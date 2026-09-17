@@ -35,9 +35,23 @@ import timber.log.Timber
  */
 class CallForegroundService : Service() {
     companion object {
-        fun start(context: Context) {
+        private const val EXTRA_INCLUDE_MEDIA_PROJECTION_TYPE = "includeMediaProjectionType"
+
+        /**
+         * @param includeMediaProjectionType Whether to also declare the `mediaProjection`
+         * foreground service type. Defaults to `false`: Android requires the app to already hold a
+         * live screen-capture grant at the moment a `mediaProjection`-type foreground service is
+         * started, or the whole `startForeground()` call throws `SecurityException` (confirmed on
+         * Android 16) and the service is killed ~5s later — which silently broke the microphone
+         * exemption too, since both types were requested in the same call. Stock Android WebView
+         * doesn't actually implement screen-capture behind `getDisplayMedia()` in the first place
+         * (confirmed: it always rejects), so there was never a working code path this type would
+         * have enabled — this isn't a feature tradeoff, just a dead declaration removed.
+         */
+        fun start(context: Context, includeMediaProjectionType: Boolean = false) {
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
                 val intent = Intent(context, CallForegroundService::class.java)
+                    .putExtra(EXTRA_INCLUDE_MEDIA_PROJECTION_TYPE, includeMediaProjectionType)
                 ContextCompat.startForegroundService(context, intent)
             } else {
                 Timber.w("Microphone permission is not granted, cannot start the call foreground service")
@@ -64,10 +78,14 @@ class CallForegroundService : Service() {
             getString(R.string.call_foreground_service_channel_title_android).ifEmpty { "Ongoing call" }
         ).build()
         notificationManagerCompat.createNotificationChannel(foregroundServiceChannel)
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val includeMediaProjectionType = intent?.getBooleanExtra(EXTRA_INCLUDE_MEDIA_PROJECTION_TYPE, false) ?: false
 
         val callActivityIntent = Intent(this, ElementCallActivity::class.java)
         val pendingIntent = PendingIntentCompat.getActivity(this, 0, callActivityIntent, 0, false)
-        val notification = NotificationCompat.Builder(this, foregroundServiceChannel.id)
+        val notification = NotificationCompat.Builder(this, "call_foreground_service_channel")
             .setSmallIcon(CommonDrawables.ic_notification)
             .setContentTitle(getString(R.string.call_foreground_service_title_android))
             .setContentText(getString(R.string.call_foreground_service_message_android))
@@ -75,11 +93,11 @@ class CallForegroundService : Service() {
             .build()
         val notificationId = NotificationIdProvider.getForegroundServiceNotificationId(ForegroundServiceType.ONGOING_CALL)
         val serviceType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            // Also declare mediaProjection here (even though no projection has started yet): Android 14+ requires an
-            // active foreground service of this type to already be running before the WebView's built-in screen-share
-            // (getDisplayMedia, used by Element Call) can request one, and we have no hook into that internal moment.
-            // Running it for the whole call, like the other call-related types, is the only way to satisfy the ordering.
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+            if (includeMediaProjectionType) {
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+            } else {
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+            }
         } else {
             0
         }
@@ -88,6 +106,7 @@ class CallForegroundService : Service() {
         }.onFailure {
             Timber.e(it, "Failed to start ongoing call foreground service")
         }
+        return START_NOT_STICKY
     }
 
     override fun onDestroy() {

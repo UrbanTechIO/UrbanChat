@@ -34,6 +34,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
@@ -62,6 +64,7 @@ import io.element.android.features.home.impl.spacefilters.SpaceFiltersState
 import io.element.android.features.home.impl.spacefilters.SpaceFiltersView
 import io.element.android.features.home.impl.spaces.HomeSpacesView
 import io.element.android.libraries.androidutils.throttler.FirstThrottler
+import io.element.android.libraries.designsystem.colors.gradientSubtleColors
 import io.element.android.libraries.designsystem.preview.ElementPreview
 import io.element.android.libraries.designsystem.preview.PreviewsDayNight
 import io.element.android.libraries.designsystem.theme.components.FloatingActionButton
@@ -185,125 +188,144 @@ private fun HomeScaffold(
     val roomsLazyListState = rememberLazyListState()
     val spacesLazyListState = rememberLazyListState()
 
-    Scaffold(
-        modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = {
-            HomeTopBar(
-                selectedNavigationItem = state.currentHomeNavigationBarItem,
-                currentUserAndNeighbors = state.currentUserAndNeighbors,
-                showAvatarIndicator = state.showAvatarIndicator,
-                areSearchResultsDisplayed = roomListState.searchState.isSearchActive,
-                onToggleSearch = { roomListState.eventSink(RoomListEvent.ToggleSearchResults) },
-                onMenuActionClick = onMenuActionClick,
-                onOpenSettings = onOpenSettings,
-                onAccountSwitch = {
-                    state.eventSink(HomeEvent.SwitchToAccount(it))
-                },
-                scrollBehavior = scrollBehavior,
-                displayFilters = state.displayRoomListFilters,
-                filtersState = roomListState.filtersState,
-                spaceFiltersState = roomListState.spaceFiltersState,
-                canReportBug = state.canReportBug,
-                modifier = Modifier.hazeEffect(
-                    state = hazeState,
-                    style = HazeMaterials.thick(),
-                )
-            )
-        },
-        floatingActionButton = {
-            val coroutineScope = rememberCoroutineScope()
-            HomeBottomBar(
-                // The Scaffold uses top-only insets so the scrollable content can go edge-to-edge behind the
-                // navigation bar, so the floating toolbar has to apply the bottom inset itself to avoid overlapping it.
-                modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars),
-                currentHomeNavigationBarItem = state.currentHomeNavigationBarItem,
-                onItemClick = { item ->
-                    // scroll to top if selecting the same item
-                    if (item == state.currentHomeNavigationBarItem) {
-                        val lazyListStateTarget = when (item) {
-                            HomeNavigationBarItem.Chats -> roomsLazyListState
-                            HomeNavigationBarItem.Spaces -> spacesLazyListState
-                        }
-                        coroutineScope.launch {
-                            if (lazyListStateTarget.firstVisibleItemIndex > 10) {
-                                lazyListStateTarget.scrollToItem(10)
-                            }
-                            // Also reset the scrollBehavior height offset as it's not triggered by programmatic scrolls
-                            scrollBehavior.state.heightOffset = 0f
-                            lazyListStateTarget.animateScrollToItem(0)
-                        }
-                    } else {
-                        state.eventSink(HomeEvent.SelectHomeNavigationBarItem(item))
-                    }
-                },
-                floatingActionButton = {
-                    when (state.currentHomeNavigationBarItem) {
-                        HomeNavigationBarItem.Chats -> {
-                            HomeFloatingActionButton(onStartChatClick, CommonStrings.action_create_room)
-                        }
-                        HomeNavigationBarItem.Spaces -> {
-                            HomeFloatingActionButton(onCreateSpaceClick, CommonStrings.action_create_space)
-                        }
-                    }
-                },
-            )
-        },
-        floatingActionButtonPosition = FabPosition.Center,
-        contentWindowInsets = scaffoldScrollableContentInsets,
-        content = { padding ->
-            val outerPadding = PaddingValues(
-                start = padding.calculateStartPadding(LocalLayoutDirection.current),
-                end = padding.calculateEndPadding(LocalLayoutDirection.current),
-                // Remove these two lines once https://issuetracker.google.com/issues/436432313 has been fixed
-                bottom = padding.calculateBottomPadding(),
-                top = padding.calculateTopPadding()
-            )
-            val contentPadding = PaddingValues(
-                bottom = 96.dp,
-            )
-            when (state.currentHomeNavigationBarItem) {
-                HomeNavigationBarItem.Chats -> {
-                    RoomListContentView(
-                        contentState = roomListState.contentState,
-                        filtersState = roomListState.filtersState,
-                        spaceFiltersState = roomListState.spaceFiltersState,
-                        lazyListState = roomsLazyListState,
-                        hideInvitesAvatars = roomListState.hideInvitesAvatars,
-                        eventSink = roomListState.eventSink,
-                        onSetUpRecoveryClick = onSetUpRecoveryClick,
-                        onConfirmRecoveryKeyClick = onConfirmRecoveryKeyClick,
-                        onRoomClick = ::onRoomClick,
-                        onCreateRoomClick = onStartChatClick,
-                        contentPadding = lazyColumnContentPadding + contentPadding,
-                        modifier = Modifier
-                            .padding(outerPadding)
-                            .consumeWindowInsets(outerPadding)
-                            .hazeSource(state = hazeState)
-                    )
-                    SpaceFiltersView(roomListState.spaceFiltersState)
-                }
-                HomeNavigationBarItem.Spaces -> {
-                    HomeSpacesView(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(outerPadding)
-                            .consumeWindowInsets(outerPadding)
-                            .hazeSource(state = hazeState),
-                        contentPadding = lazyColumnContentPadding + contentPadding,
-                        state = state.homeSpacesState,
-                        lazyListState = spacesLazyListState,
-                        onSpaceClick = { spaceId ->
-                            onRoomClick(spaceId)
-                        },
-                        onCreateSpaceClick = onCreateSpaceClick,
-                        // TODO use actual callbacks for this
-                        onExploreClick = {},
-                    )
-                }
-            }
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+    // Extends the top bar's own accent-colored gradient (see HomeTopBar's
+    // backgroundVerticalGradient) down across the whole page, fading out by the vertical
+    // midpoint of the screen instead of just the top bar's own small height, per the user's
+    // "solid at the top, fading towards mid-page" request. Uses the same accent-derived stops
+    // (see SemanticColors.withAccent) so both stay in sync with the user's theme color setting.
+    val pageGradientColors = gradientSubtleColors()
+    val pageBackgroundBrush = Brush.verticalGradient(
+        colorStops = arrayOf(
+            0.0f to pageGradientColors[0],
+            0.1f to pageGradientColors[1],
+            0.2f to pageGradientColors[2],
+            0.3f to pageGradientColors[3],
+            0.4f to pageGradientColors[4],
+            0.5f to pageGradientColors[5],
+        ),
     )
+    Box(modifier = modifier.fillMaxSize().background(pageBackgroundBrush)) {
+        Scaffold(
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+            containerColor = Color.Transparent,
+            topBar = {
+                HomeTopBar(
+                    selectedNavigationItem = state.currentHomeNavigationBarItem,
+                    currentUserAndNeighbors = state.currentUserAndNeighbors,
+                    showAvatarIndicator = state.showAvatarIndicator,
+                    areSearchResultsDisplayed = roomListState.searchState.isSearchActive,
+                    onToggleSearch = { roomListState.eventSink(RoomListEvent.ToggleSearchResults) },
+                    onMenuActionClick = onMenuActionClick,
+                    onOpenSettings = onOpenSettings,
+                    onAccountSwitch = {
+                        state.eventSink(HomeEvent.SwitchToAccount(it))
+                    },
+                    scrollBehavior = scrollBehavior,
+                    displayFilters = state.displayRoomListFilters,
+                    filtersState = roomListState.filtersState,
+                    spaceFiltersState = roomListState.spaceFiltersState,
+                    canReportBug = state.canReportBug,
+                    modifier = Modifier.hazeEffect(
+                        state = hazeState,
+                        style = HazeMaterials.thick(),
+                    )
+                )
+            },
+            floatingActionButton = {
+                val coroutineScope = rememberCoroutineScope()
+                HomeBottomBar(
+                    // The Scaffold uses top-only insets so the scrollable content can go edge-to-edge behind the
+                    // navigation bar, so the floating toolbar has to apply the bottom inset itself to avoid overlapping it.
+                    modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars),
+                    currentHomeNavigationBarItem = state.currentHomeNavigationBarItem,
+                    onItemClick = { item ->
+                        // scroll to top if selecting the same item
+                        if (item == state.currentHomeNavigationBarItem) {
+                            val lazyListStateTarget = when (item) {
+                                HomeNavigationBarItem.Chats -> roomsLazyListState
+                                HomeNavigationBarItem.Spaces -> spacesLazyListState
+                            }
+                            coroutineScope.launch {
+                                if (lazyListStateTarget.firstVisibleItemIndex > 10) {
+                                    lazyListStateTarget.scrollToItem(10)
+                                }
+                                // Also reset the scrollBehavior height offset as it's not triggered by programmatic scrolls
+                                scrollBehavior.state.heightOffset = 0f
+                                lazyListStateTarget.animateScrollToItem(0)
+                            }
+                        } else {
+                            state.eventSink(HomeEvent.SelectHomeNavigationBarItem(item))
+                        }
+                    },
+                    floatingActionButton = {
+                        when (state.currentHomeNavigationBarItem) {
+                            HomeNavigationBarItem.Chats -> {
+                                HomeFloatingActionButton(onStartChatClick, CommonStrings.action_create_room)
+                            }
+                            HomeNavigationBarItem.Spaces -> {
+                                HomeFloatingActionButton(onCreateSpaceClick, CommonStrings.action_create_space)
+                            }
+                        }
+                    },
+                )
+            },
+            floatingActionButtonPosition = FabPosition.Center,
+            contentWindowInsets = scaffoldScrollableContentInsets,
+            content = { padding ->
+                val outerPadding = PaddingValues(
+                    start = padding.calculateStartPadding(LocalLayoutDirection.current),
+                    end = padding.calculateEndPadding(LocalLayoutDirection.current),
+                    // Remove these two lines once https://issuetracker.google.com/issues/436432313 has been fixed
+                    bottom = padding.calculateBottomPadding(),
+                    top = padding.calculateTopPadding()
+                )
+                val contentPadding = PaddingValues(
+                    bottom = 96.dp,
+                )
+                when (state.currentHomeNavigationBarItem) {
+                    HomeNavigationBarItem.Chats -> {
+                        RoomListContentView(
+                            contentState = roomListState.contentState,
+                            filtersState = roomListState.filtersState,
+                            spaceFiltersState = roomListState.spaceFiltersState,
+                            lazyListState = roomsLazyListState,
+                            hideInvitesAvatars = roomListState.hideInvitesAvatars,
+                            eventSink = roomListState.eventSink,
+                            onSetUpRecoveryClick = onSetUpRecoveryClick,
+                            onConfirmRecoveryKeyClick = onConfirmRecoveryKeyClick,
+                            onRoomClick = ::onRoomClick,
+                            onCreateRoomClick = onStartChatClick,
+                            contentPadding = lazyColumnContentPadding + contentPadding,
+                            modifier = Modifier
+                                .padding(outerPadding)
+                                .consumeWindowInsets(outerPadding)
+                                .hazeSource(state = hazeState)
+                        )
+                        SpaceFiltersView(roomListState.spaceFiltersState)
+                    }
+                    HomeNavigationBarItem.Spaces -> {
+                        HomeSpacesView(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(outerPadding)
+                                .consumeWindowInsets(outerPadding)
+                                .hazeSource(state = hazeState),
+                            contentPadding = lazyColumnContentPadding + contentPadding,
+                            state = state.homeSpacesState,
+                            lazyListState = spacesLazyListState,
+                            onSpaceClick = { spaceId ->
+                                onRoomClick(spaceId)
+                            },
+                            onCreateSpaceClick = onCreateSpaceClick,
+                            // TODO use actual callbacks for this
+                            onExploreClick = {},
+                        )
+                    }
+                }
+            },
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+        )
+    }
 }
 
 @Composable

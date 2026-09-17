@@ -55,6 +55,16 @@ fun SemanticColors.withAccent(accent: Color): SemanticColors {
         iconAccentTertiary = accent,
         iconOnSolidPrimary = onAccent,
         textActionAccent = accent,
+        // Recolors the "subtle" gradient (used behind the room list's top bar, and now its page
+        // background too) from Compound's fixed brand green to the user's chosen accent. Plain
+        // alpha fade-out works the same over both light and dark canvases, unlike the upstream
+        // tokens which use differently-shaded opaque colors per theme for the same visual effect.
+        gradientSubtleStop1 = accent.copy(alpha = 0.65f),
+        gradientSubtleStop2 = accent.copy(alpha = 0.50f),
+        gradientSubtleStop3 = accent.copy(alpha = 0.35f),
+        gradientSubtleStop4 = accent.copy(alpha = 0.22f),
+        gradientSubtleStop5 = accent.copy(alpha = 0.10f),
+        gradientSubtleStop6 = accent.copy(alpha = 0f),
     )
 }
 

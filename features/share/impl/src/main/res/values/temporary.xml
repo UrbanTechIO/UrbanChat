@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="screen_share_lock_auth_failed_title">"Authentication failed"</string>
+    <string name="screen_share_lock_no_device_security_title">"Set up a screen lock"</string>
+    <string name="screen_share_lock_no_device_security_subtitle">"Add a PIN, pattern, password or biometric unlock to your device to share into this chat."</string>
+</resources>

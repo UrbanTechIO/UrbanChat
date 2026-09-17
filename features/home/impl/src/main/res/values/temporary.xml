@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright (c) 2026 New Vector Ltd.
+  ~
+  ~ SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial.
+  ~ Please see LICENSE files in the repository root for full details.
+  -->
+
+<resources>
+    <string name="screen_roomlist_lock_chat">"Lock chat"</string>
+    <string name="screen_roomlist_unlock_chat">"Unlock chat"</string>
+    <string name="screen_roomlist_locked_chats">"Locked chats"</string>
+    <string name="screen_locked_chats_title">"Locked chats"</string>
+    <string name="screen_locked_chats_auth_failed_title">"Authentication failed"</string>
+    <string name="screen_locked_chats_no_device_security_title">"Set up a screen lock"</string>
+    <string name="screen_locked_chats_no_device_security_subtitle">"Add a PIN, pattern, password or biometric unlock to your device to use locked chats."</string>
+    <string name="screen_locked_chats_empty_title">"No locked chats"</string>
+    <string name="screen_locked_chats_empty_subtitle">"Long-press a chat and choose \"Lock chat\" to hide it here."</string>
+    <string name="screen_locked_chats_unlock_hint">"Long-press a chat to unlock it"</string>
+</resources>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright (c) 2026 New Vector Ltd.
+  ~
+  ~ SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial.
+  ~ Please see LICENSE files in the repository root for full details.
+  -->
+
+<resources>
+    <string name="screen_advanced_settings_accent_color">"Theme colour"</string>
+    <string name="screen_advanced_settings_chat_background_color">"Chat background colour"</string>
+    <string name="screen_advanced_settings_custom_color">"Custom colour"</string>
+    <string name="screen_advanced_settings_chat_background_image">"Chat background image"</string>
+    <string name="screen_advanced_settings_choose_photo">"Choose photo"</string>
+    <string name="screen_advanced_settings_remove_photo">"Remove photo"</string>
+    <string name="screen_advanced_settings_frosted_glass">"Frosted glass"</string>
+    <string name="screen_advanced_settings_frosted_glass_description">"Blur the chat header and message bar over your wallpaper"</string>
+    <string name="screen_advanced_settings_outgoing_bubble_color">"Outgoing message colour"</string>
+    <string name="screen_advanced_settings_incoming_bubble_color">"Incoming message colour"</string>
+    <string name="screen_advanced_settings_locked_chats_access_code">"Locked chats access code"</string>
+    <string name="screen_advanced_settings_locked_chats_access_code_description">"Typing this code into the chat search bar reveals your locked chats. Leave empty to disable."</string>
+    <string name="screen_advanced_settings_locked_chats_access_code_placeholder">"Access code"</string>
+    <string name="screen_advanced_settings_locked_chats_access_code_verify_description">"Enter your current access code to change it."</string>
+    <string name="screen_advanced_settings_locked_chats_access_code_wrong">"Incorrect access code"</string>
+    <string name="theme_frosted">"Frosted"</string>
+    <string name="screen_advanced_settings_header_bar_opacity">"Header bar transparency"</string>
+    <string name="screen_advanced_settings_composer_bar_opacity">"Composer bar transparency"</string>
+    <string name="screen_advanced_settings_bubble_bar_opacity">"Message bubble transparency"</string>
+    <string name="screen_advanced_settings_colours_section_title">"Colours"</string>
+    <string name="screen_notification_settings_in_room_message_sound_label">"Sound for open chats"</string>
+    <string name="screen_notification_settings_in_room_message_sound_description">"Play a sound for messages received while their chat is open"</string>
+    <string name="screen_notification_settings_in_room_message_sound_choose_label">"Sound"</string>
+    <string name="screen_advanced_settings_download_to_gallery_title">"Enable Download to Gallery"</string>
+    <string name="screen_advanced_settings_download_to_gallery_description">"Show a download button on received photos and videos. Downloading saves it to your device's Gallery, in an UrbanChat folder, and later plays it from there instead of the server"</string>
+    <string name="screen_advanced_settings_disable_link_previews_title">"Disable link previews"</string>
+    <string name="screen_advanced_settings_disable_link_previews_description">"When off, messages containing a link show a preview card with its title, description and image"</string>
+</resources>

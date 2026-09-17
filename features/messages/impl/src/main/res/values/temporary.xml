@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright (c) 2026 New Vector Ltd.
+  ~
+  ~ SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial.
+  ~ Please see LICENSE files in the repository root for full details.
+  -->
+
+<resources>
+    <string name="screen_image_edition_a11y_tool_crop">"Crop and rotate"</string>
+    <string name="screen_image_edition_a11y_tool_pen">"Draw"</string>
+    <string name="screen_image_edition_a11y_tool_arrow">"Draw arrow"</string>
+    <string name="screen_image_edition_a11y_tool_text">"Add text"</string>
+    <string name="screen_image_edition_a11y_tool_blur">"Pixelate area"</string>
+    <string name="screen_image_edition_a11y_undo_annotation">"Undo last annotation"</string>
+    <string name="screen_image_edition_a11y_annotation_color">"Annotation colour"</string>
+    <string name="screen_image_edition_a11y_stroke_width">"Stroke width"</string>
+    <string name="screen_image_edition_text_annotation_title">"Add text"</string>
+    <string name="screen_room_search_placeholder">"Search in this chat"</string>
+    <string name="screen_room_search_initial_state_title">"Search for messages in this chat"</string>
+    <string name="screen_room_search_no_results_title">"No messages found"</string>
+    <string name="screen_room_lock_auth_failed_title">"Authentication failed"</string>
+    <string name="screen_room_lock_no_device_security_title">"Set up a screen lock"</string>
+    <string name="screen_room_lock_no_device_security_subtitle">"Add a PIN, pattern, password or biometric unlock to your device to open this chat."</string>
+    <string name="screen_media_upload_preview_hd_toggle">"HD"</string>
+    <string name="screen_media_upload_preview_hd_toggle_a11y_on">"Send in original quality"</string>
+    <string name="screen_media_upload_preview_hd_toggle_a11y_off">"Send in reduced quality"</string>
+    <string name="screen_timeline_video_downloading_no_size_a11y">"Downloading video"</string>
+</resources>

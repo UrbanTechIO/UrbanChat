@@ -1,0 +1,18 @@
+{
+  "matrix_rtc_session": {
+    "wait_for_key_rotation_ms": 5000,
+    "delayed_leave_event_restart_ms": 4000,
+    "delayed_leave_event_delay_ms": 18000
+  },
+  "media_quality": {
+    "video": {
+      "max_resolution": 720,
+      "max_framerate": 24,
+      "max_bitrate": 1000000
+    },
+    "screen_share": {
+      "max_resolution": 1080,
+      "max_framerate": 15
+    }
+  }
+}

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ Copyright (c) 2026 New Vector Ltd.
+  ~
+  ~ SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial.
+  ~ Please see LICENSE files in the repository root for full details.
+  -->
+<!--
+  Declares this app as a Direct Share provider: the dynamic, per-room shortcuts published by
+  DefaultNotificationConversationService (tagged with the matching category below) are surfaced
+  by the OS Sharesheet as one-tap "share straight to this conversation" targets, instead of the
+  user having to open the app and then pick a room.
+-->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+      A single wildcard <data> element, matching upstream element-hq/element-x-android's own
+      "Offer conversations in the system share sheet" implementation exactly: the share-target
+      matcher is a narrower code path than a normal intent-filter, and splitting this into several
+      specific-mimeType <data> elements (as an earlier version of this file did) silently matched
+      nothing at all instead of behaving as an OR of alternatives.
+    -->
+    <share-target android:targetClass="io.element.android.x.MainActivity">
+        <data android:mimeType="*/*" />
+        <category android:name="io.element.android.category.ROOM_SHARE_TARGET" />
+    </share-target>
+</shortcuts>

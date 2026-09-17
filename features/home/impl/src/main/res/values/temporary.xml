@@ -16,4 +16,6 @@
     <string name="screen_locked_chats_empty_title">"No locked chats"</string>
     <string name="screen_locked_chats_empty_subtitle">"Long-press a chat and choose \"Lock chat\" to hide it here."</string>
     <string name="screen_locked_chats_unlock_hint">"Long-press a chat to unlock it"</string>
+    <string name="screen_roomlist_section_chats">"Chats"</string>
+    <string name="screen_roomlist_section_groups">"Groups"</string>
 </resources>

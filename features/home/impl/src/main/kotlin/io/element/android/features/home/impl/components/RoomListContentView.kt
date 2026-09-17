@@ -52,6 +52,7 @@ import io.element.android.libraries.designsystem.preview.PreviewsDayNight
 import io.element.android.libraries.designsystem.theme.components.Button
 import io.element.android.libraries.designsystem.theme.components.HorizontalDivider
 import io.element.android.libraries.designsystem.theme.components.IconSource
+import io.element.android.libraries.designsystem.theme.components.ListSectionHeader
 import io.element.android.libraries.designsystem.theme.components.Text
 import io.element.android.libraries.designsystem.utils.OnVisibleRangeChangeEffect
 import io.element.android.libraries.ui.strings.CommonStrings
@@ -223,11 +224,19 @@ private fun RoomsViewList(
     OnVisibleRangeChangeEffect(lazyListState) { visibleRange ->
         eventSink(RoomListEvent.UpdateVisibleRange(visibleRange))
     }
+    // Non-room items (invites, knocks, placeholders) stay unsectioned at the top, in their
+    // existing order. Only actual joined rooms are split into "Chats" (DMs) and "Groups"
+    // (everything else) sections, each rendered as its own contiguous run so the existing
+    // recency/importance ordering within each group is preserved.
+    val nonRoomItems = state.summaries.filter { it.displayType != RoomSummaryDisplayType.ROOM }
+    val directRooms = state.summaries.filter { it.displayType == RoomSummaryDisplayType.ROOM && it.isDm }
+    val groupRooms = state.summaries.filter { it.displayType == RoomSummaryDisplayType.ROOM && !it.isDm }
     LazyColumn(
         state = lazyListState,
         modifier = modifier,
         contentPadding = contentPadding,
     ) {
+        var hasPrecedingContent = false
         when (state.securityBannerState) {
             SecurityBannerState.SetUpRecovery -> {
                 item {
@@ -236,6 +245,7 @@ private fun RoomsViewList(
                         onDismissClick = { eventSink(RoomListEvent.DismissBanner) },
                     )
                 }
+                hasPrecedingContent = true
             }
             SecurityBannerState.RecoveryKeyConfirmation -> {
                 item {
@@ -244,6 +254,7 @@ private fun RoomsViewList(
                         onDismissClick = { eventSink(RoomListEvent.DismissBanner) },
                     )
                 }
+                hasPrecedingContent = true
             }
             // Banner precedence (top-to-bottom): full-screen-intent > battery-optimization >
             // new-notification-sound > sound-unavailable. At most one renders at a time.
@@ -252,11 +263,13 @@ private fun RoomsViewList(
                     item {
                         FullScreenIntentPermissionBanner(state = state.fullScreenIntentPermissionsState)
                     }
+                    hasPrecedingContent = true
                 }
                 state.batteryOptimizationState.shouldDisplayBanner -> {
                     item {
                         BatteryOptimizationBanner(state = state.batteryOptimizationState)
                     }
+                    hasPrecedingContent = true
                 }
                 state.showNewNotificationSoundBanner -> {
                     item {
@@ -264,27 +277,82 @@ private fun RoomsViewList(
                             onDismissClick = { eventSink(RoomListEvent.DismissNewNotificationSoundBanner) },
                         )
                     }
+                    hasPrecedingContent = true
                 }
             }
         }
 
         // Note: do not use a key for the LazyColumn, or the scroll will not behave as expected if a room
         // is moved to the top of the list.
-        itemsIndexed(
-            items = state.summaries,
-            contentType = { _, room -> room.contentType() },
-        ) { index, room ->
-            RoomSummaryRow(
-                room = room,
-                hideInviteAvatars = hideInvitesAvatars,
-                isInviteSeen = room.displayType == RoomSummaryDisplayType.INVITE &&
-                    state.seenRoomInvites.contains(room.roomId),
-                showUnreadCount = state.showUnreadCount,
-                onClick = onRoomClick,
-                eventSink = eventSink,
-            )
-            if (index != state.summaries.lastIndex) {
-                HorizontalDivider()
+        if (nonRoomItems.isNotEmpty()) {
+            itemsIndexed(
+                items = nonRoomItems,
+                contentType = { _, room -> room.contentType() },
+            ) { index, room ->
+                RoomSummaryRow(
+                    room = room,
+                    hideInviteAvatars = hideInvitesAvatars,
+                    isInviteSeen = room.displayType == RoomSummaryDisplayType.INVITE &&
+                        state.seenRoomInvites.contains(room.roomId),
+                    showUnreadCount = state.showUnreadCount,
+                    onClick = onRoomClick,
+                    eventSink = eventSink,
+                )
+                if (index != nonRoomItems.lastIndex) {
+                    HorizontalDivider()
+                }
+            }
+            hasPrecedingContent = true
+        }
+
+        if (directRooms.isNotEmpty()) {
+            item {
+                ListSectionHeader(
+                    title = stringResource(R.string.screen_roomlist_section_chats),
+                    hasDivider = hasPrecedingContent,
+                )
+            }
+            itemsIndexed(
+                items = directRooms,
+                contentType = { _, room -> room.contentType() },
+            ) { index, room ->
+                RoomSummaryRow(
+                    room = room,
+                    hideInviteAvatars = hideInvitesAvatars,
+                    isInviteSeen = false,
+                    showUnreadCount = state.showUnreadCount,
+                    onClick = onRoomClick,
+                    eventSink = eventSink,
+                )
+                if (index != directRooms.lastIndex) {
+                    HorizontalDivider()
+                }
+            }
+            hasPrecedingContent = true
+        }
+
+        if (groupRooms.isNotEmpty()) {
+            item {
+                ListSectionHeader(
+                    title = stringResource(R.string.screen_roomlist_section_groups),
+                    hasDivider = hasPrecedingContent,
+                )
+            }
+            itemsIndexed(
+                items = groupRooms,
+                contentType = { _, room -> room.contentType() },
+            ) { index, room ->
+                RoomSummaryRow(
+                    room = room,
+                    hideInviteAvatars = hideInvitesAvatars,
+                    isInviteSeen = false,
+                    showUnreadCount = state.showUnreadCount,
+                    onClick = onRoomClick,
+                    eventSink = eventSink,
+                )
+                if (index != groupRooms.lastIndex) {
+                    HorizontalDivider()
+                }
             }
         }
     }

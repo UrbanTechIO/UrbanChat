@@ -64,6 +64,8 @@ internal fun aHomeState(
     homeSpacesState: HomeSpacesState = aHomeSpacesState(),
     canReportBug: Boolean = true,
     directLogoutState: DirectLogoutState = aDirectLogoutState(),
+    frostedGlassEnabled: Boolean = false,
+    headerBarOpacity: Float = 0.3f,
     eventSink: (HomeEvent) -> Unit = {}
 ) = HomeState(
     currentUserAndNeighbors = currentUserAndNeighbors.toImmutableList(),
@@ -75,5 +77,7 @@ internal fun aHomeState(
     currentHomeNavigationBarItem = currentHomeNavigationBarItem,
     roomListState = roomListState,
     homeSpacesState = homeSpacesState,
+    frostedGlassEnabled = frostedGlassEnabled,
+    headerBarOpacity = headerBarOpacity,
     eventSink = eventSink,
 )

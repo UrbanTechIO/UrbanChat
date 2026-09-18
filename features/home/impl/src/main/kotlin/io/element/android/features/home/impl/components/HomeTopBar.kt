@@ -59,7 +59,6 @@ import io.element.android.libraries.designsystem.components.TopAppBarScrollBehav
 import io.element.android.libraries.designsystem.components.avatar.Avatar
 import io.element.android.libraries.designsystem.components.avatar.AvatarSize
 import io.element.android.libraries.designsystem.components.avatar.AvatarType
-import io.element.android.libraries.designsystem.modifiers.backgroundVerticalGradient
 import io.element.android.libraries.designsystem.preview.ElementPreview
 import io.element.android.libraries.designsystem.preview.PreviewsDayNight
 import io.element.android.libraries.designsystem.preview.USER_NAME_ALICE
@@ -101,62 +100,69 @@ fun HomeTopBar(
     modifier: Modifier = Modifier,
 ) {
     val contentPadding = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal).asPaddingValues()
-    Column(modifier) {
-        TopAppBar(
-            modifier = Modifier
-                .backgroundVerticalGradient(
-                    isVisible = !areSearchResultsDisplayed,
-                )
-                .statusBarsPadding()
-                .padding(contentPadding),
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = Color.Transparent,
-                scrolledContainerColor = Color.Transparent,
-            ),
-            title = {
-                val displayTitle = when (selectedNavigationItem) {
-                    HomeNavigationBarItem.Chats -> {
-                        when (spaceFiltersState) {
-                            is SpaceFiltersState.Selected -> spaceFiltersState.selectedFilter.spaceRoom.displayName
-                            else -> stringResource(selectedNavigationItem.labelRes)
+    Column {
+        // The solid/frosted background only wraps the app bar row here, not the filters row
+        // below: the filters row stays transparent so it shows the page's own gradient
+        // background through it instead of matching the app bar's tint.
+        Box(modifier = modifier) {
+            TopAppBar(
+                modifier = Modifier
+                    .statusBarsPadding()
+                    .padding(contentPadding),
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    scrolledContainerColor = Color.Transparent,
+                ),
+                title = {
+                    val displayTitle = when (selectedNavigationItem) {
+                        HomeNavigationBarItem.Chats -> {
+                            when (spaceFiltersState) {
+                                is SpaceFiltersState.Selected -> spaceFiltersState.selectedFilter.spaceRoom.displayName
+                                else -> stringResource(selectedNavigationItem.labelRes)
+                            }
                         }
+                        HomeNavigationBarItem.Spaces -> stringResource(selectedNavigationItem.labelRes)
                     }
-                    HomeNavigationBarItem.Spaces -> stringResource(selectedNavigationItem.labelRes)
-                }
-                Text(
-                    modifier = Modifier.semantics {
-                        heading()
-                    },
-                    style = ElementTheme.typography.aliasScreenTitle,
-                    text = displayTitle,
-                )
-            },
-            navigationIcon = {
-                NavigationIcon(
-                    currentUserAndNeighbors = currentUserAndNeighbors,
-                    showAvatarIndicator = showAvatarIndicator,
-                    onAccountSwitch = onAccountSwitch,
-                    onClick = onOpenSettings,
-                )
-            },
-            actions = {
-                if (selectedNavigationItem == HomeNavigationBarItem.Chats) {
-                    RoomListMenuItems(
-                        onToggleSearch = onToggleSearch,
-                        onMenuActionClick = onMenuActionClick,
-                        canReportBug = canReportBug,
-                        spaceFiltersState = spaceFiltersState,
+                    Text(
+                        modifier = Modifier.semantics {
+                            heading()
+                        },
+                        style = ElementTheme.typography.aliasScreenTitle,
+                        text = displayTitle,
                     )
-                }
-            },
-            // We want a 16dp left padding for the navigationIcon :
-            // 4dp from default TopAppBarHorizontalPadding
-            // 8dp from AccountIcon default padding (because of IconButton)
-            // 4dp extra padding using left insets
-            windowInsets = WindowInsets(left = 4.dp),
-        )
+                },
+                navigationIcon = {
+                    NavigationIcon(
+                        currentUserAndNeighbors = currentUserAndNeighbors,
+                        showAvatarIndicator = showAvatarIndicator,
+                        onAccountSwitch = onAccountSwitch,
+                        onClick = onOpenSettings,
+                    )
+                },
+                actions = {
+                    if (selectedNavigationItem == HomeNavigationBarItem.Chats) {
+                        RoomListMenuItems(
+                            onToggleSearch = onToggleSearch,
+                            onMenuActionClick = onMenuActionClick,
+                            canReportBug = canReportBug,
+                            spaceFiltersState = spaceFiltersState,
+                        )
+                    }
+                },
+                // We want a 16dp left padding for the navigationIcon :
+                // 4dp from default TopAppBarHorizontalPadding
+                // 8dp from AccountIcon default padding (because of IconButton)
+                // 4dp extra padding using left insets
+                windowInsets = WindowInsets(left = 4.dp),
+            )
+        }
         if (displayFilters) {
-            TopAppBarScrollBehaviorLayout(scrollBehavior = scrollBehavior) {
+            // Transparent: shows the page's own gradient background through the filters row
+            // instead of matching the app bar's tint (see the Box above).
+            TopAppBarScrollBehaviorLayout(
+                scrollBehavior = scrollBehavior,
+                backgroundColor = Color.Transparent,
+            ) {
                 RoomListFiltersView(
                     state = filtersState,
                     modifier = Modifier.padding(bottom = 16.dp).padding(contentPadding)

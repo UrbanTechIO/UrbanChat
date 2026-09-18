@@ -29,6 +29,7 @@ import io.element.android.libraries.designsystem.utils.snackbar.collectSnackbarM
 import io.element.android.libraries.indicator.api.IndicatorService
 import io.element.android.libraries.matrix.api.MatrixClient
 import io.element.android.libraries.matrix.api.sync.SyncService
+import io.element.android.libraries.preferences.api.store.AppPreferencesStore
 import io.element.android.libraries.sessionstorage.api.SessionStore
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.combine
@@ -45,6 +46,7 @@ class HomePresenter(
     private val logoutPresenter: Presenter<DirectLogoutState>,
     private val rageshakeFeatureAvailability: RageshakeFeatureAvailability,
     private val sessionStore: SessionStore,
+    private val appPreferencesStore: AppPreferencesStore,
 ) : Presenter<HomeState> {
     private val currentUserWithNeighborsBuilder = CurrentUserWithNeighborsBuilder()
 
@@ -76,6 +78,14 @@ class HomePresenter(
         // Avatar indicator
         val showAvatarIndicator by indicatorService.showRoomListTopBarIndicator()
         val directLogoutState = logoutPresenter.present()
+        // Reuses the same app-wide "frosted glass" appearance setting the chat timeline's top bar
+        // uses, so toggling it in Settings stays consistent across the whole app.
+        val frostedGlassEnabled by remember {
+            appPreferencesStore.isFrostedGlassEnabledFlow()
+        }.collectAsState(initial = false)
+        val headerBarOpacity by remember {
+            appPreferencesStore.getHeaderBarOpacityFlow()
+        }.collectAsState(initial = 0.3f)
 
         fun handleEvent(event: HomeEvent) {
             when (event) {
@@ -99,6 +109,8 @@ class HomePresenter(
             snackbarMessage = snackbarMessage,
             canReportBug = canReportBug,
             directLogoutState = directLogoutState,
+            frostedGlassEnabled = frostedGlassEnabled,
+            headerBarOpacity = headerBarOpacity,
             eventSink = ::handleEvent,
         )
     }

@@ -6,8 +6,6 @@
  * Please see LICENSE files in the repository root for full details.
  */
 
-@file:OptIn(ExperimentalHazeMaterialsApi::class)
-
 package io.element.android.features.home.impl
 
 import androidx.activity.compose.BackHandler
@@ -43,10 +41,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import dev.chrisbanes.haze.HazeDefaults
+import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
-import dev.chrisbanes.haze.materials.HazeMaterials
 import dev.chrisbanes.haze.rememberHazeState
 import io.element.android.compound.theme.ElementTheme
 import io.element.android.compound.tokens.generated.CompoundIcons
@@ -195,13 +193,16 @@ private fun HomeScaffold(
     // (see SemanticColors.withAccent) so both stay in sync with the user's theme color setting.
     val pageGradientColors = gradientSubtleColors()
     val pageBackgroundBrush = Brush.verticalGradient(
+        // Compressed compared to a linear 0..0.5 spread: the top app bar paints its own solid/
+        // frosted tint over stop1 anyway, so the visible fade needs to happen fast, right where
+        // the (transparent) filters row sits, rather than staying vivid blue until mid-screen.
         colorStops = arrayOf(
             0.0f to pageGradientColors[0],
-            0.1f to pageGradientColors[1],
-            0.2f to pageGradientColors[2],
-            0.3f to pageGradientColors[3],
-            0.4f to pageGradientColors[4],
-            0.5f to pageGradientColors[5],
+            0.03f to pageGradientColors[1],
+            0.06f to pageGradientColors[2],
+            0.10f to pageGradientColors[3],
+            0.18f to pageGradientColors[4],
+            0.30f to pageGradientColors[5],
         ),
     )
     Box(modifier = modifier.fillMaxSize().background(pageBackgroundBrush)) {
@@ -225,10 +226,14 @@ private fun HomeScaffold(
                     filtersState = roomListState.filtersState,
                     spaceFiltersState = roomListState.spaceFiltersState,
                     canReportBug = state.canReportBug,
-                    modifier = Modifier.hazeEffect(
-                        state = hazeState,
-                        style = HazeMaterials.thick(),
-                    )
+                    modifier = if (state.frostedGlassEnabled) {
+                        Modifier.hazeEffect(
+                            state = hazeState,
+                            style = rememberAccentFrostedHazeStyle(state.headerBarOpacity),
+                        )
+                    } else {
+                        Modifier.background(ElementTheme.colors.bgAccentRest.copy(alpha = 0.55f))
+                    }
                 )
             },
             floatingActionButton = {
@@ -272,14 +277,19 @@ private fun HomeScaffold(
             floatingActionButtonPosition = FabPosition.Center,
             contentWindowInsets = scaffoldScrollableContentInsets,
             content = { padding ->
+                // When frosted glass is on, the list must actually scroll behind the (now
+                // translucent) top bar for Haze to have real content to blur, so the top inset
+                // is left out here and passed as extra list content padding below instead
+                // (mirrors MessagesView's extraTopContentPadding for the chat timeline).
                 val outerPadding = PaddingValues(
                     start = padding.calculateStartPadding(LocalLayoutDirection.current),
                     end = padding.calculateEndPadding(LocalLayoutDirection.current),
                     // Remove these two lines once https://issuetracker.google.com/issues/436432313 has been fixed
                     bottom = padding.calculateBottomPadding(),
-                    top = padding.calculateTopPadding()
+                    top = if (state.frostedGlassEnabled) 0.dp else padding.calculateTopPadding()
                 )
                 val contentPadding = PaddingValues(
+                    top = if (state.frostedGlassEnabled) padding.calculateTopPadding() else 0.dp,
                     bottom = 96.dp,
                 )
                 when (state.currentHomeNavigationBarItem) {
@@ -324,6 +334,27 @@ private fun HomeScaffold(
                 }
             },
             snackbarHost = { SnackbarHost(snackbarHostState) },
+        )
+    }
+}
+
+/**
+ * Frosted-glass haze style for the room list's top bar, tinted with the user's accent theme
+ * color instead of the neutral background color the chat timeline's equivalent
+ * (`rememberFrostedHazeStyle` in MessagesView.kt) uses — same blur/noise mechanism, matching tint
+ * source instead of the timeline's own bgCanvasDefault-based tint, since here it's blending with
+ * a page background that's itself accent-tinted (see pageBackgroundBrush above).
+ */
+@Composable
+private fun rememberAccentFrostedHazeStyle(opacity: Float): HazeStyle {
+    val accent = ElementTheme.colors.bgAccentRest
+    return remember(accent, opacity) {
+        val tintAlpha = 1f - opacity.coerceIn(0f, 1f) * 0.9f
+        HazeDefaults.style(
+            backgroundColor = accent,
+            tint = HazeDefaults.tint(accent.copy(alpha = tintAlpha)),
+            blurRadius = HazeDefaults.blurRadius,
+            noiseFactor = HazeDefaults.noiseFactor,
         )
     }
 }

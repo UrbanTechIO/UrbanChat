@@ -156,6 +156,18 @@ fun AdvancedSettingsView(
             ),
             onClick = { state.eventSink(AdvancedSettingsEvents.SetSharePresenceEnabled(!state.isSharePresenceEnabled)) }
         )
+        ListItem(
+            content = {
+                Text(text = stringResource(id = R.string.screen_advanced_settings_show_online_status))
+            },
+            supportingContent = {
+                Text(text = stringResource(id = R.string.screen_advanced_settings_show_online_status_description))
+            },
+            trailingContent = ListItemContent.Switch(
+                checked = state.isShowOnlineStatusEnabled,
+            ),
+            onClick = { state.eventSink(AdvancedSettingsEvents.SetShowOnlineStatusEnabled(!state.isShowOnlineStatusEnabled)) }
+        )
         val compressImages = state.mediaOptimizationState?.shouldCompressImages
 
         when (state.mediaOptimizationState) {

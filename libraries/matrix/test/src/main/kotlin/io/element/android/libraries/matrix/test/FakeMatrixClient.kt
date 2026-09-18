@@ -46,6 +46,7 @@ import io.element.android.libraries.matrix.api.sync.SyncService
 import io.element.android.libraries.matrix.api.user.DisplayedStatus
 import io.element.android.libraries.matrix.api.user.MatrixSearchUserResults
 import io.element.android.libraries.matrix.api.user.MatrixUser
+import io.element.android.libraries.matrix.api.user.UserPresence
 import io.element.android.libraries.matrix.api.user.UserStatus
 import io.element.android.libraries.matrix.api.verification.SessionVerificationService
 import io.element.android.libraries.matrix.test.encryption.FakeEncryptionService
@@ -292,6 +293,16 @@ class FakeMatrixClient(
             ))
         }
         return clearUserStatusResult
+    }
+
+    var getUserPresenceResult: Result<UserPresence> = Result.success(UserPresence.OFFLINE)
+    override suspend fun getUserPresence(userId: UserId): Result<UserPresence> = getUserPresenceResult
+
+    var setOwnPresenceCalled: Boolean = false
+    var setOwnPresenceResult: Result<Unit> = Result.success(Unit)
+    override suspend fun setOwnPresence(presence: UserPresence): Result<Unit> {
+        setOwnPresenceCalled = true
+        return setOwnPresenceResult
     }
 
     override suspend fun joinRoom(roomId: RoomId): Result<RoomInfo?> = joinRoomLambda(roomId)

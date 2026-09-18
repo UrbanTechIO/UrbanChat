@@ -48,6 +48,7 @@ import io.element.android.features.home.impl.model.RoomSummaryDisplayType
 import io.element.android.features.home.impl.roomlist.RoomListEvent
 import io.element.android.libraries.core.extensions.orEmpty
 import io.element.android.libraries.core.extensions.toSafeLength
+import io.element.android.libraries.designsystem.atomic.atoms.RedIndicatorAtom
 import io.element.android.libraries.designsystem.atomic.atoms.UnreadIndicatorAtom
 import io.element.android.libraries.designsystem.atomic.molecules.InviteButtonsRowMolecule
 import io.element.android.libraries.designsystem.components.avatar.Avatar
@@ -64,6 +65,7 @@ import io.element.android.libraries.designsystem.theme.unreadIndicator
 import io.element.android.libraries.matrix.api.notification.CallIntent
 import io.element.android.libraries.matrix.api.room.RoomNotificationMode
 import io.element.android.libraries.matrix.api.user.DisplayedStatus
+import io.element.android.libraries.matrix.api.user.UserPresence
 import io.element.android.libraries.matrix.ui.components.DisplayNameWithStatus
 import io.element.android.libraries.matrix.ui.components.InviteSenderView
 import io.element.android.libraries.matrix.ui.model.InviteSender
@@ -197,18 +199,32 @@ private fun RoomSummaryScaffoldRow(
             .padding(horizontal = 16.dp, vertical = 11.dp)
             .height(IntrinsicSize.Min),
     ) {
-        Avatar(
-            avatarData = room.avatarData,
-            avatarType = if (room.isSpace) {
-                AvatarType.Space(isTombstoned = room.isTombstoned)
-            } else {
-                AvatarType.Room(
-                    heroes = room.heroes,
-                    isTombstoned = room.isTombstoned,
+        Box {
+            Avatar(
+                avatarData = room.avatarData,
+                avatarType = if (room.isSpace) {
+                    AvatarType.Space(isTombstoned = room.isTombstoned)
+                } else {
+                    AvatarType.Room(
+                        heroes = room.heroes,
+                        isTombstoned = room.isTombstoned,
+                    )
+                },
+                hideImage = hideAvatarImage,
+            )
+            // Only DMs have a single "other user" whose presence is meaningful; null means not
+            // polled yet, so nothing is shown rather than defaulting to an incorrect state.
+            if (room.isDm && room.presence != null) {
+                RedIndicatorAtom(
+                    modifier = Modifier.align(Alignment.BottomEnd),
+                    color = if (room.presence == UserPresence.ONLINE) {
+                        ElementTheme.colors.iconSuccessPrimary
+                    } else {
+                        ElementTheme.colors.iconQuaternary
+                    },
                 )
-            },
-            hideImage = hideAvatarImage,
-        )
+            }
+        }
         Spacer(modifier = Modifier.width(16.dp))
         Column(
             modifier = Modifier.fillMaxWidth(),

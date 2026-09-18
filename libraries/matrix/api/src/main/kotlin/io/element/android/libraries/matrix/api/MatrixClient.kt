@@ -46,6 +46,7 @@ import io.element.android.libraries.matrix.api.sync.SyncService
 import io.element.android.libraries.matrix.api.timeline.Timeline
 import io.element.android.libraries.matrix.api.user.MatrixSearchUserResults
 import io.element.android.libraries.matrix.api.user.MatrixUser
+import io.element.android.libraries.matrix.api.user.UserPresence
 import io.element.android.libraries.matrix.api.user.UserStatus
 import io.element.android.libraries.matrix.api.verification.SessionVerificationService
 import kotlinx.collections.immutable.ImmutableList
@@ -108,6 +109,15 @@ interface MatrixClient {
 
     /** Clears both m.status and m.call profile fields (maps to DELETE on the profile endpoint per MSC4426). */
     suspend fun clearUserStatus(): Result<Unit>
+
+    /**
+     * Fetches [userId]'s current `m.presence` state via `GET /_matrix/client/v3/presence/{userId}/status`.
+     * There is no push/subscription API for this in the SDK, so callers need to poll.
+     */
+    suspend fun getUserPresence(userId: UserId): Result<UserPresence>
+
+    /** Sets this account's own presence, controlling whether other users see it as online. */
+    suspend fun setOwnPresence(presence: UserPresence): Result<Unit>
     suspend fun joinRoom(roomId: RoomId): Result<RoomInfo?>
     suspend fun joinRoomByIdOrAlias(roomIdOrAlias: RoomIdOrAlias, serverNames: List<String>): Result<RoomInfo?>
     suspend fun knockRoom(roomIdOrAlias: RoomIdOrAlias, message: String, serverNames: List<String>): Result<RoomInfo?>

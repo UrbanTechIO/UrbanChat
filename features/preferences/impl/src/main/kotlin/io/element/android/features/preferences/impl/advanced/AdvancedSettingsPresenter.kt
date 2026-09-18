@@ -58,6 +58,9 @@ class AdvancedSettingsPresenter(
         val isSharePresenceEnabled by remember {
             sessionPreferencesStore.isSharePresenceEnabled()
         }.collectAsState(initial = true)
+        val isShowOnlineStatusEnabled by remember {
+            sessionPreferencesStore.isShowOnlineStatusEnabled()
+        }.collectAsState(initial = true)
         val isBlackThemeAllowed by remember {
             featureFlagService.isFeatureEnabledFlow(FeatureFlags.AllowBlackTheme)
         }.collectAsState(initial = false)
@@ -190,6 +193,9 @@ class AdvancedSettingsPresenter(
                 is AdvancedSettingsEvents.SetSharePresenceEnabled -> sessionCoroutineScope.launch {
                     sessionPreferencesStore.setSharePresence(event.enabled)
                 }
+                is AdvancedSettingsEvents.SetShowOnlineStatusEnabled -> sessionCoroutineScope.launch {
+                    sessionPreferencesStore.setShowOnlineStatus(event.enabled)
+                }
                 is AdvancedSettingsEvents.SetCompressMedia -> sessionCoroutineScope.launch {
                     sessionPreferencesStore.setOptimizeImages(event.compress)
                 }
@@ -271,6 +277,7 @@ class AdvancedSettingsPresenter(
         return AdvancedSettingsState(
             isDeveloperModeEnabled = isDeveloperModeEnabled,
             isSharePresenceEnabled = isSharePresenceEnabled,
+            isShowOnlineStatusEnabled = isShowOnlineStatusEnabled,
             mediaOptimizationState = mediaOptimizationState,
             theme = themeOption,
             availableThemeOptions = availableThemeOptions,

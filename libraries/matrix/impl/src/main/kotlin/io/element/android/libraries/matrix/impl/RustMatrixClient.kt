@@ -52,6 +52,7 @@ import io.element.android.libraries.matrix.api.sync.SyncState
 import io.element.android.libraries.matrix.api.user.DisplayedStatus
 import io.element.android.libraries.matrix.api.user.MatrixSearchUserResults
 import io.element.android.libraries.matrix.api.user.MatrixUser
+import io.element.android.libraries.matrix.api.user.UserPresence
 import io.element.android.libraries.matrix.api.user.UserStatus
 import io.element.android.libraries.matrix.impl.encryption.RustEncryptionService
 import io.element.android.libraries.matrix.impl.exception.mapClientException
@@ -134,6 +135,7 @@ import org.matrix.rustcomponents.sdk.IgnoredUsersListener
 import org.matrix.rustcomponents.sdk.Membership
 import org.matrix.rustcomponents.sdk.NotificationProcessSetup
 import org.matrix.rustcomponents.sdk.PowerLevels
+import org.matrix.rustcomponents.sdk.PresenceState
 import org.matrix.rustcomponents.sdk.RoomInfoListener
 import org.matrix.rustcomponents.sdk.SendQueueRoomErrorListener
 import org.matrix.rustcomponents.sdk.TaskHandle
@@ -573,6 +575,47 @@ class RustMatrixClient(
             )
         )
         Result.success(Unit)
+    }
+
+    // There is no FFI binding to read another user's presence (only to set our own), so this
+    // hits the standard Matrix presence endpoint directly, the same way getAuthenticatedUrl()
+    // does: fetch a fresh token from the live session (the SDK owns OAuth refresh) rather than
+    // the possibly-stale copy persisted to SessionStore.
+    override suspend fun getUserPresence(userId: UserId): Result<UserPresence> = withContext(sessionDispatcher) {
+        runCatchingExceptions {
+            val accessToken = innerClient.session().accessToken
+            val encodedUserId = java.net.URLEncoder.encode(userId.value, "UTF-8")
+            val url = "${homeserverUrl.trimEnd('/')}/_matrix/client/v3/presence/$encodedUserId/status"
+            val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+            val responseBody = try {
+                connection.requestMethod = "GET"
+                connection.setRequestProperty("Authorization", "Bearer $accessToken")
+                connection.connectTimeout = 10_000
+                connection.readTimeout = 10_000
+                if (connection.responseCode !in 200..299) {
+                    error("HTTP ${connection.responseCode}")
+                }
+                connection.inputStream.use { it.readBytes() }.decodeToString()
+            } finally {
+                connection.disconnect()
+            }
+            when (Json.parseToJsonElement(responseBody).jsonObject["presence"]?.jsonPrimitive?.contentOrNull) {
+                "online" -> UserPresence.ONLINE
+                "unavailable" -> UserPresence.UNAVAILABLE
+                else -> UserPresence.OFFLINE
+            }
+        }
+    }
+
+    override suspend fun setOwnPresence(presence: UserPresence): Result<Unit> = withContext(sessionDispatcher) {
+        runCatchingExceptions {
+            val sdkPresence = when (presence) {
+                UserPresence.ONLINE -> PresenceState.ONLINE
+                UserPresence.OFFLINE -> PresenceState.OFFLINE
+                UserPresence.UNAVAILABLE -> PresenceState.UNAVAILABLE
+            }
+            innerClient.setPresence(sdkPresence, true)
+        }
     }
 
     override suspend fun joinRoom(roomId: RoomId): Result<RoomInfo?> = withContext(sessionDispatcher) {

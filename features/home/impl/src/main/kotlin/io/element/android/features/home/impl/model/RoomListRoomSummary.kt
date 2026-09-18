@@ -16,6 +16,7 @@ import io.element.android.libraries.matrix.api.core.RoomId
 import io.element.android.libraries.matrix.api.notification.CallIntent
 import io.element.android.libraries.matrix.api.room.RoomNotificationMode
 import io.element.android.libraries.matrix.api.user.DisplayedStatus
+import io.element.android.libraries.matrix.api.user.UserPresence
 import io.element.android.libraries.matrix.ui.model.InviteSender
 import kotlinx.collections.immutable.ImmutableList
 
@@ -44,6 +45,8 @@ data class RoomListRoomSummary(
     val heroes: ImmutableList<AvatarData>,
     val isSpace: Boolean,
     val dmUserStatus: DisplayedStatus?,
+    /** The other user's online status for a DM, polled separately since the SDK doesn't push presence updates. Null until first polled, or for non-DMs. */
+    val presence: UserPresence? = null,
 ) {
     val isHighlighted = userDefinedNotificationMode != RoomNotificationMode.MUTE &&
         (numberOfUnreadNotifications > 0 || numberOfUnreadMentions > 0) ||

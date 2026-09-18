@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 
 class InMemorySessionPreferencesStore(
     isSharePresenceEnabled: Boolean = true,
+    isShowOnlineStatusEnabled: Boolean = true,
     isSendPublicReadReceiptsEnabled: Boolean = true,
     isRenderReadReceiptsEnabled: Boolean = true,
     isSendTypingNotificationsEnabled: Boolean = true,
@@ -27,6 +28,7 @@ class InMemorySessionPreferencesStore(
     lockedChatsAccessCode: String = "",
 ) : SessionPreferencesStore {
     private val isSharePresenceEnabled = MutableStateFlow(isSharePresenceEnabled)
+    private val isShowOnlineStatusEnabled = MutableStateFlow(isShowOnlineStatusEnabled)
     private val isSendPublicReadReceiptsEnabled = MutableStateFlow(isSendPublicReadReceiptsEnabled)
     private val isRenderReadReceiptsEnabled = MutableStateFlow(isRenderReadReceiptsEnabled)
     private val isSendTypingNotificationsEnabled = MutableStateFlow(isSendTypingNotificationsEnabled)
@@ -44,6 +46,12 @@ class InMemorySessionPreferencesStore(
     }
 
     override fun isSharePresenceEnabled(): Flow<Boolean> = isSharePresenceEnabled
+
+    override suspend fun setShowOnlineStatus(enabled: Boolean) {
+        isShowOnlineStatusEnabled.tryEmit(enabled)
+    }
+
+    override fun isShowOnlineStatusEnabled(): Flow<Boolean> = isShowOnlineStatusEnabled
 
     override suspend fun setSendPublicReadReceipts(enabled: Boolean) {
         isSendPublicReadReceiptsEnabled.tryEmit(enabled)

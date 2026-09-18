@@ -50,25 +50,34 @@ import io.element.android.libraries.fullscreenintent.api.FullScreenIntentPermiss
 import io.element.android.libraries.matrix.api.MatrixClient
 import io.element.android.libraries.matrix.api.core.RoomId
 import io.element.android.libraries.matrix.api.encryption.RecoveryState
+import io.element.android.libraries.matrix.api.core.UserId
 import io.element.android.libraries.matrix.api.roomlist.RoomList
 import io.element.android.libraries.matrix.api.roomlist.RoomListFilter
+import io.element.android.libraries.matrix.api.user.UserPresence
 import io.element.android.libraries.matrix.ui.safety.rememberHideInvitesAvatar
 import io.element.android.libraries.preferences.api.store.SessionPreferencesStore
 import io.element.android.libraries.push.api.battery.BatteryOptimizationState
 import io.element.android.services.analytics.api.AnalyticsService
 import io.element.android.services.analytics.api.watchers.AnalyticsColdStartWatcher
 import io.element.android.services.analyticsproviders.api.trackers.captureInteraction
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.takeWhile
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.seconds
 
 @Inject
 class RoomListPresenter(
@@ -102,6 +111,15 @@ class RoomListPresenter(
 
         LaunchedEffect(Unit) {
             roomListDataSource.launchIn(this)
+        }
+
+        // Applies the "Show my online status" setting to the SDK's own presence on startup and
+        // on every change, live - there's no separate hook needed for app-start vs toggling
+        // since collecting the preference flow handles both.
+        LaunchedEffect(Unit) {
+            sessionPreferencesStore.isShowOnlineStatusEnabled().collect { enabled ->
+                client.setOwnPresence(if (enabled) UserPresence.ONLINE else UserPresence.OFFLINE)
+            }
         }
 
         var securityBannerDismissed by rememberSaveable { mutableStateOf(false) }
@@ -247,6 +265,16 @@ class RoomListPresenter(
         val seenRoomInvites by remember { seenInvitesStore.seenRoomIds() }.collectAsState(emptySet())
         val lockedRoomIds by remember { sessionPreferencesStore.lockedRoomIds() }.collectAsState(emptySet())
         val securityBannerState by rememberSecurityBannerState(securityBannerDismissed)
+        val dmUserIds = remember(roomSummaries) {
+            roomSummaries.dataOrNull().orEmpty()
+                .asSequence()
+                .filter { it.isDm }
+                .mapNotNull { it.heroes.firstOrNull()?.id }
+                .distinct()
+                .map(::UserId)
+                .toImmutableList()
+        }
+        val presenceByUserId = rememberUserPresenceByUserId(dmUserIds)
         return when {
             showEmpty -> RoomListContentState.Empty(
                 securityBannerState = securityBannerState,
@@ -263,11 +291,38 @@ class RoomListPresenter(
                     batteryOptimizationState = batteryOptimizationPresenter.present(),
                     summaries = roomSummaries.dataOrNull().orEmpty()
                         .filterNot { lockedRoomIds.contains(it.roomId) }
+                        .map { summary ->
+                            val presence = summary.heroes.firstOrNull()?.id?.let { presenceByUserId[UserId(it)] }
+                            if (presence != null) summary.copy(presence = presence) else summary
+                        }
                         .toImmutableList(),
                     seenRoomInvites = seenRoomInvites.toImmutableSet(),
                 )
             }
         }
+    }
+
+    /**
+     * Polls presence for [userIds] on a fixed interval since the SDK has no push/subscription
+     * API for other users' presence. Restarting on a changed [userIds] list (e.g. the DM set
+     * changed) triggers an immediate poll rather than waiting for the next tick.
+     */
+    @Composable
+    private fun rememberUserPresenceByUserId(userIds: ImmutableList<UserId>): Map<UserId, UserPresence> {
+        var presenceByUserId by remember { mutableStateOf<Map<UserId, UserPresence>>(emptyMap()) }
+        LaunchedEffect(userIds) {
+            if (userIds.isEmpty()) return@LaunchedEffect
+            while (isActive) {
+                val updated = coroutineScope {
+                    userIds.map { userId ->
+                        async { client.getUserPresence(userId).getOrNull()?.let { userId to it } }
+                    }.awaitAll()
+                }.filterNotNull().toMap()
+                presenceByUserId = presenceByUserId + updated
+                delay(50.seconds)
+            }
+        }
+        return presenceByUserId
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)

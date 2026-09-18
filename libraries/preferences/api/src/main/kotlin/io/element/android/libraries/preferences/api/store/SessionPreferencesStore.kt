@@ -22,6 +22,10 @@ interface SessionPreferencesStore {
     suspend fun setSharePresence(enabled: Boolean)
     fun isSharePresenceEnabled(): Flow<Boolean>
 
+    /** Whether other users can see this account as online. Unrelated to [isSharePresenceEnabled] (read receipts/typing). */
+    suspend fun setShowOnlineStatus(enabled: Boolean)
+    fun isShowOnlineStatusEnabled(): Flow<Boolean>
+
     suspend fun setSendPublicReadReceipts(enabled: Boolean)
     fun isSendPublicReadReceiptsEnabled(): Flow<Boolean>
 

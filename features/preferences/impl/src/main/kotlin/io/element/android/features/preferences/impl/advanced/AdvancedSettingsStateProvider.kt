@@ -36,6 +36,7 @@ open class AdvancedSettingsStateProvider : PreviewParameterProvider<AdvancedSett
 fun aAdvancedSettingsState(
     isDeveloperModeEnabled: Boolean = false,
     isSharePresenceEnabled: Boolean = false,
+    isShowOnlineStatusEnabled: Boolean = true,
     mediaOptimizationState: MediaOptimizationState = MediaOptimizationState.AllMedia(isEnabled = false),
     theme: ThemeOption = ThemeOption.System,
     availableThemeOptions: ImmutableList<ThemeOption> = ThemeOption.entries.toImmutableList(),
@@ -50,6 +51,7 @@ fun aAdvancedSettingsState(
 ) = AdvancedSettingsState(
     isDeveloperModeEnabled = isDeveloperModeEnabled,
     isSharePresenceEnabled = isSharePresenceEnabled,
+    isShowOnlineStatusEnabled = isShowOnlineStatusEnabled,
     mediaOptimizationState = mediaOptimizationState,
     theme = theme,
     availableThemeOptions = availableThemeOptions,

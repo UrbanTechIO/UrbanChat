@@ -65,6 +65,7 @@ import io.element.android.libraries.androidutils.throttler.FirstThrottler
 import io.element.android.libraries.designsystem.colors.gradientSubtleColors
 import io.element.android.libraries.designsystem.preview.ElementPreview
 import io.element.android.libraries.designsystem.preview.PreviewsDayNight
+import io.element.android.libraries.designsystem.theme.darken
 import io.element.android.libraries.designsystem.theme.components.FloatingActionButton
 import io.element.android.libraries.designsystem.theme.components.HorizontalFloatingToolbar
 import io.element.android.libraries.designsystem.theme.components.HorizontalFloatingToolbarItem
@@ -352,7 +353,10 @@ private fun HomeScaffold(
  */
 @Composable
 private fun rememberAccentFrostedHazeStyle(opacity: Float): HazeStyle {
-    val accent = ElementTheme.colors.bgAccentRest
+    // Darkened rather than the raw accent color: the accent is tuned to read well as a small
+    // solid button/highlight, not as a bar filling the full width of the screen, where the same
+    // color reads as too bright/saturated.
+    val accent = ElementTheme.colors.bgAccentRest.darken(0.6f)
     return remember(accent, opacity) {
         val tintAlpha = 1f - opacity.coerceIn(0f, 1f) * 0.9f
         HazeDefaults.style(

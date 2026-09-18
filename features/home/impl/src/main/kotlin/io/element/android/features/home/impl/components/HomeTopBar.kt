@@ -165,7 +165,7 @@ fun HomeTopBar(
             ) {
                 RoomListFiltersView(
                     state = filtersState,
-                    modifier = Modifier.padding(bottom = 16.dp).padding(contentPadding)
+                    modifier = Modifier.padding(top = 8.dp, bottom = 16.dp).padding(contentPadding)
                 )
             }
         }

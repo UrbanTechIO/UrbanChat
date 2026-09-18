@@ -170,7 +170,7 @@ private fun RoomListFilterView(
     modifier: Modifier = Modifier
 ) {
     val background = animateColorAsState(
-        targetValue = if (selected) ElementTheme.colors.bgActionPrimaryRest else ElementTheme.colors.bgCanvasDefault,
+        targetValue = if (selected) ElementTheme.colors.bgActionPrimaryRest else ElementTheme.colors.bgSubtlePrimary,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
         label = "chip background colour",
     )

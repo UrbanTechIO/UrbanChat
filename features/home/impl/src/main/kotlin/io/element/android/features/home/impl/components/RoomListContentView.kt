@@ -237,6 +237,10 @@ private fun RoomsViewList(
         contentPadding = contentPadding,
     ) {
         var hasPrecedingContent = false
+        // The very first section header in the list never gets a divider, even if a banner or
+        // invite precedes it: that divider only makes sense between two sections further down,
+        // not right under the top bar.
+        var isFirstSectionHeader = true
         when (state.securityBannerState) {
             SecurityBannerState.SetUpRecovery -> {
                 item {
@@ -309,9 +313,10 @@ private fun RoomsViewList(
             item {
                 ListSectionHeader(
                     title = stringResource(R.string.screen_roomlist_section_chats),
-                    hasDivider = hasPrecedingContent,
+                    hasDivider = hasPrecedingContent && !isFirstSectionHeader,
                 )
             }
+            isFirstSectionHeader = false
             itemsIndexed(
                 items = directRooms,
                 contentType = { _, room -> room.contentType() },
@@ -335,9 +340,10 @@ private fun RoomsViewList(
             item {
                 ListSectionHeader(
                     title = stringResource(R.string.screen_roomlist_section_groups),
-                    hasDivider = hasPrecedingContent,
+                    hasDivider = hasPrecedingContent && !isFirstSectionHeader,
                 )
             }
+            isFirstSectionHeader = false
             itemsIndexed(
                 items = groupRooms,
                 contentType = { _, room -> room.contentType() },

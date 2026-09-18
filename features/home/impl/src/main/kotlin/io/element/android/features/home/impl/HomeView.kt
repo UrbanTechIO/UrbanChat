@@ -309,6 +309,12 @@ private fun HomeScaffold(
                             modifier = Modifier
                                 .padding(outerPadding)
                                 .consumeWindowInsets(outerPadding)
+                                // Repaints the same gradient the outer Box already shows through here,
+                                // but as part of this composable's own subtree: Haze only picks up
+                                // colors actually drawn within the hazeSource composable, so without
+                                // this the blur behind the top bar only ever sees the list's mostly
+                                // dark rows, never the accent-tinted gradient itself.
+                                .background(pageBackgroundBrush)
                                 .hazeSource(state = hazeState)
                         )
                         SpaceFiltersView(roomListState.spaceFiltersState)
@@ -319,6 +325,7 @@ private fun HomeScaffold(
                                 .fillMaxSize()
                                 .padding(outerPadding)
                                 .consumeWindowInsets(outerPadding)
+                                .background(pageBackgroundBrush)
                                 .hazeSource(state = hazeState),
                             contentPadding = lazyColumnContentPadding + contentPadding,
                             state = state.homeSpacesState,

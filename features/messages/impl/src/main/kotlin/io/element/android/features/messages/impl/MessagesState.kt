@@ -30,6 +30,7 @@ import io.element.android.libraries.matrix.api.core.RoomId
 import io.element.android.libraries.matrix.api.encryption.identity.IdentityState
 import io.element.android.libraries.matrix.api.room.tombstone.SuccessorRoom
 import io.element.android.libraries.matrix.api.user.DisplayedStatus
+import io.element.android.libraries.matrix.api.user.UserPresence
 import kotlinx.collections.immutable.ImmutableList
 
 data class MessagesState(
@@ -57,6 +58,8 @@ data class MessagesState(
     val pinnedMessagesBannerState: PinnedMessagesBannerState,
     val dmUserVerificationState: IdentityState?,
     val dmUserStatus: DisplayedStatus?,
+    /** Null for non-DMs, or before the first poll completes (there's no push API for this). */
+    val dmUserPresence: UserPresence?,
     val roomMemberModerationState: RoomMemberModerationState,
     /** Type of "shared history" icon to show in the top bar. */
     val topBarSharedHistoryIcon: SharedHistoryIcon,

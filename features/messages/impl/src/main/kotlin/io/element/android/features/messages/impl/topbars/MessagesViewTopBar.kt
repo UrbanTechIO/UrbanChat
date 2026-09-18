@@ -10,6 +10,7 @@ package io.element.android.features.messages.impl.topbars
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -40,6 +41,7 @@ import io.element.android.features.messages.impl.SharedHistoryIcon
 import io.element.android.features.roomcall.api.RoomCallState
 import io.element.android.features.roomcall.api.aStandByCallState
 import io.element.android.features.roomcall.api.anOngoingCallState
+import io.element.android.libraries.designsystem.atomic.atoms.RedIndicatorAtom
 import io.element.android.libraries.designsystem.components.avatar.Avatar
 import io.element.android.libraries.designsystem.components.avatar.AvatarData
 import io.element.android.libraries.designsystem.components.avatar.AvatarSize
@@ -54,6 +56,7 @@ import io.element.android.libraries.designsystem.theme.components.Icon
 import io.element.android.libraries.designsystem.theme.components.TopAppBar
 import io.element.android.libraries.matrix.api.encryption.identity.IdentityState
 import io.element.android.libraries.matrix.api.user.DisplayedStatus
+import io.element.android.libraries.matrix.api.user.UserPresence
 import io.element.android.libraries.matrix.ui.components.DisplayNameWithStatus
 import io.element.android.libraries.matrix.ui.components.aMatrixUserList
 import io.element.android.libraries.matrix.ui.model.getAvatarData
@@ -72,6 +75,7 @@ internal fun MessagesViewTopBar(
     dmUserIdentityState: IdentityState?,
     sharedHistoryIcon: SharedHistoryIcon,
     dmUserStatus: DisplayedStatus?,
+    dmUserPresence: UserPresence?,
     onRoomDetailsClick: () -> Unit,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -105,6 +109,7 @@ internal fun MessagesViewTopBar(
                     isTombstoned = isTombstoned,
                     heroes = heroes,
                     dmUserStatus = dmUserStatus,
+                    dmUserPresence = dmUserPresence,
                     modifier = titleModifier
                 )
 
@@ -159,19 +164,33 @@ private fun RoomAvatarAndNameRow(
     heroes: ImmutableList<AvatarData>,
     isTombstoned: Boolean,
     dmUserStatus: DisplayedStatus?,
+    dmUserPresence: UserPresence?,
     modifier: Modifier = Modifier
 ) {
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Avatar(
-            avatarData = roomAvatar,
-            avatarType = AvatarType.Room(
-                heroes = heroes,
-                isTombstoned = isTombstoned,
-            ),
-        )
+        Box {
+            Avatar(
+                avatarData = roomAvatar,
+                avatarType = AvatarType.Room(
+                    heroes = heroes,
+                    isTombstoned = isTombstoned,
+                ),
+            )
+            // Null for group rooms (no single "other user") or before the first poll completes.
+            if (dmUserPresence != null) {
+                RedIndicatorAtom(
+                    modifier = Modifier.align(Alignment.BottomEnd),
+                    color = if (dmUserPresence == UserPresence.ONLINE) {
+                        ElementTheme.colors.iconSuccessPrimary
+                    } else {
+                        ElementTheme.colors.iconQuaternary
+                    },
+                )
+            }
+        }
         DisplayNameWithStatus(
             name = roomName ?: stringResource(CommonStrings.common_no_room_name),
             status = dmUserStatus,
@@ -199,6 +218,7 @@ internal fun MessagesViewTopBarPreview() = ElementPreview {
         dmUserIdentityState: IdentityState? = null,
         sharedHistoryIcon: SharedHistoryIcon = SharedHistoryIcon.NONE,
         dmUserStatus: DisplayedStatus? = null,
+        dmUserPresence: UserPresence? = null,
         displayThreads: Boolean = false,
     ) = MessagesViewTopBar(
         roomName = roomName,
@@ -208,6 +228,7 @@ internal fun MessagesViewTopBarPreview() = ElementPreview {
         dmUserIdentityState = dmUserIdentityState,
         sharedHistoryIcon = sharedHistoryIcon,
         dmUserStatus = dmUserStatus,
+        dmUserPresence = dmUserPresence,
         onRoomDetailsClick = {},
         onBackClick = {},
         menuActions = {

@@ -290,6 +290,7 @@ fun MessagesView(
                             dmUserIdentityState = state.dmUserVerificationState,
                             sharedHistoryIcon = state.topBarSharedHistoryIcon,
                             dmUserStatus = state.dmUserStatus,
+                            dmUserPresence = state.dmUserPresence,
                             onBackClick = { hidingKeyboard { onBackClick() } },
                             onRoomDetailsClick = { hidingKeyboard { onRoomDetailsClick() } },
                             modifier = topBarModifier,

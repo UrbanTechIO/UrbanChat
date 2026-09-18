@@ -55,6 +55,7 @@ import io.element.android.libraries.matrix.api.encryption.identity.IdentityState
 import io.element.android.libraries.matrix.api.room.tombstone.SuccessorRoom
 import io.element.android.libraries.matrix.api.timeline.Timeline
 import io.element.android.libraries.matrix.api.user.DisplayedStatus
+import io.element.android.libraries.matrix.api.user.UserPresence
 import io.element.android.libraries.textcomposer.model.MessageComposerMode
 import io.element.android.libraries.textcomposer.model.aTextEditorStateMarkdown
 import io.element.android.libraries.textcomposer.model.aTextEditorStateRich
@@ -134,6 +135,7 @@ fun aMessagesState(
     ),
     isCurrentlySharingLiveLocationInRoom: Boolean = false,
     dmUserStatus: DisplayedStatus? = null,
+    dmUserPresence: UserPresence? = null,
     eventSink: (MessagesEvent) -> Unit = {},
 ) = MessagesState(
     roomId = RoomId("!id:domain"),
@@ -192,6 +194,7 @@ fun aMessagesState(
     outgoingBubbleColorHex = null,
     incomingBubbleColorHex = null,
     dmUserStatus = dmUserStatus,
+    dmUserPresence = dmUserPresence,
     eventSink = eventSink,
 )
 

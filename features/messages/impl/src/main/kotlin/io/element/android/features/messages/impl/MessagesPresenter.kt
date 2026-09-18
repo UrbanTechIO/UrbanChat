@@ -74,6 +74,7 @@ import io.element.android.libraries.di.annotations.SessionCoroutineScope
 import io.element.android.libraries.emoji.api.recentemojis.AddRecentEmoji
 import io.element.android.libraries.featureflag.api.FeatureFlagService
 import io.element.android.libraries.featureflag.api.FeatureFlags
+import io.element.android.libraries.matrix.api.MatrixClient
 import io.element.android.libraries.matrix.api.core.toThreadId
 import io.element.android.libraries.matrix.api.encryption.EncryptionService
 import io.element.android.libraries.matrix.api.encryption.identity.IdentityState
@@ -84,6 +85,7 @@ import io.element.android.libraries.matrix.api.room.RoomMembersState
 import io.element.android.libraries.matrix.api.room.history.RoomHistoryVisibility
 import io.element.android.libraries.matrix.api.room.powerlevels.permissionsAsState
 import io.element.android.libraries.matrix.api.timeline.Timeline
+import io.element.android.libraries.matrix.api.user.UserPresence
 import io.element.android.libraries.preferences.api.store.AppPreferencesStore
 import io.element.android.libraries.matrix.api.timeline.item.event.EventOrTransactionId
 import io.element.android.libraries.matrix.ui.messages.reply.map
@@ -96,10 +98,13 @@ import io.element.android.services.analytics.api.AnalyticsService
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.time.Duration.Companion.seconds
 import timber.log.Timber
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -107,6 +112,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 class MessagesPresenter(
     @Assisted private val navigator: MessagesNavigator,
     private val room: JoinedRoom,
+    private val client: MatrixClient,
     @Assisted private val composerPresenter: Presenter<MessageComposerState>,
     voiceMessageComposerPresenterFactory: DefaultVoiceMessageComposerPresenter.Factory,
     @Assisted private val timelinePresenter: Presenter<TimelineState>,
@@ -268,6 +274,18 @@ class MessagesPresenter(
         val dmRoomMember by room.getDirectRoomMember(membersState)
         val roomMemberIdentityStateChanges = identityChangeState.roomMemberIdentityStateChanges
 
+        // Polled rather than pushed since the SDK has no subscription API for other users'
+        // presence (see RoomListPresenter's equivalent for the room list). Null for non-DMs,
+        // since dmRoomMember is only non-null there.
+        var dmUserPresence by remember { mutableStateOf<UserPresence?>(null) }
+        LaunchedEffect(dmRoomMember?.userId) {
+            val userId = dmRoomMember?.userId ?: return@LaunchedEffect
+            while (isActive) {
+                client.getUserPresence(userId).getOrNull()?.let { dmUserPresence = it }
+                delay(50.seconds)
+            }
+        }
+
         // The top bar should show a "history" icon if:
         //   * The room is encrypted, and:
         //   * The room's history_visibility allows future users to see content.
@@ -367,6 +385,7 @@ class MessagesPresenter(
             pinnedMessagesBannerState = pinnedMessagesBannerState,
             dmUserVerificationState = dmUserVerificationState,
             dmUserStatus = roomInfo.dmUserStatus(),
+            dmUserPresence = dmUserPresence,
             roomMemberModerationState = roomMemberModerationState,
             topBarSharedHistoryIcon = topBarSharedHistoryIcon,
             successorRoom = roomInfo.successorRoom,

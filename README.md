@@ -1,34 +1,25 @@
-[![Latest build](https://github.com/element-hq/element-x-android/actions/workflows/build.yml/badge.svg?query=branch%3Adevelop)](https://github.com/element-hq/element-x-android/actions/workflows/build.yml?query=branch%3Adevelop)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=element-x-android&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=element-x-android)
-[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=element-x-android&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=element-x-android)
-[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=element-x-android&metric=bugs)](https://sonarcloud.io/summary/new_code?id=element-x-android)
-[![codecov](https://codecov.io/github/element-hq/element-x-android/branch/develop/graph/badge.svg?token=ecwvia7amV)](https://codecov.io/github/element-hq/element-x-android)
-[![Element X Android Matrix room #element-x-android:matrix.org](https://img.shields.io/matrix/element-x-android:matrix.org.svg?label=%23element-x-android:matrix.org&logo=matrix&server_fqdn=matrix.org)](https://matrix.to/#/#element-x-android:matrix.org)
-[![Localazy](https://img.shields.io/endpoint?url=https%3A%2F%2Fconnect.localazy.com%2Fstatus%2Felement%2Fdata%3Fcontent%3Dall%26title%3Dlocalazy%26logo%3Dtrue)](https://localazy.com/p/element)
+# UrbanChat
 
-# Element X Android
-
-Element X Android is the next-generation [Matrix](https://matrix.org/) client provided by [Element](https://element.io/).
-
-Compared to the previous-generation [Element Classic](https://github.com/element-hq/element-android), the application is a total rewrite, using the [Matrix Rust SDK](https://github.com/matrix-org/matrix-rust-sdk) underneath and targeting devices running Android 7+. The UI layer is written using [Jetpack Compose](https://developer.android.com/jetpack/compose), and the navigation is managed using [Appyx](https://github.com/bumble-tech/appyx).
-
-[<img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="80">](https://play.google.com/store/apps/details?id=io.element.android.x)[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="80">](https://f-droid.org/packages/io.element.android.x)
+UrbanChat is a private [Matrix](https://matrix.org/) client for Android, built on top of [Element X](https://github.com/element-hq/element-x-android). It uses the [Matrix Rust SDK](https://github.com/matrix-org/matrix-rust-sdk) underneath, targets devices running Android 7+, and is written using [Jetpack Compose](https://developer.android.com/jetpack/compose) with navigation managed by [Appyx](https://github.com/bumble-tech/appyx).
 
 ## Table of contents
 
 <!--- TOC -->
 
+* [Acknowledgements](#acknowledgements)
 * [Screenshots](#screenshots)
-* [Translations](#translations)
 * [Rust SDK](#rust-sdk)
-* [Status](#status)
 * [Minimum SDK version](#minimum-sdk-version)
-* [Contributing](#contributing)
 * [Build instructions](#build-instructions)
-* [Support](#support)
 * [Copyright and License](#copyright-and-license)
 
 <!--- END -->
+
+## Acknowledgements
+
+UrbanChat is a fork of [Element X Android](https://github.com/element-hq/element-x-android), built and maintained privately by [UrbanTechIO](https://github.com/UrbanTechIO). Enormous credit and thanks go to [Element](https://element.io/) and [New Vector Ltd](https://element.io/) for building and open-sourcing the original client this project is based on — including its architecture, the Compound design system, and its integration with the Matrix Rust SDK. UrbanChat exists to customize that foundation for private, personal use, not to compete with or replace it.
+
+If you're looking for the official, publicly supported Matrix client, please use [Element X](https://github.com/element-hq/element-x-android) directly.
 
 ## Screenshots
 
@@ -52,55 +43,27 @@ adb shell am broadcast -a com.android.systemui.demo -e command exit
 |-|-|-|-|
 |<img src="./docs/images-lfs/screen_1_dark.png" width="280" />|<img src="./docs/images-lfs/screen_2_dark.png" width="280" />|<img src="./docs/images-lfs/screen_3_dark.png" width="280" />|<img src="./docs/images-lfs/screen_4_dark.png" width="280" />|
 
-## Translations
-
-Element X Android supports many languages. You can help us to translate the app in your language by joining our [Localazy project](https://localazy.com/p/element). You can also help us to improve the existing translations.
-
-Note that for now, we keep control on the French and German translations.
-
-Translations can be checked screen per screen using our tool Element X Android Gallery, available at https://element-hq.github.io/element-x-android/. Note that this page is updated every Tuesday.
-
-More instructions about translating the application can be found at [CONTRIBUTING.md](CONTRIBUTING.md#strings).
-
 ## Rust SDK
 
-Element X leverages the [Matrix Rust SDK](https://github.com/matrix-org/matrix-rust-sdk) through an FFI layer that the final client can directly import and use.
-
-We're doing this as a way to share code between platforms and while we've seen promising results it's still in the experimental stage and bound to change.
-
-## Status
-
-This project is actively developed and supported. New users are recommended to use Element X instead of the previous-generation app.
+UrbanChat leverages the [Matrix Rust SDK](https://github.com/matrix-org/matrix-rust-sdk) through an FFI layer that the client directly imports and uses, the same way Element X does.
 
 ## Minimum SDK version
 
-Element X Android requires a minimum SDK version of 24 (Android 7.0, Nougat). We aim to support devices running Android 7.0 and above, which covers a wide range of devices still in use today.
-
-Element Android Enterprise requires a minimum SDK version of 33 (Android 13, Tiramisu). For Element Enterprise, we support only devices that still receive security updates, which means devices running Android 13 and above. Android does not have a documented support policy, but some information can be found at [https://endoflife.date/android](https://endoflife.date/android).
-
-## Contributing
-
-Want to get actively involved in the project? You're more than welcome! A good way to start is to check the issues that are labelled with the [good first issue](https://github.com/element-hq/element-x-android/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) label. Let us know by commenting the issue that you're starting working on it.
-
-But first make sure to read our [contribution guide](CONTRIBUTING.md) first.
-
-You can also come chat with the community in the Matrix [room](https://matrix.to/#/#element-x-android:matrix.org) dedicated to the project.
+UrbanChat requires a minimum SDK version of 24 (Android 7.0, Nougat).
 
 ## Build instructions
 
 Just clone the project and open it in Android Studio. Make sure to select the
-`app` configuration when building (as we also have sample apps in the project).
+`app` configuration when building (as there are also sample apps in the project).
 
 To build against a local copy of the Rust SDK, see the [Developer
 onboarding](docs/_developer_onboarding.md#building-the-sdk-locally) instructions.
 
-## Support
-
-When you are experiencing an issue on Element X Android, please first search in [GitHub issues](https://github.com/element-hq/element-x-android/issues)
-and then in [#element-x-android:matrix.org](https://matrix.to/#/#element-x-android:matrix.org).
-If after your research you still have a question, ask at [#element-x-android:matrix.org](https://matrix.to/#/#element-x-android:matrix.org). Otherwise feel free to create a GitHub issue if you encounter a bug or a crash, by explaining clearly in detail what happened. You can also perform bug reporting from the application settings. This is especially recommended when you encounter a crash.
-
 ## Copyright and License
+
+Copyright (c) 2026 UrbanTechIO.
+
+UrbanChat is a derivative work of Element X Android:
 
 Copyright (c) 2025 Element Creations Ltd.
 Copyright (c) 2022 - 2025 New Vector Ltd.

@@ -346,13 +346,13 @@ private fun HomeScaffold(
 }
 
 /**
- * Frosted-glass haze style for the room list's top bar. Matches the chat timeline's equivalent
- * (`rememberFrostedHazeStyle` in MessagesView.kt) exactly, using the neutral background color
- * rather than the accent color, for a consistent look between the two top bars.
+ * Frosted-glass haze style for the room list's top bar. Same blur/noise mechanism as the chat
+ * timeline's equivalent (`rememberFrostedHazeStyle` in MessagesView.kt), but tinted with the
+ * user's accent theme color instead of a neutral background color, per their theme color setting.
  */
 @Composable
 private fun rememberAccentFrostedHazeStyle(opacity: Float): HazeStyle {
-    val accent = ElementTheme.colors.bgCanvasDefault
+    val accent = ElementTheme.colors.bgAccentRest
     return remember(accent, opacity) {
         val tintAlpha = 1f - opacity.coerceIn(0f, 1f) * 0.9f
         HazeDefaults.style(

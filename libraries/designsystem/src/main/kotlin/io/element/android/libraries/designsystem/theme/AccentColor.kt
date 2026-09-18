@@ -59,11 +59,16 @@ fun SemanticColors.withAccent(accent: Color): SemanticColors {
         // background too) from Compound's fixed brand green to the user's chosen accent. Plain
         // alpha fade-out works the same over both light and dark canvases, unlike the upstream
         // tokens which use differently-shaded opaque colors per theme for the same visual effect.
-        gradientSubtleStop1 = accent.copy(alpha = 0.65f),
-        gradientSubtleStop2 = accent.copy(alpha = 0.50f),
-        gradientSubtleStop3 = accent.copy(alpha = 0.35f),
-        gradientSubtleStop4 = accent.copy(alpha = 0.22f),
-        gradientSubtleStop5 = accent.copy(alpha = 0.10f),
+        // Stop1 is kept near-opaque (unlike a plain subtle wash) because it also doubles as the
+        // color Haze blurs behind the home top bar's frosted glass: the neutral tint used there
+        // (matching MessagesView's chat-timeline frosted style) only lets a lightly-tinted source
+        // show through as color, so the source itself needs to be vivid, similar to how the chat
+        // timeline's own colorful wallpaper image reads through the same tint.
+        gradientSubtleStop1 = accent.copy(alpha = 0.90f),
+        gradientSubtleStop2 = accent.copy(alpha = 0.70f),
+        gradientSubtleStop3 = accent.copy(alpha = 0.50f),
+        gradientSubtleStop4 = accent.copy(alpha = 0.30f),
+        gradientSubtleStop5 = accent.copy(alpha = 0.12f),
         gradientSubtleStop6 = accent.copy(alpha = 0f),
     )
 }

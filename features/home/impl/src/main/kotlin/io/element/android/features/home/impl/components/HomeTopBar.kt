@@ -101,64 +101,64 @@ fun HomeTopBar(
 ) {
     val contentPadding = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal).asPaddingValues()
     Column {
-        // The solid/frosted background only wraps the app bar row here, not the filters row
-        // below: the filters row stays transparent so it shows the page's own gradient
+        // Applied directly to the app bar (not wrapped in an extra Box) to match how
+        // MessagesViewTopBar applies its own hazeEffect modifier directly - Haze's blur didn't
+        // render through an extra wrapping Box, it only ever showed its flat fallback color.
+        // The filters row below stays transparent so it shows the page's own gradient
         // background through it instead of matching the app bar's tint.
-        Box(modifier = modifier) {
-            TopAppBar(
-                modifier = Modifier
-                    .statusBarsPadding()
-                    .padding(contentPadding),
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    scrolledContainerColor = Color.Transparent,
-                ),
-                title = {
-                    val displayTitle = when (selectedNavigationItem) {
-                        HomeNavigationBarItem.Chats -> {
-                            when (spaceFiltersState) {
-                                is SpaceFiltersState.Selected -> spaceFiltersState.selectedFilter.spaceRoom.displayName
-                                else -> stringResource(selectedNavigationItem.labelRes)
-                            }
+        TopAppBar(
+            modifier = modifier
+                .statusBarsPadding()
+                .padding(contentPadding),
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.Transparent,
+                scrolledContainerColor = Color.Transparent,
+            ),
+            title = {
+                val displayTitle = when (selectedNavigationItem) {
+                    HomeNavigationBarItem.Chats -> {
+                        when (spaceFiltersState) {
+                            is SpaceFiltersState.Selected -> spaceFiltersState.selectedFilter.spaceRoom.displayName
+                            else -> stringResource(selectedNavigationItem.labelRes)
                         }
-                        HomeNavigationBarItem.Spaces -> stringResource(selectedNavigationItem.labelRes)
                     }
-                    Text(
-                        modifier = Modifier.semantics {
-                            heading()
-                        },
-                        style = ElementTheme.typography.aliasScreenTitle,
-                        text = displayTitle,
+                    HomeNavigationBarItem.Spaces -> stringResource(selectedNavigationItem.labelRes)
+                }
+                Text(
+                    modifier = Modifier.semantics {
+                        heading()
+                    },
+                    style = ElementTheme.typography.aliasScreenTitle,
+                    text = displayTitle,
+                )
+            },
+            navigationIcon = {
+                NavigationIcon(
+                    currentUserAndNeighbors = currentUserAndNeighbors,
+                    showAvatarIndicator = showAvatarIndicator,
+                    onAccountSwitch = onAccountSwitch,
+                    onClick = onOpenSettings,
+                )
+            },
+            actions = {
+                if (selectedNavigationItem == HomeNavigationBarItem.Chats) {
+                    RoomListMenuItems(
+                        onToggleSearch = onToggleSearch,
+                        onMenuActionClick = onMenuActionClick,
+                        canReportBug = canReportBug,
+                        spaceFiltersState = spaceFiltersState,
                     )
-                },
-                navigationIcon = {
-                    NavigationIcon(
-                        currentUserAndNeighbors = currentUserAndNeighbors,
-                        showAvatarIndicator = showAvatarIndicator,
-                        onAccountSwitch = onAccountSwitch,
-                        onClick = onOpenSettings,
-                    )
-                },
-                actions = {
-                    if (selectedNavigationItem == HomeNavigationBarItem.Chats) {
-                        RoomListMenuItems(
-                            onToggleSearch = onToggleSearch,
-                            onMenuActionClick = onMenuActionClick,
-                            canReportBug = canReportBug,
-                            spaceFiltersState = spaceFiltersState,
-                        )
-                    }
-                },
-                // We want a 16dp left padding for the navigationIcon :
-                // 4dp from default TopAppBarHorizontalPadding
-                // 8dp from AccountIcon default padding (because of IconButton)
-                // 4dp extra padding using left insets
-                windowInsets = WindowInsets(left = 4.dp),
-            )
-        }
+                }
+            },
+            // We want a 16dp left padding for the navigationIcon :
+            // 4dp from default TopAppBarHorizontalPadding
+            // 8dp from AccountIcon default padding (because of IconButton)
+            // 4dp extra padding using left insets
+            windowInsets = WindowInsets(left = 4.dp),
+        )
         if (displayFilters) {
             // Transparent: shows the page's own gradient background through the filters row
-            // instead of matching the app bar's tint (see the Box above).
+            // instead of matching the app bar's tint above.
             TopAppBarScrollBehaviorLayout(
                 scrollBehavior = scrollBehavior,
                 backgroundColor = Color.Transparent,

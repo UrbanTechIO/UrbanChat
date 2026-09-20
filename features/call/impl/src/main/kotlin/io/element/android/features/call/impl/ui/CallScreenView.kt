@@ -9,6 +9,7 @@
 package io.element.android.features.call.impl.ui
 
 import android.annotation.SuppressLint
+import android.media.AudioDeviceInfo
 import android.view.ViewGroup
 import android.webkit.ConsoleMessage
 import android.webkit.JavascriptInterface
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,6 +55,7 @@ import io.element.android.libraries.designsystem.preview.ElementPreview
 import io.element.android.libraries.designsystem.preview.PreviewsDayNight
 import io.element.android.libraries.designsystem.theme.components.Text
 import io.element.android.libraries.ui.strings.CommonStrings
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import timber.log.Timber
 
@@ -177,6 +180,21 @@ internal fun CallScreenView(
 
             val audioOptions by (webViewAudioManager?.availableDevices ?: remember { MutableStateFlow(emptyList()) }).collectAsState()
             val selectedAudioId by (webViewAudioManager?.selectedDeviceId ?: remember { MutableStateFlow(null) }).collectAsState()
+            // Keep Element Call's speaker button (icon and colours) in sync with the real output.
+            val selectedAudioType = audioOptions.find { it.id == selectedAudioId }?.type
+            LaunchedEffect(selectedAudioType, callWebView) {
+                val kind = when (selectedAudioType) {
+                    null -> return@LaunchedEffect
+                    AudioDeviceInfo.TYPE_BUILTIN_EARPIECE -> "earpiece"
+                    AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> "speaker"
+                    else -> "headset"
+                }
+                // Re-applied periodically because the script may not be installed yet when the output is first known.
+                while (true) {
+                    callWebView?.evaluateJavascript("window.__audioIcon && window.__audioIcon('$kind');", null)
+                    delay(2_000)
+                }
+            }
             if (showAudioSheet) {
                 CallAudioOutputSheet(
                     options = audioOptions,

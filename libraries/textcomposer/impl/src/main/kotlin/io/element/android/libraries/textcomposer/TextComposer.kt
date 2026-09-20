@@ -11,8 +11,12 @@ package io.element.android.libraries.textcomposer
 import android.content.res.Configuration
 import android.net.Uri
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -51,7 +55,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerInputScope
@@ -117,6 +121,7 @@ import io.element.android.wysiwyg.compose.RichTextEditor
 import io.element.android.wysiwyg.display.TextDisplay
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import uniffi.wysiwyg_composer.MenuAction
@@ -260,6 +265,7 @@ fun TextComposer(
     LaunchedEffect(voiceMessageState) {
         if (voiceMessageState is VoiceMessageState.Idle) {
             isRecordingLocked = false
+            pendingAutoSendAfterStop = false
         }
     }
     val latestOnSendVoiceMessage by rememberUpdatedState(onSendVoiceMessage)
@@ -301,15 +307,19 @@ fun TextComposer(
                             )
                         }
                     )
+                    // Hands-free (locked) recording: Send is available right away, so the user doesn't
+                    // need a separate stop step; delete is the existing button on the left.
                     is VoiceMessageState.Recording -> EndButtonParams(
-                        endButtonContentDescriptionResId = CommonStrings.a11y_voice_message_stop_recording,
+                        endButtonContentDescriptionResId = CommonStrings.action_send_voice_message,
                         endButtonClick = {
                             performHapticFeedback()
+                            pendingAutoSendAfterStop = true
                             onVoiceRecorderEvent.invoke(VoiceMessageRecorderEvent.Stop)
                         },
                         endButtonContent = @Composable {
-                            VoiceMessageRecorderButtonIcon(
-                                isRecording = true,
+                            SendButtonIcon(
+                                canSendMessage = true,
+                                isEditing = composerMode.isEditing,
                             )
                         }
                     )
@@ -547,6 +557,17 @@ private fun StandardLayout(
     onVoiceRecordGestureRelease: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Delete animation: the preview bar rises and fades out before the delete is actually dispatched.
+    val deleteScope = rememberCoroutineScope()
+    var isDeletingPreview by remember { mutableStateOf(false) }
+    LaunchedEffect(voiceMessageState) {
+        if (voiceMessageState is VoiceMessageState.Idle) isDeletingPreview = false
+    }
+    val deleteProgress by animateFloatAsState(
+        targetValue = if (isDeletingPreview) 1f else 0f,
+        animationSpec = tween(durationMillis = DELETE_ANIMATION_MS, easing = FastOutSlowInEasing),
+        label = "voiceDeleteProgress",
+    )
     Column(modifier = modifier) {
         if (isRoomEncrypted == false) {
             Spacer(Modifier.height(16.dp))
@@ -573,8 +594,12 @@ private fun StandardLayout(
                                 onAddAttachment()
                             } else {
                                 when (voiceMessageState) {
-                                    is VoiceMessageState.Preview -> if (!voiceMessageState.isSending) {
-                                        onDeleteVoiceMessage()
+                                    is VoiceMessageState.Preview -> if (!voiceMessageState.isSending && !isDeletingPreview) {
+                                        isDeletingPreview = true
+                                        deleteScope.launch {
+                                            delay(DELETE_ANIMATION_MS.toLong())
+                                            onDeleteVoiceMessage()
+                                        }
                                     }
                                     is VoiceMessageState.Recording ->
                                         onVoiceRecorderEvent(VoiceMessageRecorderEvent.Cancel)
@@ -604,6 +629,10 @@ private fun StandardLayout(
                 modifier = Modifier
                     .padding(bottom = 8.dp, top = 8.dp)
                     .weight(1f)
+                    .graphicsLayer {
+                        translationY = -48.dp.toPx() * deleteProgress
+                        alpha = 1f - deleteProgress
+                    }
             ) {
                 val movableVoiceRecording = remember { movableContentOf { voiceRecording() } }
                 if (voiceMessageState is VoiceMessageState.Idle) {
@@ -623,6 +652,11 @@ private fun StandardLayout(
             // To avoid loosing keyboard focus, the IconButton has to be defined here and has to be always enabled.
             val endButtonContentDescription = stringResource(endButtonParams.endButtonContentDescriptionResId)
             val recordAccentColor = ElementTheme.colors.bgActionPrimaryRest
+            val holdVisual by animateFloatAsState(
+                targetValue = if (isHoldingMicUnlocked) 1f else 0f,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                label = "micHoldVisual",
+            )
             val pulseTransition = rememberInfiniteTransition(label = "micHoldPulse")
             val pulseProgress by pulseTransition.animateFloat(
                 initialValue = 0f,
@@ -642,36 +676,43 @@ private fun StandardLayout(
                         onClick(null, null)
                     }
                     .drawBehind {
-                        if (!isHoldingMicUnlocked) return@drawBehind
-                        // Pulsing ring: grows outward from the button and fades out, looping while held.
+                        if (holdVisual <= 0.01f) return@drawBehind
                         val baseRadius = size.minDimension / 2f
+                        // Springy "grow" halo behind the mic as soon as the hold is confirmed.
+                        drawCircle(
+                            color = recordAccentColor,
+                            radius = baseRadius * (1f + 0.3f * holdVisual),
+                            alpha = 0.28f * holdVisual,
+                            center = center,
+                        )
+                        // Pulsing ring: grows outward from the button and fades out, looping while held.
                         val ringRadius = baseRadius + baseRadius * 1.4f * pulseProgress
                         drawCircle(
                             color = recordAccentColor,
                             radius = ringRadius,
-                            alpha = (1f - pulseProgress) * 0.3f,
+                            alpha = (1f - pulseProgress) * 0.3f * holdVisual,
                             center = center,
                         )
-                        // Upward trail while dragging towards the lock threshold: a few short ticks
-                        // that climb higher and fade out the further the drag progresses.
-                        val dragProgress = (-micDragOffsetPx / VOICE_MESSAGE_LOCK_DRAG_THRESHOLD.toPx()).coerceIn(0f, 1f)
-                        if (dragProgress > 0f) {
-                            val tickCount = 3
-                            repeat(tickCount) { index ->
-                                val tickProgress = (dragProgress - index * 0.2f).coerceIn(0f, 1f)
-                                if (tickProgress <= 0f) return@repeat
-                                val yOffset = -baseRadius * (1.3f + index * 0.9f) * tickProgress
-                                val tickAlpha = (1f - tickProgress) * 0.9f * dragProgress
-                                drawLine(
-                                    color = recordAccentColor,
-                                    start = Offset(center.x, center.y + yOffset),
-                                    end = Offset(center.x, center.y + yOffset - baseRadius * 0.5f),
-                                    strokeWidth = 3.dp.toPx(),
-                                    cap = StrokeCap.Round,
-                                    alpha = tickAlpha,
-                                )
-                            }
-                        }
+                        // Lock track above the button: a capsule that fades in with the hold, with a knob
+                        // that rises along it following the finger, filling in as it nears the lock point.
+                        val trackLength = VOICE_MESSAGE_LOCK_DRAG_THRESHOLD.toPx()
+                        val dragProgress = (-micDragOffsetPx / trackLength).coerceIn(0f, 1f)
+                        val trackWidth = baseRadius * 0.9f
+                        val trackBottom = center.y - baseRadius * 1.5f
+                        val trackTop = trackBottom - trackLength - trackWidth
+                        drawRoundRect(
+                            color = recordAccentColor,
+                            topLeft = Offset(center.x - trackWidth / 2f, trackTop),
+                            size = androidx.compose.ui.geometry.Size(trackWidth, trackBottom - trackTop),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(trackWidth / 2f),
+                            alpha = (0.15f + 0.25f * dragProgress) * holdVisual,
+                        )
+                        drawCircle(
+                            color = recordAccentColor,
+                            radius = trackWidth * 0.32f,
+                            center = Offset(center.x, trackBottom - trackWidth / 2f - dragProgress * trackLength),
+                            alpha = (0.55f + 0.45f * dragProgress) * holdVisual,
+                        )
                     }
                     .then(
                         if (useVoiceRecordGesture) {
@@ -847,7 +888,8 @@ private fun VoiceMessageState.endButtonKey() = when (this) {
 
 private val VOICE_MESSAGE_LOCK_DRAG_THRESHOLD = 64.dp
 private val VOICE_MESSAGE_CANCEL_DRAG_THRESHOLD = 120.dp
-private const val VOICE_MESSAGE_MIN_HOLD_MS = 500L
+private const val VOICE_MESSAGE_MIN_HOLD_MS = 300L
+private const val DELETE_ANIMATION_MS = 260
 
 /**
  * WhatsApp-style press-and-hold gesture for the mic button: [onStart] fires once the press has

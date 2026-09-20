@@ -15,5 +15,6 @@ data class CallScreenState(
     val webViewError: String?,
     val userAgent: String,
     val isCallActive: Boolean,
+    val answeredAtMillis: Long?,
     val eventSink: (CallScreenEvent) -> Unit,
 )

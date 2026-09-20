@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright (c) 2026 New Vector Ltd.
+  ~
+  ~ SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial.
+  ~ Please see LICENSE files in the repository root for full details.
+  -->
+
+<resources>
+    <string name="call_status_calling">"Calling…"</string>
+    <string name="call_audio_output_earpiece">"Phone"</string>
+    <string name="call_audio_output_speaker">"Speaker"</string>
+    <string name="call_audio_output_bluetooth">"Bluetooth"</string>
+    <string name="call_audio_output_wired">"Headphones"</string>
+    <string name="call_audio_output_button">"Audio output"</string>
+</resources>

@@ -22,6 +22,8 @@ import io.element.android.libraries.core.extensions.runCatchingExceptions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -68,6 +70,59 @@ class WebViewAudioManager(
      * Store the device id requested by EC, and re-set it if something try to switch (only android S+).
      */
     private var ecRequestedDeviceId: String? = null
+        set(value) {
+            field = value
+            _selectedDeviceId.value = value
+        }
+
+    private val _selectedDeviceId = MutableStateFlow<String?>(null)
+    private val _availableDevices = MutableStateFlow<List<CallAudioOption>>(emptyList())
+
+    /** The currently selected audio device id, for the native audio picker. */
+    val selectedDeviceId: StateFlow<String?> = _selectedDeviceId
+
+    /** The currently available audio devices, for the native audio picker. */
+    val availableDevices: StateFlow<List<CallAudioOption>> = _availableDevices
+
+    /**
+     * Makes Element Call's own UI (button icon and colour) show [deviceId] as the selected output.
+     *
+     * `controls.setAudioDevice` is only wired up in Element Call's iOS audio code, so on Android it does
+     * nothing. Android's code instead keeps its current selection if that device is still in the list it
+     * was given, and otherwise falls back to the first entry. So: hand it a list with only the wanted
+     * device (forcing it to be selected), then the full list with the wanted device first (so it keeps
+     * it, and doesn't jump to a newly "added" headset). Both calls run back to back in one JS task.
+     */
+    private fun syncSelectionToWebUi(deviceId: String) {
+        val all = listAudioDevices().map(SerializableAudioDevice::fromAudioDeviceInfo)
+        val wanted = all.find { it.id == deviceId } ?: return
+        val allWantedFirst = listOf(wanted) + all.filter { it.id != deviceId }
+        webView.evaluateJavascript(
+            "controls.setAvailableAudioDevices(${json.encodeToString(listOf(wanted))});" +
+                "controls.setAvailableAudioDevices(${json.encodeToString(allWantedFirst)});",
+            null,
+        )
+    }
+
+    /** Refreshes [availableDevices]/[selectedDeviceId] from the OS, for when the native picker is opened. */
+    fun refreshAudioOptions() {
+        _availableDevices.value = listAudioDevices().map {
+            CallAudioOption(id = it.id.toString(), name = it.productName.toString(), type = it.type)
+        }
+        if (_selectedDeviceId.value == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            _selectedDeviceId.value = audioManager.communicationDevice?.id?.toString()
+        }
+    }
+
+    /** Selects a device from the native audio picker, the same way a selection in the web UI does. */
+    fun selectDeviceFromNativeUi(deviceId: String) {
+        previousSelectedDevice = listAudioDevices().find { it.id.toString() == deviceId }
+        ecRequestedDeviceId = deviceId
+        audioManager.selectAudioDevice(deviceId)
+        // Also tell Element Call's UI, otherwise its own button (icon and white/dark styling) keeps
+        // showing the previous device since the pick never went through the web UI.
+        syncSelectionToWebUi(deviceId)
+    }
 
     /**
      * The list of device types that are considered as communication devices, sorted by likelihood of it being used for communication.
@@ -266,20 +321,26 @@ class WebViewAudioManager(
                     // Calling this ahead of time makes the default audio device to not use the right audio stream
                     setAvailableAudioDevices()
 
-                    // Registering the audio devices changed callback will also set the default audio device
-                    audioManager.registerAudioDeviceCallback(audioDeviceCallback, null)
+                    if (!hasRegisteredCallbacks) {
+                        // Registering the audio devices changed callback will also set the default audio device
+                        audioManager.registerAudioDeviceCallback(audioDeviceCallback, null)
 
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        audioManager.addOnCommunicationDeviceChangedListener(Executors.newSingleThreadExecutor(), commsDeviceChangedListener)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            audioManager.addOnCommunicationDeviceChangedListener(Executors.newSingleThreadExecutor(), commsDeviceChangedListener)
+                        }
                     }
 
-                    // Nothing has been explicitly selected yet at this point, so default to the
-                    // highest-priority device available — a connected Bluetooth headset/earbuds if
-                    // there is one, per [wantedDeviceTypes]'s ordering.
-                    listAudioDevices().firstOrNull()?.let { bestDevice ->
-                        Timber.d("Audio: defaulting to best available device at call start: ${bestDevice.type}")
-                        ecRequestedDeviceId = bestDevice.id.toString()
-                        audioManager.selectAudioDevice(bestDevice)
+                    // This can fire again when the call is answered (a new audio track starts), so if the
+                    // user already picked a device while it was ringing (e.g. switched to speaker) and it's
+                    // still available, keep it instead of falling back to the default (earpiece).
+                    val alreadyChosenDevice = ecRequestedDeviceId?.let { requestedId ->
+                        listAudioDevices().find { it.id.toString() == requestedId }
+                    }
+                    val deviceToUse = alreadyChosenDevice ?: listAudioDevices().firstOrNull()
+                    deviceToUse?.let { device ->
+                        Timber.d("Audio: using device at playback start: ${device.type} (kept user's choice: ${alreadyChosenDevice != null})")
+                        ecRequestedDeviceId = device.id.toString()
+                        audioManager.selectAudioDevice(device)
                     }
 
                     hasRegisteredCallbacks = true
@@ -337,6 +398,7 @@ class WebViewAudioManager(
         devices: List<SerializableAudioDevice> = listAudioDevices().map(SerializableAudioDevice::fromAudioDeviceInfo),
     ) {
         Timber.d("Updating available audio devices")
+        _availableDevices.value = devices.map { CallAudioOption(id = it.id, name = it.name, type = it.type) }
         val deviceList = json.encodeToString(devices)
         webView.evaluateJavascript("controls.setAvailableAudioDevices($deviceList);", {
             Timber.d("Audio: setAvailableAudioDevices result: $it")
@@ -492,6 +554,14 @@ private fun isBuiltIn(type: Int): Boolean = when (type) {
 enum class InvalidAudioDeviceReason {
     BT_AUDIO_DEVICE_DISABLED,
 }
+
+/** An audio output the user can pick from the native call audio picker. */
+data class CallAudioOption(
+    val id: String,
+    val name: String,
+    /** An [AudioDeviceInfo] TYPE_* constant. */
+    val type: Int,
+)
 
 /**
  * This class is used to serialize the audio device information to JSON.

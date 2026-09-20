@@ -14,6 +14,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -104,6 +105,17 @@ class CallScreenPresenter(
         screenTracker.TrackScreen(screen = MobileScreen.ScreenName.RoomCall)
         HandleMatrixClientSyncState()
 
+        // The call counts as answered once someone other than us is in it, which is what the
+        // call timer is measured from.
+        val answeredAtMillis by produceState<Long?>(initialValue = null) {
+            val room = matrixClientsProvider.getOrNull(callData.sessionId)?.getRoom(callData.roomId) ?: return@produceState
+            room.roomInfoFlow.collect { info ->
+                if (value == null && info.activeRoomCallParticipants.any { it.value != callData.sessionId.value }) {
+                    value = clock.epochMillis()
+                }
+            }
+        }
+
         callWidgetDriver.value?.let { driver ->
             LaunchedEffect(Unit) {
                 driver.incomingMessages
@@ -190,6 +202,7 @@ class CallScreenPresenter(
             webViewError = webViewError,
             userAgent = userAgent,
             isCallActive = isWidgetLoaded,
+            answeredAtMillis = answeredAtMillis,
             eventSink = ::handleEvent,
         )
     }

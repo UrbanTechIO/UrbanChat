@@ -20,8 +20,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,11 +35,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import io.element.android.features.call.impl.R
 import io.element.android.features.call.impl.pip.PictureInPictureEvent
 import io.element.android.features.call.impl.pip.PictureInPictureState
 import io.element.android.features.call.impl.pip.aPictureInPictureState
+import io.element.android.features.call.impl.utils.AudioPickerInterceptor
 import io.element.android.features.call.impl.utils.InvalidAudioDeviceReason
 import io.element.android.features.call.impl.utils.WebViewAudioManager
 import io.element.android.features.call.impl.utils.WebViewPipController
@@ -48,6 +53,7 @@ import io.element.android.libraries.designsystem.preview.ElementPreview
 import io.element.android.libraries.designsystem.preview.PreviewsDayNight
 import io.element.android.libraries.designsystem.theme.components.Text
 import io.element.android.libraries.ui.strings.CommonStrings
+import kotlinx.coroutines.flow.MutableStateFlow
 import timber.log.Timber
 
 typealias RequestPermissionCallback = (Array<String>) -> Unit
@@ -89,6 +95,7 @@ internal fun CallScreenView(
         )
     } else {
         var webViewAudioManager by remember { mutableStateOf<WebViewAudioManager?>(null) }
+        var showAudioSheet by remember { mutableStateOf(false) }
         val coroutineScope = rememberCoroutineScope()
 
         var invalidAudioDeviceReason by remember { mutableStateOf<InvalidAudioDeviceReason?>(null) }
@@ -98,8 +105,9 @@ internal fun CallScreenView(
             }
         }
 
+        Box(modifier = modifier.fillMaxSize()) {
         CallWebView(
-            modifier = modifier.consumeWindowInsets(WindowInsets.systemBars).fillMaxSize(),
+            modifier = Modifier.consumeWindowInsets(WindowInsets.systemBars).fillMaxSize(),
             url = state.urlState,
             userAgent = state.userAgent,
             onPermissionsRequest = { request ->
@@ -111,10 +119,15 @@ internal fun CallScreenView(
             onCreateWebView = { webView ->
                 callWebView = webView
                 webView.addBackHandler(onBackPressed = ::handleBack)
+                AudioPickerInterceptor.install(webView, AudioPickerInterceptor(onOpenPicker = {
+                    webViewAudioManager?.refreshAudioOptions()
+                    showAudioSheet = true
+                }))
                 val interceptor = WebViewWidgetMessageInterceptor(
                     webView = webView,
                     onUrlLoaded = { url ->
                         webView.evaluateJavascript("controls.onBackButtonPressed = () => { backHandler.onBackPressed() }", null)
+                        webView.evaluateJavascript(AudioPickerInterceptor.script(), null)
                         if (webViewAudioManager?.isInCallMode?.get() == false) {
                             Timber.d("URL $url is loaded, starting in-call audio mode")
                             webViewAudioManager?.onCallStarted()
@@ -151,6 +164,31 @@ internal fun CallScreenView(
                 )
             }
             is AsyncData.Success -> Unit
+        }
+
+        if (state.urlState is AsyncData.Success && !pipState.isInPictureInPicture) {
+            CallTimerLabel(
+                answeredAtMillis = state.answeredAtMillis,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .statusBarsPadding()
+                    .padding(top = 76.dp),
+            )
+
+            val audioOptions by (webViewAudioManager?.availableDevices ?: remember { MutableStateFlow(emptyList()) }).collectAsState()
+            val selectedAudioId by (webViewAudioManager?.selectedDeviceId ?: remember { MutableStateFlow(null) }).collectAsState()
+            if (showAudioSheet) {
+                CallAudioOutputSheet(
+                    options = audioOptions,
+                    selectedId = selectedAudioId,
+                    onSelect = { option ->
+                        webViewAudioManager?.selectDeviceFromNativeUi(option.id)
+                        showAudioSheet = false
+                    },
+                    onDismiss = { showAudioSheet = false },
+                )
+            }
+        }
         }
     }
 }

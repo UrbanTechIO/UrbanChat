@@ -21,6 +21,9 @@ import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.SingleIn
 import io.element.android.appconfig.ElementCallConfig
 import io.element.android.features.call.api.CallData
+import io.element.android.features.call.api.CallLog
+import io.element.android.features.call.api.CallLogEntry
+import io.element.android.features.call.api.CallLogType
 import io.element.android.features.call.api.CurrentCall
 import io.element.android.features.call.impl.notifications.CallNotificationData
 import io.element.android.features.call.impl.notifications.RingingCallNotificationCreator
@@ -103,6 +106,7 @@ class DefaultActiveCallManager(
     private val appForegroundStateService: AppForegroundStateService,
     private val imageLoaderHolder: ImageLoaderHolder,
     private val systemClock: SystemClock,
+    private val callLog: CallLog,
 ) : ActiveCallManager {
     private val tag = "ActiveCallManager"
     private var timedOutCallJob: Job? = null
@@ -138,6 +142,7 @@ class DefaultActiveCallManager(
             appForegroundStateService.updateHasRingingCall(true)
             Timber.tag(tag).d("Received incoming call for room id: ${notificationData.roomId}, ringDuration(ms): $ringDuration")
             if (activeCall.value != null) {
+                logIncoming(notificationData, CallLogType.Missed)
                 displayMissedCallNotification(notificationData)
                 Timber.tag(tag).w("Already have an active call, ignoring incoming call: $notificationData")
                 return
@@ -193,6 +198,7 @@ class DefaultActiveCallManager(
         cancelIncomingCallNotification()
 
         if (displayMissedCallNotification) {
+            logIncoming(notificationData, CallLogType.Missed)
             displayMissedCallNotification(notificationData)
         }
     }
@@ -226,6 +232,7 @@ class DefaultActiveCallManager(
         if (currentActiveCall.callState is CallState.Ringing) {
             // Decline the call
             val notificationData = currentActiveCall.callState.notificationData
+            logIncoming(notificationData, CallLogType.Declined)
             matrixClientProvider.getOrRestore(notificationData.sessionId).getOrNull()
                 ?.getRoom(notificationData.roomId)
                 ?.declineCall(notificationData.eventId)
@@ -242,6 +249,22 @@ class DefaultActiveCallManager(
         }
         timedOutCallJob?.cancel()
         activeCall.value = null
+    }
+
+    private suspend fun logIncoming(data: CallNotificationData, type: CallLogType) {
+        callLog.add(
+            CallLogEntry(
+                id = data.eventId.value,
+                sessionId = data.sessionId,
+                roomId = data.roomId,
+                type = type,
+                isAudioCall = data.audioOnly,
+                startedAtMillis = data.timestamp,
+                durationSeconds = null,
+                otherName = data.senderName,
+                eventId = data.eventId.value,
+            )
+        )
     }
 
     override suspend fun joinedCall(callData: CallData) = mutex.withLock {

@@ -24,8 +24,13 @@ import dev.zacsweers.metro.AssistedFactory
 import dev.zacsweers.metro.AssistedInject
 import im.vector.app.features.analytics.plan.MobileScreen
 import io.element.android.features.call.api.CallData
+import io.element.android.features.call.api.CallLog
+import io.element.android.features.call.api.CallLogEntry
+import io.element.android.features.call.api.CallLogType
 import io.element.android.features.call.impl.data.WidgetMessage
+import io.element.android.features.call.impl.notifications.CallNotificationData
 import io.element.android.features.call.impl.utils.ActiveCallManager
+import io.element.android.features.call.impl.utils.CallState
 import io.element.android.features.call.impl.utils.CallWidgetProvider
 import io.element.android.features.call.impl.utils.WidgetMessageInterceptor
 import io.element.android.features.call.impl.utils.WidgetMessageSerializer
@@ -66,6 +71,7 @@ class CallScreenPresenter(
     @AppCoroutineScope
     private val appCoroutineScope: CoroutineScope,
     private val widgetMessageSerializer: WidgetMessageSerializer,
+    private val callLog: CallLog,
 ) : Presenter<CallScreenState> {
     @AssistedFactory
     interface Factory {
@@ -86,8 +92,12 @@ class CallScreenPresenter(
         val languageTag = languageTagProvider.provideLanguageTag()
         val theme = "dark"
 
+        val logState = remember { CallLogState(startedAt = clock.epochMillis()) }
         DisposableEffect(Unit) {
             coroutineScope.launch {
+                (activeCallManager.activeCall.value?.callState as? CallState.Ringing)?.notificationData?.let {
+                    logState.incoming = it
+                }
                 // Sets the call as joined
                 activeCallManager.joinedCall(callData)
                 fetchRoomCallUrl(
@@ -99,7 +109,25 @@ class CallScreenPresenter(
                 )
             }
             onDispose {
-                appCoroutineScope.launch { activeCallManager.hangUpCall(callData) }
+                val endedAt = clock.epochMillis()
+                val incoming = logState.incoming
+                val answeredAt = logState.answeredAt
+                appCoroutineScope.launch {
+                    callLog.add(
+                        CallLogEntry(
+                            id = "${callData.roomId.value}_${logState.startedAt}",
+                            sessionId = callData.sessionId,
+                            roomId = callData.roomId,
+                            type = if (incoming != null) CallLogType.Incoming else CallLogType.Outgoing,
+                            isAudioCall = callData.isAudioCall,
+                            startedAtMillis = logState.startedAt,
+                            durationSeconds = answeredAt?.let { ((endedAt - it) / 1_000).coerceAtLeast(0) },
+                            otherName = incoming?.senderName,
+                            eventId = incoming?.eventId?.value,
+                        )
+                    )
+                    activeCallManager.hangUpCall(callData)
+                }
             }
         }
         screenTracker.TrackScreen(screen = MobileScreen.ScreenName.RoomCall)
@@ -112,6 +140,7 @@ class CallScreenPresenter(
             room.roomInfoFlow.collect { info ->
                 if (value == null && info.activeRoomCallParticipants.any { it.value != callData.sessionId.value }) {
                     value = clock.epochMillis()
+                    logState.answeredAt = value
                 }
             }
         }
@@ -272,4 +301,10 @@ class CallScreenPresenter(
         navigator.close()
         widgetDriver?.close()
     }
+}
+
+/** Facts about the call gathered while the call screen is open, saved to the call log when it closes. */
+private class CallLogState(val startedAt: Long) {
+    var incoming: CallNotificationData? = null
+    var answeredAt: Long? = null
 }

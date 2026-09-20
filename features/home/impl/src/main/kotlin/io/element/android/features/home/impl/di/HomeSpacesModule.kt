@@ -20,5 +20,8 @@ import io.element.android.libraries.di.SessionScope
 @ContributesTo(SessionScope::class)
 interface HomeSpacesModule {
     @Binds
+    fun bindHomeCallsPresenter(presenter: io.element.android.features.home.impl.calls.HomeCallsPresenter): Presenter<io.element.android.features.home.impl.calls.HomeCallsState>
+
+    @Binds
     fun bindHomeSpacesPresenter(presenter: HomeSpacesPresenter): Presenter<HomeSpacesState>
 }

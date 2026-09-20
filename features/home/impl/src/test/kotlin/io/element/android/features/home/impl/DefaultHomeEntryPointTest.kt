@@ -11,6 +11,7 @@ package io.element.android.features.home.impl
 import com.bumble.appyx.core.modality.BuildContext
 import com.google.common.truth.Truth.assertThat
 import io.element.android.features.home.api.HomeEntryPoint
+import io.element.android.libraries.matrix.api.core.EventId
 import io.element.android.libraries.matrix.api.core.RoomId
 import io.element.android.libraries.matrix.api.room.JoinedRoom
 import io.element.android.libraries.matrix.test.FakeMatrixClient
@@ -44,6 +45,7 @@ class DefaultHomeEntryPointTest : RobolectricTest() {
         }
         val callback = object : HomeEntryPoint.Callback {
             override fun navigateToRoom(roomId: RoomId, joinedRoom: JoinedRoom?) = lambdaError()
+            override fun navigateToRoomEvent(roomId: RoomId, eventId: EventId) = lambdaError()
             override fun navigateToCreateRoom() = lambdaError()
             override fun navigateToCreateSpace() = lambdaError()
             override fun navigateToSettings() = lambdaError()

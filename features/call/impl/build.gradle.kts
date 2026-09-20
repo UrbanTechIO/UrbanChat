@@ -85,6 +85,7 @@ dependencies {
     implementation(libs.androidx.webkit)
     implementation(libs.coil.compose)
     implementation(libs.serialization.json)
+    implementation(libs.androidx.datastore.preferences)
     implementation(libs.element.call.embedded)
     api(projects.features.call.api)
 

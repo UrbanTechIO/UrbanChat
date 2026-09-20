@@ -18,4 +18,11 @@
     <string name="screen_locked_chats_unlock_hint">"Long-press a chat to unlock it"</string>
     <string name="screen_roomlist_section_chats">"Chats"</string>
     <string name="screen_roomlist_section_groups">"Groups"</string>
+    <string name="screen_home_tab_calls">"Calls"</string>
+    <string name="screen_home_calls_empty">"No calls yet. Calls you make, receive or miss will show up here."</string>
+    <string name="screen_home_calls_outgoing">"Outgoing"</string>
+    <string name="screen_home_calls_incoming">"Incoming"</string>
+    <string name="screen_home_calls_missed">"Missed"</string>
+    <string name="screen_home_calls_declined">"Declined"</string>
+    <string name="screen_home_calls_no_answer">"No answer"</string>
 </resources>

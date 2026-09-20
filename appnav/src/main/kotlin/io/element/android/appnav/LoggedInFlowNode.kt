@@ -340,6 +340,16 @@ class LoggedInFlowNode(
                         }
                     }
 
+                    override fun navigateToRoomEvent(roomId: RoomId, eventId: EventId) {
+                        lifecycleScope.launch {
+                            attachRoom(
+                                roomIdOrAlias = roomId.toRoomIdOrAlias(),
+                                initialElement = RoomNavigationTarget.Root(eventId),
+                                clearBackstack = false,
+                            )
+                        }
+                    }
+
                     override fun navigateToSettings() {
                         backstack.push(NavTarget.Settings())
                     }

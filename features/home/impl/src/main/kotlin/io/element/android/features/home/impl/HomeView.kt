@@ -55,6 +55,8 @@ import io.element.android.features.home.impl.model.RoomListRoomSummary
 import io.element.android.features.home.impl.roomlist.RoomListContextMenu
 import io.element.android.features.home.impl.roomlist.RoomListDeclineInviteMenu
 import io.element.android.features.home.impl.roomlist.RoomListEvent
+import io.element.android.features.home.impl.calls.CallLogRow
+import io.element.android.features.home.impl.calls.HomeCallsView
 import io.element.android.features.home.impl.roomlist.RoomListState
 import io.element.android.features.home.impl.search.RoomListSearchView
 import io.element.android.features.home.impl.spacefilters.SpaceFiltersEvent
@@ -84,6 +86,7 @@ import kotlinx.coroutines.launch
 fun HomeView(
     homeState: HomeState,
     onRoomClick: (RoomId) -> Unit,
+    onCallLogClick: (CallLogRow) -> Unit,
     onSettingsClick: () -> Unit,
     onSetUpRecoveryClick: () -> Unit,
     onConfirmRecoveryKeyClick: () -> Unit,
@@ -131,6 +134,7 @@ fun HomeView(
             onSetUpRecoveryClick = onSetUpRecoveryClick,
             onConfirmRecoveryKeyClick = onConfirmRecoveryKeyClick,
             onRoomClick = { if (firstThrottler.canHandle()) onRoomClick(it) },
+            onCallLogClick = { if (firstThrottler.canHandle()) onCallLogClick(it) },
             onOpenSettings = { if (firstThrottler.canHandle()) onSettingsClick() },
             onStartChatClick = { if (firstThrottler.canHandle()) onStartChatClick() },
             onCreateSpaceClick = { if (firstThrottler.canHandle()) onCreateSpaceClick() },
@@ -157,6 +161,7 @@ private fun HomeScaffold(
     onSetUpRecoveryClick: () -> Unit,
     onConfirmRecoveryKeyClick: () -> Unit,
     onRoomClick: (RoomId) -> Unit,
+    onCallLogClick: (CallLogRow) -> Unit,
     onOpenSettings: () -> Unit,
     onStartChatClick: () -> Unit,
     onCreateSpaceClick: () -> Unit,
@@ -186,6 +191,7 @@ private fun HomeScaffold(
     val hazeState = rememberHazeState()
     val roomsLazyListState = rememberLazyListState()
     val spacesLazyListState = rememberLazyListState()
+    val callsLazyListState = rememberLazyListState()
 
     // Extends the top bar's own accent-colored gradient (see HomeTopBar's
     // backgroundVerticalGradient) down across the whole page, fading out by the vertical
@@ -250,6 +256,7 @@ private fun HomeScaffold(
                             val lazyListStateTarget = when (item) {
                                 HomeNavigationBarItem.Chats -> roomsLazyListState
                                 HomeNavigationBarItem.Spaces -> spacesLazyListState
+                                HomeNavigationBarItem.Calls -> callsLazyListState
                             }
                             coroutineScope.launch {
                                 if (lazyListStateTarget.firstVisibleItemIndex > 10) {
@@ -271,6 +278,7 @@ private fun HomeScaffold(
                             HomeNavigationBarItem.Spaces -> {
                                 HomeFloatingActionButton(onCreateSpaceClick, CommonStrings.action_create_space)
                             }
+                            HomeNavigationBarItem.Calls -> Unit
                         }
                     },
                 )
@@ -337,6 +345,20 @@ private fun HomeScaffold(
                             onCreateSpaceClick = onCreateSpaceClick,
                             // TODO use actual callbacks for this
                             onExploreClick = {},
+                        )
+                    }
+                    HomeNavigationBarItem.Calls -> {
+                        HomeCallsView(
+                            state = state.homeCallsState,
+                            onCallClick = onCallLogClick,
+                            contentPadding = lazyColumnContentPadding + contentPadding,
+                            lazyListState = callsLazyListState,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(outerPadding)
+                                .consumeWindowInsets(outerPadding)
+                                .background(pageBackgroundBrush)
+                                .hazeSource(state = hazeState),
                         )
                     }
                 }
@@ -418,6 +440,7 @@ internal fun HomeViewPreview(@PreviewParameter(HomeStateProvider::class) state: 
     HomeView(
         homeState = state,
         onRoomClick = {},
+        onCallLogClick = {},
         onSettingsClick = {},
         onSetUpRecoveryClick = {},
         onConfirmRecoveryKeyClick = {},
@@ -438,6 +461,7 @@ internal fun HomeViewA11yPreview() = ElementPreview {
     HomeView(
         homeState = aHomeState(),
         onRoomClick = {},
+        onCallLogClick = {},
         onSettingsClick = {},
         onSetUpRecoveryClick = {},
         onConfirmRecoveryKeyClick = {},

@@ -33,6 +33,7 @@ import dev.zacsweers.metro.AssistedInject
 import im.vector.app.features.analytics.plan.MobileScreen
 import io.element.android.annotations.ContributesNode
 import io.element.android.features.home.api.HomeEntryPoint
+import io.element.android.features.home.impl.calls.findCallEventId
 import io.element.android.features.home.impl.components.RoomListMenuAction
 import io.element.android.features.home.impl.lockedchats.LockedChatsNode
 import io.element.android.features.home.impl.model.RoomListRoomSummary
@@ -228,6 +229,16 @@ class HomeFlowNode(
             HomeView(
                 homeState = state,
                 onRoomClick = ::navigateToRoom,
+                onCallLogClick = { row ->
+                    sessionCoroutineScope.launch {
+                        val eventId = runCatchingExceptions { matrixClient.findCallEventId(row.entry) }.getOrNull()
+                        if (eventId != null) {
+                            callback.navigateToRoomEvent(row.entry.roomId, eventId)
+                        } else {
+                            navigateToRoom(row.entry.roomId)
+                        }
+                    }
+                },
                 onSettingsClick = callback::navigateToSettings,
                 onStartChatClick = callback::navigateToCreateRoom,
                 onCreateSpaceClick = callback::navigateToCreateSpace,

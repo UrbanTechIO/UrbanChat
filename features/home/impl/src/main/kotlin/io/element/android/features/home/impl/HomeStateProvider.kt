@@ -9,6 +9,7 @@
 package io.element.android.features.home.impl
 
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
+import io.element.android.features.home.impl.calls.HomeCallsState
 import io.element.android.features.home.impl.roomlist.RoomListState
 import io.element.android.features.home.impl.roomlist.RoomListStateProvider
 import io.element.android.features.home.impl.roomlist.aRoomListState
@@ -22,6 +23,7 @@ import io.element.android.libraries.designsystem.utils.snackbar.SnackbarMessage
 import io.element.android.libraries.matrix.api.core.UserId
 import io.element.android.libraries.matrix.api.user.MatrixUser
 import io.element.android.libraries.ui.strings.CommonStrings
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 
 open class HomeStateProvider : PreviewParameterProvider<HomeState> {
@@ -62,6 +64,7 @@ internal fun aHomeState(
     currentHomeNavigationBarItem: HomeNavigationBarItem = HomeNavigationBarItem.Chats,
     roomListState: RoomListState = aRoomListState(),
     homeSpacesState: HomeSpacesState = aHomeSpacesState(),
+    homeCallsState: HomeCallsState = HomeCallsState(rows = persistentListOf()),
     canReportBug: Boolean = true,
     directLogoutState: DirectLogoutState = aDirectLogoutState(),
     frostedGlassEnabled: Boolean = false,
@@ -77,6 +80,7 @@ internal fun aHomeState(
     currentHomeNavigationBarItem = currentHomeNavigationBarItem,
     roomListState = roomListState,
     homeSpacesState = homeSpacesState,
+    homeCallsState = homeCallsState,
     frostedGlassEnabled = frostedGlassEnabled,
     headerBarOpacity = headerBarOpacity,
     eventSink = eventSink,

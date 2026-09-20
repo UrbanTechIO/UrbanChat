@@ -65,6 +65,7 @@ fun RoomListContentView(
     spaceFiltersState: SpaceFiltersState,
     lazyListState: LazyListState,
     hideInvitesAvatars: Boolean,
+    organizeChatLists: Boolean,
     eventSink: (RoomListEvent) -> Unit,
     onSetUpRecoveryClick: () -> Unit,
     onConfirmRecoveryKeyClick: () -> Unit,
@@ -96,6 +97,7 @@ fun RoomListContentView(
                 modifier = modifier,
                 state = contentState,
                 hideInvitesAvatars = hideInvitesAvatars,
+                organizeChatLists = organizeChatLists,
                 filtersState = filtersState,
                 spaceFiltersState = spaceFiltersState,
                 eventSink = eventSink,
@@ -176,6 +178,7 @@ private fun EmptyView(
 private fun RoomsView(
     state: RoomListContentState.Rooms,
     hideInvitesAvatars: Boolean,
+    organizeChatLists: Boolean,
     filtersState: RoomListFiltersState,
     spaceFiltersState: SpaceFiltersState,
     eventSink: (RoomListEvent) -> Unit,
@@ -198,6 +201,7 @@ private fun RoomsView(
         RoomsViewList(
             state = state,
             hideInvitesAvatars = hideInvitesAvatars,
+            organizeChatLists = organizeChatLists,
             eventSink = eventSink,
             onSetUpRecoveryClick = onSetUpRecoveryClick,
             onConfirmRecoveryKeyClick = onConfirmRecoveryKeyClick,
@@ -213,6 +217,7 @@ private fun RoomsView(
 private fun RoomsViewList(
     state: RoomListContentState.Rooms,
     hideInvitesAvatars: Boolean,
+    organizeChatLists: Boolean,
     eventSink: (RoomListEvent) -> Unit,
     onSetUpRecoveryClick: () -> Unit,
     onConfirmRecoveryKeyClick: () -> Unit,
@@ -229,8 +234,8 @@ private fun RoomsViewList(
     // (everything else) sections, each rendered as its own contiguous run so the existing
     // recency/importance ordering within each group is preserved.
     val nonRoomItems = state.summaries.filter { it.displayType != RoomSummaryDisplayType.ROOM }
-    val directRooms = state.summaries.filter { it.displayType == RoomSummaryDisplayType.ROOM && it.isDm }
-    val groupRooms = state.summaries.filter { it.displayType == RoomSummaryDisplayType.ROOM && !it.isDm }
+    val directRooms = state.summaries.filter { it.displayType == RoomSummaryDisplayType.ROOM && (!organizeChatLists || it.isDm) }
+    val groupRooms = if (organizeChatLists) state.summaries.filter { it.displayType == RoomSummaryDisplayType.ROOM && !it.isDm } else emptyList()
     LazyColumn(
         state = lazyListState,
         modifier = modifier,
@@ -310,11 +315,13 @@ private fun RoomsViewList(
         }
 
         if (directRooms.isNotEmpty()) {
-            item {
-                ListSectionHeader(
-                    title = stringResource(R.string.screen_roomlist_section_chats),
-                    hasDivider = hasPrecedingContent && !isFirstSectionHeader,
-                )
+            if (organizeChatLists) {
+                item {
+                    ListSectionHeader(
+                        title = stringResource(R.string.screen_roomlist_section_chats),
+                        hasDivider = hasPrecedingContent && !isFirstSectionHeader,
+                    )
+                }
             }
             isFirstSectionHeader = false
             itemsIndexed(
@@ -423,6 +430,7 @@ internal fun RoomListContentViewPreview(@PreviewParameter(RoomListContentStatePr
         ),
         spaceFiltersState = anUnselectedSpaceFiltersState(),
         hideInvitesAvatars = false,
+        organizeChatLists = true,
         eventSink = {},
         onSetUpRecoveryClick = {},
         onConfirmRecoveryKeyClick = {},

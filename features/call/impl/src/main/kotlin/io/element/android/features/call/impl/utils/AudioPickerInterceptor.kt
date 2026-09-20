@@ -27,12 +27,19 @@ import android.webkit.WebView
  */
 class AudioPickerInterceptor(
     private val onOpenPicker: () -> Unit,
+    private val onPicked: (success: Boolean) -> Unit,
 ) {
     private val mainHandler = Handler(Looper.getMainLooper())
 
     @JavascriptInterface
     fun open() {
         mainHandler.post(onOpenPicker)
+    }
+
+    /** Called once [pickOutputScript] has finished driving Element Call's own settings menu. */
+    @JavascriptInterface
+    fun picked(success: Boolean) {
+        mainHandler.post { onPicked(success) }
     }
 
     companion object {
@@ -48,6 +55,17 @@ class AudioPickerInterceptor(
 
         fun install(webView: WebView, interceptor: AudioPickerInterceptor) {
             webView.addJavascriptInterface(interceptor, BRIDGE_NAME)
+        }
+
+        /**
+         * Picks [deviceId] through Element Call's own settings menu (Audio tab > output radio buttons), so it
+         * goes through exactly the same code as choosing it by hand there: Element Call updates its own state
+         * and tells the app which device to use. The menu is hidden while this runs, and the app closes it
+         * once [picked] reports back. Requires the script from [script] to be installed.
+         */
+        fun pickOutputScript(deviceId: String): String {
+            val id = deviceId.replace("\\", "\\\\").replace("\"", "\\\"")
+            return "window.__pickOutput && window.__pickOutput(\"$id\");"
         }
 
         /** Idempotent: safe to evaluate again after every page load. */
@@ -67,15 +85,21 @@ class AudioPickerInterceptor(
                     }
                     return (text || '').trim().toLowerCase();
                   }
+                  // Some WebViews only deliver one of pointerup / touchend / click once the earlier events were
+                  // cancelled, so any of them opens the picker, debounced so one tap opens it once.
+                  var lastOpen = 0;
                   function handler(e) {
                     var button = e.target && e.target.closest && e.target.closest('button');
-                    if (!button || labels.indexOf(labelOf(button)) === -1) return;
-                    e.preventDefault();
+                    if (!button || (labels.indexOf(labelOf(button)) === -1 && !button.hasAttribute('data-audio-kind'))) return;
+                    if (e.cancelable) { e.preventDefault(); }
                     e.stopPropagation();
                     e.stopImmediatePropagation();
-                    if (e.type === 'click') { $BRIDGE_NAME.open(); }
+                    if (e.type === 'pointerup' || e.type === 'touchend' || e.type === 'click') {
+                      var now = Date.now();
+                      if (now - lastOpen > 500) { lastOpen = now; $BRIDGE_NAME.open(); }
+                    }
                   }
-                  ['pointerdown', 'mousedown', 'click'].forEach(function (type) {
+                  ['pointerdown', 'mousedown', 'pointerup', 'touchend', 'click'].forEach(function (type) {
                     document.addEventListener(type, handler, true);
                   });
 
@@ -98,6 +122,44 @@ class AudioPickerInterceptor(
                     'button[data-audio-kind="speaker"]{--audio-icon:' + icon(SPEAKER) + ';background:#eceef2 !important;color:#1b1d22 !important;}' +
                     'button[data-audio-kind="headset"]{--audio-icon:' + icon(HEADSET) + ';background:#eceef2 !important;color:#1b1d22 !important;}';
                   document.head.appendChild(style);
+
+                  var hideStyle = document.createElement('style');
+                  hideStyle.textContent =
+                    'html[data-audio-picking] [role="dialog"], html[data-audio-picking] [data-radix-popper-content-wrapper],' +
+                    'html[data-audio-picking] [class*="overlay"] { opacity: 0 !important; transition: none !important; }';
+                  document.head.appendChild(hideStyle);
+                  window.__pickOutput = function (id) {
+                    var root = document.documentElement;
+                    var finished = false;
+                    function finish(ok) {
+                      if (finished) return;
+                      finished = true;
+                      $BRIDGE_NAME.picked(ok);
+                      setTimeout(function () { root.removeAttribute('data-audio-picking'); }, 700);
+                    }
+                    try {
+                      root.setAttribute('data-audio-picking', '1');
+                      var settings = document.querySelector('button[data-testid="settings-bottom-center"]');
+                      if (!settings) {
+                        var all = document.querySelectorAll('button[data-testid^="settings-bottom"]');
+                        for (var i = 0; i < all.length; i++) { if (all[i].offsetParent !== null) { settings = all[i]; break; } }
+                      }
+                      if (!settings) { finish(false); return; }
+                      settings.click();
+                      var tries = 0;
+                      var timer = setInterval(function () {
+                        var radio = document.querySelector('input[type="radio"][value="' + id + '"]');
+                        if (radio) {
+                          clearInterval(timer);
+                          radio.click();
+                          setTimeout(function () { finish(true); }, 200);
+                        } else if (++tries > 40) {
+                          clearInterval(timer);
+                          finish(false);
+                        }
+                      }, 50);
+                    } catch (e) { finish(false); }
+                  };
 
                   var kind = null;
                   function apply() {

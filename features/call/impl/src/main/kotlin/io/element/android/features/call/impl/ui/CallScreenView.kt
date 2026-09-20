@@ -99,6 +99,7 @@ internal fun CallScreenView(
     } else {
         var webViewAudioManager by remember { mutableStateOf<WebViewAudioManager?>(null) }
         var showAudioSheet by remember { mutableStateOf(false) }
+        var pendingAudioPick by remember { mutableStateOf<String?>(null) }
         val coroutineScope = rememberCoroutineScope()
 
         var invalidAudioDeviceReason by remember { mutableStateOf<InvalidAudioDeviceReason?>(null) }
@@ -122,10 +123,26 @@ internal fun CallScreenView(
             onCreateWebView = { webView ->
                 callWebView = webView
                 webView.addBackHandler(onBackPressed = ::handleBack)
-                AudioPickerInterceptor.install(webView, AudioPickerInterceptor(onOpenPicker = {
-                    webViewAudioManager?.refreshAudioOptions()
-                    showAudioSheet = true
-                }))
+                AudioPickerInterceptor.install(
+                    webView,
+                    AudioPickerInterceptor(
+                        onOpenPicker = {
+                            webViewAudioManager?.refreshAudioOptions()
+                            showAudioSheet = true
+                        },
+                        onPicked = { success ->
+                            val id = pendingAudioPick
+                            pendingAudioPick = null
+                            if (success) {
+                                // Close Element Call's settings menu, which was only opened to make the pick.
+                                webView.dispatchEscKeyEvent()
+                                if (id != null) webViewAudioManager?.ensureSelectedAfterWebPick(id)
+                            } else if (id != null) {
+                                webViewAudioManager?.selectDeviceFromNativeUi(id)
+                            }
+                        },
+                    ),
+                )
                 val interceptor = WebViewWidgetMessageInterceptor(
                     webView = webView,
                     onUrlLoaded = { url ->
@@ -200,7 +217,11 @@ internal fun CallScreenView(
                     options = audioOptions,
                     selectedId = selectedAudioId,
                     onSelect = { option ->
-                        webViewAudioManager?.selectDeviceFromNativeUi(option.id)
+                        // Pick it through Element Call's own audio menu, the way that already works from its
+                        // three-dots menu; falls back to setting the device directly if that isn't possible.
+                        pendingAudioPick = option.id
+                        callWebView?.evaluateJavascript(AudioPickerInterceptor.pickOutputScript(option.id), null)
+                            ?: webViewAudioManager?.selectDeviceFromNativeUi(option.id)
                         showAudioSheet = false
                     },
                     onDismiss = { showAudioSheet = false },

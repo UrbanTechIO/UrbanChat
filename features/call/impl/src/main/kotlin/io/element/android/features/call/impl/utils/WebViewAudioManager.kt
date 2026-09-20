@@ -122,6 +122,45 @@ class WebViewAudioManager(
         // Also tell Element Call's UI, otherwise its own button (icon and white/dark styling) keeps
         // showing the previous device since the pick never went through the web UI.
         syncSelectionToWebUi(deviceId)
+        // Some devices silently ignore or undo the first request (e.g. while the audio route is still
+        // settling), so check what the OS actually ended up using and ask again a couple of times.
+        coroutineScope.launch(Dispatchers.Main) {
+            repeat(3) { attempt ->
+                delay(if (attempt == 0) 300L else 700L)
+                if (ecRequestedDeviceId != deviceId) return@launch
+                if (isActuallyUsing(deviceId)) return@launch
+                Timber.w("Audio: device $deviceId was not applied, retrying (attempt ${attempt + 1})")
+                audioManager.selectAudioDevice(deviceId)
+                syncSelectionToWebUi(deviceId)
+            }
+        }
+    }
+
+    /**
+     * Called after [deviceId] was picked through Element Call's own settings menu, which makes Element Call
+     * report it back to us. If that didn't end up applied on the OS (or never arrived), apply it ourselves.
+     */
+    fun ensureSelectedAfterWebPick(deviceId: String) {
+        coroutineScope.launch(Dispatchers.Main) {
+            delay(800)
+            if (ecRequestedDeviceId == deviceId && isActuallyUsing(deviceId)) return@launch
+            Timber.w("Audio: device $deviceId picked in the web menu was not applied, applying it directly")
+            selectDeviceFromNativeUi(deviceId)
+        }
+    }
+
+    private fun isActuallyUsing(deviceId: String): Boolean {
+        val device = listAudioDevices().find { it.id.toString() == deviceId } ?: return true
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            audioManager.communicationDevice?.id?.toString() == deviceId
+        } else {
+            @Suppress("DEPRECATION")
+            when (device.type) {
+                AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> audioManager.isSpeakerphoneOn
+                AudioDeviceInfo.TYPE_BUILTIN_EARPIECE -> !audioManager.isSpeakerphoneOn && !audioManager.isBluetoothScoOn
+                else -> true
+            }
+        }
     }
 
     /**
@@ -435,6 +474,12 @@ class WebViewAudioManager(
                     Timber.d("Setting communication device: ${device.id} - ${deviceName(device.type, device.productName.toString())}")
                     if (!setCommunicationDevice(device)) {
                         Timber.w("Failed to setCommunication device")
+                        // Some vendors' audio stacks reject this for the built-in outputs, but still honour the legacy switch.
+                        @Suppress("DEPRECATION")
+                        when (device.type) {
+                            AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> isSpeakerphoneOn = true
+                            AudioDeviceInfo.TYPE_BUILTIN_EARPIECE -> isSpeakerphoneOn = false
+                        }
                     }
                 }.onFailure {
                     Timber.e(it, "Could not set communication device.")

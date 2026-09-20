@@ -309,6 +309,7 @@ private fun HomeScaffold(
                             spaceFiltersState = roomListState.spaceFiltersState,
                             lazyListState = roomsLazyListState,
                             hideInvitesAvatars = roomListState.hideInvitesAvatars,
+                            organizeChatLists = roomListState.organizeChatLists,
                             eventSink = roomListState.eventSink,
                             onSetUpRecoveryClick = onSetUpRecoveryClick,
                             onConfirmRecoveryKeyClick = onConfirmRecoveryKeyClick,

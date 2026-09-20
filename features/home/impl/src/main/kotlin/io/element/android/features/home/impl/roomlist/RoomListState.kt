@@ -31,6 +31,7 @@ data class RoomListState(
     val contentState: RoomListContentState,
     val acceptDeclineInviteState: AcceptDeclineInviteState,
     val hideInvitesAvatars: Boolean,
+    val organizeChatLists: Boolean,
     val canReportRoom: Boolean,
     val eventSink: (RoomListEvent) -> Unit,
 ) {

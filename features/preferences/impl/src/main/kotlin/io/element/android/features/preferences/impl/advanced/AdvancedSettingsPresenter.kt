@@ -58,6 +58,9 @@ class AdvancedSettingsPresenter(
         val isSharePresenceEnabled by remember {
             sessionPreferencesStore.isSharePresenceEnabled()
         }.collectAsState(initial = true)
+        val isOrganizeChatListsEnabled by remember {
+            sessionPreferencesStore.isOrganizeChatListsEnabled()
+        }.collectAsState(initial = true)
         val isShowOnlineStatusEnabled by remember {
             sessionPreferencesStore.isShowOnlineStatusEnabled()
         }.collectAsState(initial = true)
@@ -193,6 +196,9 @@ class AdvancedSettingsPresenter(
                 is AdvancedSettingsEvents.SetSharePresenceEnabled -> sessionCoroutineScope.launch {
                     sessionPreferencesStore.setSharePresence(event.enabled)
                 }
+                is AdvancedSettingsEvents.SetOrganizeChatListsEnabled -> sessionCoroutineScope.launch {
+                    sessionPreferencesStore.setOrganizeChatLists(event.enabled)
+                }
                 is AdvancedSettingsEvents.SetShowOnlineStatusEnabled -> sessionCoroutineScope.launch {
                     sessionPreferencesStore.setShowOnlineStatus(event.enabled)
                 }
@@ -278,6 +284,7 @@ class AdvancedSettingsPresenter(
             isDeveloperModeEnabled = isDeveloperModeEnabled,
             isSharePresenceEnabled = isSharePresenceEnabled,
             isShowOnlineStatusEnabled = isShowOnlineStatusEnabled,
+            isOrganizeChatListsEnabled = isOrganizeChatListsEnabled,
             mediaOptimizationState = mediaOptimizationState,
             theme = themeOption,
             availableThemeOptions = availableThemeOptions,

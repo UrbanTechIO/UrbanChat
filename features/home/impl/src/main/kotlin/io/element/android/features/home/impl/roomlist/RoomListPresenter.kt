@@ -182,6 +182,7 @@ class RoomListPresenter(
         }
 
         val canReportRoom by produceState(false) { value = client.canReportRoom() }
+        val organizeChatLists by remember { sessionPreferencesStore.isOrganizeChatListsEnabled() }.collectAsState(initial = true)
         val showUnreadCount by produceState(false) {
             value = featureFlagService.isFeatureEnabled(FeatureFlags.UnreadIndicatorCount)
         }
@@ -202,6 +203,7 @@ class RoomListPresenter(
             contentState = contentState,
             acceptDeclineInviteState = acceptDeclineInviteState,
             hideInvitesAvatars = hideInvitesAvatar,
+            organizeChatLists = organizeChatLists,
             canReportRoom = canReportRoom,
             eventSink = ::handleEvent,
         )

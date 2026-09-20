@@ -158,6 +158,18 @@ fun AdvancedSettingsView(
         )
         ListItem(
             content = {
+                Text(text = stringResource(id = R.string.screen_advanced_settings_organize_chats))
+            },
+            supportingContent = {
+                Text(text = stringResource(id = R.string.screen_advanced_settings_organize_chats_description))
+            },
+            trailingContent = ListItemContent.Switch(
+                checked = state.isOrganizeChatListsEnabled,
+            ),
+            onClick = { state.eventSink(AdvancedSettingsEvents.SetOrganizeChatListsEnabled(!state.isOrganizeChatListsEnabled)) }
+        )
+        ListItem(
+            content = {
                 Text(text = stringResource(id = R.string.screen_advanced_settings_show_online_status))
             },
             supportingContent = {

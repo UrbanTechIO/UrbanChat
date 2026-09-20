@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 class InMemorySessionPreferencesStore(
     isSharePresenceEnabled: Boolean = true,
     isShowOnlineStatusEnabled: Boolean = true,
+    isOrganizeChatListsEnabled: Boolean = true,
     isSendPublicReadReceiptsEnabled: Boolean = true,
     isRenderReadReceiptsEnabled: Boolean = true,
     isSendTypingNotificationsEnabled: Boolean = true,
@@ -29,6 +30,7 @@ class InMemorySessionPreferencesStore(
 ) : SessionPreferencesStore {
     private val isSharePresenceEnabled = MutableStateFlow(isSharePresenceEnabled)
     private val isShowOnlineStatusEnabled = MutableStateFlow(isShowOnlineStatusEnabled)
+    private val isOrganizeChatListsEnabled = MutableStateFlow(isOrganizeChatListsEnabled)
     private val isSendPublicReadReceiptsEnabled = MutableStateFlow(isSendPublicReadReceiptsEnabled)
     private val isRenderReadReceiptsEnabled = MutableStateFlow(isRenderReadReceiptsEnabled)
     private val isSendTypingNotificationsEnabled = MutableStateFlow(isSendTypingNotificationsEnabled)
@@ -52,6 +54,12 @@ class InMemorySessionPreferencesStore(
     }
 
     override fun isShowOnlineStatusEnabled(): Flow<Boolean> = isShowOnlineStatusEnabled
+
+    override suspend fun setOrganizeChatLists(enabled: Boolean) {
+        isOrganizeChatListsEnabled.tryEmit(enabled)
+    }
+
+    override fun isOrganizeChatListsEnabled(): Flow<Boolean> = isOrganizeChatListsEnabled
 
     override suspend fun setSendPublicReadReceipts(enabled: Boolean) {
         isSendPublicReadReceiptsEnabled.tryEmit(enabled)

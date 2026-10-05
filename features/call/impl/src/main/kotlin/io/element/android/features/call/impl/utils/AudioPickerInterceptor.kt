@@ -28,12 +28,19 @@ import android.webkit.WebView
 class AudioPickerInterceptor(
     private val onOpenPicker: () -> Unit,
     private val onPicked: (success: Boolean) -> Unit,
+    private val onOutputPickedInWeb: (deviceId: String) -> Unit,
 ) {
     private val mainHandler = Handler(Looper.getMainLooper())
 
     @JavascriptInterface
     fun open() {
         mainHandler.post(onOpenPicker)
+    }
+
+    /** Called when a radio button (an output, microphone or camera) is chosen in Element Call's own settings menu. */
+    @JavascriptInterface
+    fun radioChosen(value: String) {
+        mainHandler.post { onOutputPickedInWeb(value) }
     }
 
     /** Called once [pickOutputScript] has finished driving Element Call's own settings menu. */
@@ -103,6 +110,24 @@ class AudioPickerInterceptor(
                     document.addEventListener(type, handler, true);
                   });
 
+                  // Element Call shows/hides its controls overlay on hover: a 'pointermove' with
+                  // pointerType 'mouse' shows it (then auto-hides after a few seconds), and any
+                  // 'pointerout' hides it right away. On a phone there's no real mouse, but the WebView
+                  // (especially while video tiles are still resizing right after connecting) can still
+                  // dispatch stray pointermove/pointerout events, sometimes typed 'mouse'. Each one
+                  // restarts that show/hide cycle, which is the flicker. Swallow those two triggers in
+                  // the capture phase — deliberate taps (a 'touch' pointerup) reach Element Call
+                  // untouched, so tap-to-show/hide keeps working exactly as before.
+                  function suppressStrayHover(e) {
+                    if (e.type === 'pointerout' || e.pointerType === 'mouse') {
+                      e.stopPropagation();
+                      e.stopImmediatePropagation();
+                    }
+                  }
+                  ['pointermove', 'pointerout'].forEach(function (type) {
+                    document.addEventListener(type, suppressStrayHover, true);
+                  });
+
                   // Restyle the button (icon + colours) with CSS only; see the class docs for why.
                   function icon(path) {
                     var svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='" + path + "'/></svg>";
@@ -123,6 +148,11 @@ class AudioPickerInterceptor(
                     'button[data-audio-kind="headset"]{--audio-icon:' + icon(HEADSET) + ';background:#eceef2 !important;color:#1b1d22 !important;}';
                   document.head.appendChild(style);
 
+                  // Tell the app when the user picks something in Element Call's own menu, so it knows their choice.
+                  document.addEventListener('change', function (e) {
+                    var t = e.target;
+                    if (t && t.type === 'radio' && t.value) { try { $BRIDGE_NAME.radioChosen(String(t.value)); } catch (err) {} }
+                  }, true);
                   var hideStyle = document.createElement('style');
                   hideStyle.textContent =
                     'html[data-audio-picking] [role="dialog"], html[data-audio-picking] [data-radix-popper-content-wrapper],' +

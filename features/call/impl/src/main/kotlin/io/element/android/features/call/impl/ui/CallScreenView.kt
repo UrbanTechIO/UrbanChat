@@ -130,6 +130,7 @@ internal fun CallScreenView(
                             webViewAudioManager?.refreshAudioOptions()
                             showAudioSheet = true
                         },
+                        onOutputPickedInWeb = { deviceId -> webViewAudioManager?.onUserPickedDevice(deviceId) },
                         onPicked = { success ->
                             val id = pendingAudioPick
                             pendingAudioPick = null
@@ -220,6 +221,7 @@ internal fun CallScreenView(
                         // Pick it through Element Call's own audio menu, the way that already works from its
                         // three-dots menu; falls back to setting the device directly if that isn't possible.
                         pendingAudioPick = option.id
+                        webViewAudioManager?.onUserPickedDevice(option.id)
                         callWebView?.evaluateJavascript(AudioPickerInterceptor.pickOutputScript(option.id), null)
                             ?: webViewAudioManager?.selectDeviceFromNativeUi(option.id)
                         showAudioSheet = false

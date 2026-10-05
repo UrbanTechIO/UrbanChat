@@ -9,11 +9,16 @@
 package io.element.android.features.call.impl.utils
 
 import android.content.Context
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.os.Build
 import android.os.PowerManager
+import android.os.SystemClock
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import androidx.annotation.RequiresApi
@@ -21,6 +26,7 @@ import androidx.core.content.getSystemService
 import io.element.android.libraries.core.extensions.runCatchingExceptions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,6 +40,12 @@ import timber.log.Timber
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.Duration.Companion.seconds
+
+private const val PROXIMITY_DEBOUNCE_MS = 500L
+
+// See the comment on the call proximity listener: absorbs a reversal shortly after a real switch
+// instead of letting it immediately flip back.
+private const val POST_SWITCH_LOCKOUT_MS = 500L
 
 /**
  * This class manages the audio devices for a WebView.
@@ -74,6 +86,56 @@ class WebViewAudioManager(
             field = value
             _selectedDeviceId.value = value
         }
+
+    /**
+     * The output the user explicitly picked (native picker or Element Call's own menu), or that we switched to
+     * because a headset was connected. Element Call re-decides its selection whenever it gets a device list and
+     * its default for voice calls is the earpiece, so whenever it reports something else we put this back.
+     */
+    @Volatile
+    private var userChosenDeviceId: String? = null
+
+    /** The last device Element Call reported through `onAudioDeviceSelect`. */
+    @Volatile
+    private var lastEcEmittedId: String? = null
+
+    private var reassertJob: Job? = null
+
+    /** Called when the user picks [deviceId] anywhere (native picker or Element Call's menu). */
+    fun onUserPickedDevice(deviceId: String) {
+        coroutineScope.launch(Dispatchers.Main) {
+            // Element Call's menus also have radio buttons for microphones and cameras, ignore those.
+            if (listAudioDevices().any { it.id.toString() == deviceId }) {
+                userChosenDeviceId = deviceId
+                ecRequestedDeviceId = deviceId
+            }
+        }
+    }
+
+    /**
+     * Element Call switched to something other than what the user picked. Put the OS back on the user's choice
+     * straight away, then make Element Call itself select it again through its own menu, which also records it as
+     * its preferred device so it stops overriding it. Falls back to the device list trick as a last resort.
+     */
+    private fun reassertUserChoice() {
+        val id = userChosenDeviceId ?: return
+        ecRequestedDeviceId = id
+        audioManager.selectAudioDevice(id)
+        if (reassertJob?.isActive == true) return
+        reassertJob = coroutineScope.launch(Dispatchers.Main) {
+            repeat(3) { attempt ->
+                if (userChosenDeviceId != id) return@launch
+                if (attempt > 0 && lastEcEmittedId == id) return@launch
+                Timber.d("Audio: making Element Call select the user's choice $id again (attempt ${attempt + 1})")
+                webView.evaluateJavascript(AudioPickerInterceptor.pickOutputScript(id), null)
+                delay(2_500)
+                if (lastEcEmittedId == id) return@launch
+            }
+            if (userChosenDeviceId == id && lastEcEmittedId != id) {
+                syncSelectionToWebUi(id)
+            }
+        }
+    }
 
     private val _selectedDeviceId = MutableStateFlow<String?>(null)
     private val _availableDevices = MutableStateFlow<List<CallAudioOption>>(emptyList())
@@ -117,6 +179,7 @@ class WebViewAudioManager(
     /** Selects a device from the native audio picker, the same way a selection in the web UI does. */
     fun selectDeviceFromNativeUi(deviceId: String) {
         previousSelectedDevice = listAudioDevices().find { it.id.toString() == deviceId }
+        userChosenDeviceId = deviceId
         ecRequestedDeviceId = deviceId
         audioManager.selectAudioDevice(deviceId)
         // Also tell Element Call's UI, otherwise its own button (icon and white/dark styling) keeps
@@ -187,12 +250,13 @@ class WebViewAudioManager(
         // Wired audio devices
         add(AudioDeviceInfo.TYPE_WIRED_HEADSET)
         add(AudioDeviceInfo.TYPE_WIRED_HEADPHONES)
-        // The built-in earpiece of the device: this is the expected default when nothing else is
-        // connected (same as a normal phone call) — the user opts into the speaker explicitly,
-        // rather than a call defaulting to it.
-        add(AudioDeviceInfo.TYPE_BUILTIN_EARPIECE)
-        // The built-in speaker of the device
+        // The built-in speaker of the device: the expected default when nothing else is connected,
+        // both while ringing/dialling and once answered. The proximity sensor (see
+        // [proximityListener]) is what switches this down to the earpiece once the phone is
+        // actually held to the ear, matching a normal phone call.
         add(AudioDeviceInfo.TYPE_BUILTIN_SPEAKER)
+        // The built-in earpiece of the device
+        add(AudioDeviceInfo.TYPE_BUILTIN_EARPIECE)
     }
 
     private fun rankOf(type: Int): Int = wantedDeviceTypes.indexOf(type).let { if (it == -1) Int.MAX_VALUE else it }
@@ -218,6 +282,89 @@ class WebViewAudioManager(
      * Used to ensure that only one coroutine can access the proximity sensor wake lock at a time, preventing re-acquiring or re-releasing it.
      */
     private val proximitySensorMutex = Mutex()
+
+    private val sensorManager = webView.context.getSystemService<SensorManager>()
+    private val proximitySensor = sensorManager?.getDefaultSensor(Sensor.TYPE_PROXIMITY)
+    private var isProximityListening = false
+    private var isNearEar = false
+    private var proximitySwitchJob: Job? = null
+    private var lastProximitySwitchAtMs = 0L
+
+    /**
+     * Routes audio the way a normal phone call does: loudspeaker by default (while ringing/dialling
+     * and once answered), switching down to the earpiece for as long as the phone is held to the ear.
+     * Registered for the whole call (see [onCallStarted]/[onCallStopped]), not just after answer.
+     *
+     * Only ever switches between the phone's own earpiece and speaker, and only while one of those
+     * two is actually the current output — it never overrides an explicit Bluetooth/wired choice.
+     */
+    private val proximityListener = object : SensorEventListener {
+        override fun onSensorChanged(event: SensorEvent) {
+            val distance = event.values.firstOrNull() ?: return
+            val maxRange = proximitySensor?.maximumRange ?: 5f
+            val near = distance < maxRange
+            if (near == isNearEar) return
+            proximitySwitchJob?.cancel()
+            // Same debounce-with-lockout as the voice-message proximity router: cheap sensors have
+            // almost no hysteresis right at the threshold, so holding the phone near the borderline
+            // distance can report near/far/near/... in quick succession. A plain debounce still
+            // commits each flip once it holds for 500ms, so it doesn't by itself stop oscillation —
+            // the lockout makes any reversal shortly after a real switch wait longer, which damps it
+            // out after a switch or two instead of continuing indefinitely.
+            val sinceLastSwitch = SystemClock.elapsedRealtime() - lastProximitySwitchAtMs
+            val delayMs = if (sinceLastSwitch < POST_SWITCH_LOCKOUT_MS) {
+                PROXIMITY_DEBOUNCE_MS + (POST_SWITCH_LOCKOUT_MS - sinceLastSwitch)
+            } else {
+                PROXIMITY_DEBOUNCE_MS
+            }
+            proximitySwitchJob = coroutineScope.launch(Dispatchers.Main) {
+                delay(delayMs)
+                isNearEar = near
+                lastProximitySwitchAtMs = SystemClock.elapsedRealtime()
+                applyProximityRouting(near)
+            }
+        }
+
+        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+    }
+
+    private fun applyProximityRouting(near: Boolean) {
+        val currentType = listAudioDevices().find { it.id.toString() == ecRequestedDeviceId }?.type
+        if (currentType != null && currentType != AudioDeviceInfo.TYPE_BUILTIN_EARPIECE && currentType != AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) {
+            // Currently on Bluetooth/wired/USB: proximity never overrides that.
+            return
+        }
+        val wantedType = if (near) AudioDeviceInfo.TYPE_BUILTIN_EARPIECE else AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
+        if (currentType == wantedType) return
+        val target = listAudioDevices().find { it.type == wantedType } ?: return
+        Timber.d("Audio: proximity ${if (near) "near" else "far"}, switching to type ${target.type}")
+        ecRequestedDeviceId = target.id.toString()
+        // Also update the "current intent" marker proximity itself is allowed to move freely (the check
+        // above already restricts it to earpiece/speaker, never Bluetooth/wired), so that when Element
+        // Call echoes this exact switch back through onAudioDeviceSelect, it reads as confirming what we
+        // just asked for rather than as an unwanted change to fight — without this, this switch and the
+        // "defend the current choice" logic below fought each other and the output bounced back and forth.
+        userChosenDeviceId = target.id.toString()
+        audioManager.selectAudioDevice(target)
+        syncSelectionToWebUi(target.id.toString())
+    }
+
+    private fun startProximityRouting() {
+        val sensor = proximitySensor ?: return
+        if (isProximityListening) return
+        isProximityListening = true
+        isNearEar = false
+        lastProximitySwitchAtMs = 0L
+        sensorManager?.registerListener(proximityListener, sensor, SensorManager.SENSOR_DELAY_NORMAL)
+    }
+
+    private fun stopProximityRouting() {
+        if (!isProximityListening) return
+        isProximityListening = false
+        proximitySwitchJob?.cancel()
+        proximitySwitchJob = null
+        sensorManager?.unregisterListener(proximityListener)
+    }
 
     /**
      * This listener tracks the current communication device and updates the WebView when it changes.
@@ -255,12 +402,16 @@ class WebViewAudioManager(
             val bestNewDevice = validNewDevices.minByOrNull { rankOf(it.type) }
             if (bestNewDevice != null && rankOf(bestNewDevice.type) < currentRank) {
                 Timber.d("Audio: newly connected device outranks current selection, switching to it: ${bestNewDevice.type}")
+                userChosenDeviceId = bestNewDevice.id.toString()
                 ecRequestedDeviceId = bestNewDevice.id.toString()
                 audioManager.selectAudioDevice(bestNewDevice)
             }
         }
 
         override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>?) {
+            // If the device the user picked was just disconnected, Element Call's default logic takes over again.
+            val remainingIds = listAudioDevices().map { it.id }.toSet() - removedDevices.orEmpty().map { it.id }.toSet()
+            if (userChosenDeviceId?.toIntOrNull() !in remainingIds) userChosenDeviceId = null
             // Update the available devices
             // Element Call will then decide to switch devices if needed
             setAvailableAudioDevices()
@@ -306,6 +457,7 @@ class WebViewAudioManager(
             AudioManager.MODE_NORMAL
         }
 
+        startProximityRouting()
         setWebViewAndroidNativeBridge()
     }
 
@@ -319,6 +471,8 @@ class WebViewAudioManager(
             Timber.w("Audio: tried to disable webview in-call audio mode while already disabled")
             return
         }
+
+        stopProximityRouting()
 
         // Since this should run when the call is no longer running, it should be OK to not use the mutex here
         if (proximitySensorWakeLock?.isHeld == true) {
@@ -347,9 +501,17 @@ class WebViewAudioManager(
     private fun registerWebViewDeviceSelectedCallback() {
         val webViewAudioDeviceSelectedCallback = AndroidWebViewAudioBridge(
             onAudioDeviceSelected = { selectedDeviceId ->
-                previousSelectedDevice = listAudioDevices().find { it.id.toString() == selectedDeviceId }
-                this.ecRequestedDeviceId = selectedDeviceId
-                audioManager.selectAudioDevice(selectedDeviceId)
+                lastEcEmittedId = selectedDeviceId
+                val chosen = userChosenDeviceId
+                if (chosen != null && chosen != selectedDeviceId && listAudioDevices().any { it.id.toString() == chosen }) {
+                    // Element Call fell back to its own default, overriding what the user picked.
+                    Timber.d("Audio: Element Call selected $selectedDeviceId but the user chose $chosen, putting it back")
+                    coroutineScope.launch(Dispatchers.Main) { reassertUserChoice() }
+                } else {
+                    previousSelectedDevice = listAudioDevices().find { it.id.toString() == selectedDeviceId }
+                    this.ecRequestedDeviceId = selectedDeviceId
+                    audioManager.selectAudioDevice(selectedDeviceId)
+                }
             },
             onAudioPlaybackStarted = {
                 coroutineScope.launch(Dispatchers.Main) {
@@ -372,7 +534,7 @@ class WebViewAudioManager(
                     // This can fire again when the call is answered (a new audio track starts), so if the
                     // user already picked a device while it was ringing (e.g. switched to speaker) and it's
                     // still available, keep it instead of falling back to the default (earpiece).
-                    val alreadyChosenDevice = ecRequestedDeviceId?.let { requestedId ->
+                    val alreadyChosenDevice = (userChosenDeviceId ?: ecRequestedDeviceId)?.let { requestedId ->
                         listAudioDevices().find { it.id.toString() == requestedId }
                     }
                     val deviceToUse = alreadyChosenDevice ?: listAudioDevices().firstOrNull()
@@ -380,9 +542,23 @@ class WebViewAudioManager(
                         Timber.d("Audio: using device at playback start: ${device.type} (kept user's choice: ${alreadyChosenDevice != null})")
                         ecRequestedDeviceId = device.id.toString()
                         audioManager.selectAudioDevice(device)
+                        // Element Call has its own Android-only default-device logic that prefers the earpiece for
+                        // voice calls the moment nothing has been explicitly picked yet — which is exactly the
+                        // "rings on speaker, then jumps to the earpiece" behaviour that shouldn't happen any more.
+                        // Treating our own default the same as an explicit pick makes the fight-back below
+                        // (originally only for real user picks) also defend this one.
+                        if (alreadyChosenDevice == null) userChosenDeviceId = device.id.toString()
                     }
 
                     hasRegisteredCallbacks = true
+
+                    // Every list we send makes Element Call decide again (and it defaults to the earpiece), so give it a
+                    // moment and, if it ended up somewhere other than what the user picked, put that back.
+                    val chosen = userChosenDeviceId
+                    if (chosen != null) {
+                        delay(700)
+                        if (userChosenDeviceId == chosen && lastEcEmittedId != chosen) reassertUserChoice()
+                    }
                 }
             }
         )

@@ -230,15 +230,9 @@ class AttachmentsPreviewPresenter(
             }
         }
 
-        mediaOptimizationSelectorStates.forEach { mediaOptimizationSelectorState ->
-            val videoSizeEstimations = mediaOptimizationSelectorState.videoSizeEstimations.dataOrNull()
-            LaunchedEffect(videoSizeEstimations) {
-                if (videoSizeEstimations != null) {
-                    // Check if the video size estimations are too large for the max upload size
-                    displayFileTooLargeError = videoSizeEstimations.none { it.canUpload }
-                }
-            }
-        }
+        // Videos are never blocked as "too large": whatever their length, they are re-encoded with a bitrate
+        // budget that fits the server's limit when processed (see VideoCompressorConfigFactory), so there is
+        // no size at which sending a video can't work.
 
         fun handleEvent(event: AttachmentsPreviewEvent) {
             when (event) {
@@ -259,6 +253,7 @@ class AttachmentsPreviewPresenter(
                                     } else {
                                         it.selectedVideoPreset ?: mediaOptimizationConfigProvider.get().videoCompressionPreset
                                     },
+                                    maxUploadSizeBytes = mediaOptimizationConfigProvider.get().maxUploadSizeBytes,
                                 )
                             }
                             preprocessMediaJob = coroutineScope.launch(dispatchers.io) {
@@ -524,6 +519,7 @@ class AttachmentsPreviewPresenter(
             MediaOptimizationConfig(
                 compressImages = false,
                 videoCompressionPreset = videoCompressionPreset,
+                maxUploadSizeBytes = mediaOptimizationConfigProvider.get().maxUploadSizeBytes,
             )
         } else {
             MediaOptimizationConfig(
@@ -534,6 +530,7 @@ class AttachmentsPreviewPresenter(
                 } else {
                     mediaOptimizationSelectorState.selectedVideoPreset ?: mediaOptimizationConfigProvider.get().videoCompressionPreset
                 },
+                maxUploadSizeBytes = mediaOptimizationConfigProvider.get().maxUploadSizeBytes,
             )
         }
     }

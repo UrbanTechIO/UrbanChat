@@ -32,6 +32,7 @@ import io.element.android.libraries.architecture.Presenter
 import io.element.android.libraries.architecture.runCatchingUpdatingState
 import io.element.android.libraries.core.bool.orFalse
 import io.element.android.libraries.core.coroutine.CoroutineDispatchers
+import io.element.android.libraries.core.extensions.runCatchingExceptions
 import io.element.android.libraries.core.mimetype.MimeTypes.isMimeTypeImage
 import io.element.android.libraries.core.mimetype.MimeTypes.isMimeTypeVideo
 import io.element.android.libraries.di.annotations.SessionCoroutineScope
@@ -42,6 +43,7 @@ import io.element.android.libraries.mediaupload.api.MediaOptimizationConfigProvi
 import io.element.android.libraries.mediaupload.api.MediaSenderRoomFactory
 import io.element.android.libraries.mediaviewer.api.local.LocalMediaFactory
 import io.element.android.libraries.preferences.api.store.SessionPreferencesStore
+import io.element.android.libraries.preferences.api.store.VideoCompressionPreset
 import io.element.android.services.appnavstate.api.ActiveRoomsHolder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
@@ -74,11 +76,15 @@ class SharePresenter(
 
     private data class PendingAuth(val roomIds: List<RoomId>, val attempt: Int)
 
+    /** The quality picked for a shared video; a null [preset] means original quality. */
+    private data class VideoPresetOverride(val preset: VideoCompressionPreset?)
+
     private val shareActionState: MutableState<AsyncAction<List<RoomId>>> = mutableStateOf(AsyncAction.Uninitialized)
     private val imageEditorState: MutableState<AttachmentImageEditorState?> = mutableStateOf(null)
     private val isApplyingImageEdits: MutableState<Boolean> = mutableStateOf(false)
     private val displayImageEditError: MutableState<Boolean> = mutableStateOf(false)
     private val pendingAuth: MutableState<PendingAuth?> = mutableStateOf(null)
+    private val videoQualityPrompt: MutableState<ShareVideoQualityPrompt?> = mutableStateOf(null)
 
     private var pendingRoomIds: List<RoomId>? = null
     private var pendingEditableMedia: EditedLocalMedia? = null
@@ -98,15 +104,40 @@ class SharePresenter(
     }
 
     private fun proceedWithShare(roomIds: List<RoomId>) {
-        val singleImageUri = (shareIntentData as? ShareIntentData.Uris)
-            ?.uris
-            ?.singleOrNull()
-            ?.takeIf { it.mimeType.isMimeTypeImage() }
-        if (singleImageUri != null) {
-            sessionCoroutineScope.launch { openImageEditor(singleImageUri, roomIds) }
-        } else {
-            sessionCoroutineScope.share(shareIntentData, roomIds)
+        val singleUri = (shareIntentData as? ShareIntentData.Uris)?.uris?.singleOrNull()
+        val singleImageUri = singleUri?.takeIf { it.mimeType.isMimeTypeImage() }
+        val singleVideoUri = singleUri?.takeIf { it.mimeType.isMimeTypeVideo() }
+        when {
+            singleImageUri != null -> sessionCoroutineScope.launch { openImageEditor(singleImageUri, roomIds) }
+            singleVideoUri != null -> sessionCoroutineScope.launch { askVideoQualityOrShare(singleVideoUri, roomIds) }
+            else -> sessionCoroutineScope.share(shareIntentData, roomIds)
         }
+    }
+
+    /**
+     * Videos follow the user's upload settings: with image optimisation on, or a video quality of 720p or lower,
+     * they are compressed to that quality straight away. With optimisation off and a quality above 720p the user
+     * has asked for full quality, so they get to choose the quality for this video before it is sent.
+     * Either way the result is always fitted under the server's upload limit.
+     */
+    private suspend fun askVideoQualityOrShare(uriToShare: UriToShare, roomIds: List<RoomId>) {
+        val config = mediaOptimizationConfigProvider.get()
+        // (With "Original Size" on the preset is null: the user already said never to touch videos, so no prompt.)
+        val wantsFullQuality = !config.compressImages && config.videoCompressionPreset == VideoCompressionPreset.HIGH
+        if (!wantsFullQuality) {
+            sessionCoroutineScope.share(shareIntentData, roomIds)
+            return
+        }
+        val fileSize = runCatchingExceptions {
+            localMediaFactory.createFromUri(
+                uri = uriToShare.uri,
+                mimeType = uriToShare.mimeType,
+                name = null,
+                formattedFileSize = null,
+            ).info.fileSize
+        }.getOrNull()
+        pendingRoomIds = roomIds
+        videoQualityPrompt.value = ShareVideoQualityPrompt(fileSizeBytes = fileSize, maxUploadSizeBytes = config.maxUploadSizeBytes)
     }
 
     private suspend fun openImageEditor(uriToShare: UriToShare, roomIds: List<RoomId>) {
@@ -151,6 +182,16 @@ class SharePresenter(
                 ShareEvents.ClearError -> shareActionState.value = AsyncAction.Uninitialized
                 ShareEvents.RetryAuth -> pendingAuth.value = pendingAuth.value?.let { it.copy(attempt = it.attempt + 1) }
                 ShareEvents.CancelAuth -> pendingAuth.value = null
+                is ShareEvents.SelectVideoQuality -> {
+                    val roomIds = pendingRoomIds ?: return
+                    videoQualityPrompt.value = null
+                    pendingRoomIds = null
+                    sessionCoroutineScope.share(shareIntentData, roomIds, videoPresetOverride = VideoPresetOverride(event.preset))
+                }
+                ShareEvents.DismissVideoQuality -> {
+                    videoQualityPrompt.value = null
+                    pendingRoomIds = null
+                }
                 ShareEvents.CloseImageEditor -> {
                     imageEditorState.value = null
                     pendingEditableMedia?.file?.safeDelete()
@@ -208,6 +249,7 @@ class SharePresenter(
             isApplyingImageEdits = isApplyingImageEdits.value,
             displayImageEditError = displayImageEditError.value,
             pendingAuthState = currentPendingAuth?.let { authState },
+            videoQualityPrompt = videoQualityPrompt.value,
             eventSink = ::handleEvent,
         )
     }
@@ -263,6 +305,7 @@ class SharePresenter(
         shareIntentData: ShareIntentData,
         roomIds: List<RoomId>,
         originalShareIntentData: ShareIntentData = shareIntentData,
+        videoPresetOverride: VideoPresetOverride? = null,
     ) = launch {
         suspend {
             val result = when (shareIntentData) {
@@ -288,13 +331,12 @@ class SharePresenter(
                                 val mediaSender = mediaSenderRoomFactory.create(room = room)
                                 filesToShare
                                     .map { fileToShare ->
-                                        // The share sheet has no attachment preview/HD picker, unlike the in-app
-                                        // attach flow, so there's no way for the user to opt into original quality.
-                                        // Treat "share this exact file" as already meaning "send it as-is": skip
-                                        // video recompression here rather than silently applying the default preset.
+                                        // Videos follow the user's upload settings (see askVideoQualityOrShare), unless the
+                                        // user picked a quality for this particular video. Either way the video is fitted
+                                        // under the server's upload limit while being processed, so it can't fail for size.
                                         val mediaOptimizationConfig = mediaOptimizationConfigProvider.get().let { config ->
-                                            if (fileToShare.mimeType.isMimeTypeVideo()) {
-                                                config.copy(videoCompressionPreset = null)
+                                            if (videoPresetOverride != null && fileToShare.mimeType.isMimeTypeVideo()) {
+                                                config.copy(videoCompressionPreset = videoPresetOverride.preset)
                                             } else {
                                                 config
                                             }

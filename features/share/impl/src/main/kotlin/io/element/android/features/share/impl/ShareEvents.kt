@@ -11,6 +11,7 @@ package io.element.android.features.share.impl
 import io.element.android.features.messages.impl.attachments.preview.imageeditor.EditorTool
 import io.element.android.features.messages.impl.attachments.preview.imageeditor.ImageAnnotation
 import io.element.android.features.messages.impl.attachments.preview.imageeditor.NormalizedCropRect
+import io.element.android.libraries.preferences.api.store.VideoCompressionPreset
 
 sealed interface ShareEvents {
     data object ClearError : ShareEvents
@@ -29,4 +30,8 @@ sealed interface ShareEvents {
     data object ClearImageEditError : ShareEvents
     data object RetryAuth : ShareEvents
     data object CancelAuth : ShareEvents
+
+    /** Send the shared video at this quality; null means original quality. */
+    data class SelectVideoQuality(val preset: VideoCompressionPreset?) : ShareEvents
+    data object DismissVideoQuality : ShareEvents
 }

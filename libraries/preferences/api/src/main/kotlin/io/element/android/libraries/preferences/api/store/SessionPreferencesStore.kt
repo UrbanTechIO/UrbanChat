@@ -48,6 +48,8 @@ interface SessionPreferencesStore {
 
     suspend fun setVideoCompressionPreset(preset: VideoCompressionPreset)
     fun getVideoCompressionPreset(): Flow<VideoCompressionPreset>
+    suspend fun setKeepOriginalVideoSize(enabled: Boolean)
+    fun isKeepOriginalVideoSizeEnabled(): Flow<Boolean>
 
     suspend fun clear()
 }

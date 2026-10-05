@@ -143,6 +143,8 @@ class DefaultMediaOptimizationSelectorPresenter(
                 return@LaunchedEffect
             }
             val mediaOptimizationConfig = mediaOptimizationConfigProvider.get()
+            // With the "Original Size" setting on (no preset), videos start on original quality (HD chip on).
+            selectedVideoOriginalQuality = AsyncData.Success(mediaOptimizationConfig.videoCompressionPreset == null)
             selectedImageOptimization = AsyncData.Success(mediaOptimizationConfig.compressImages)
             // Find the best video preset based on the default preset and the video size estimations
             // Since the estimation for the current preset may be way too large to upload, we check the ones that provide lower file sizes

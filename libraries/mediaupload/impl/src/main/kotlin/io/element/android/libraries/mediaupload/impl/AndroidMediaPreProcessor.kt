@@ -88,7 +88,12 @@ class AndroidMediaPreProcessor(
                     val shouldBeCompressed = mediaOptimizationConfig.compressImages && mimeType !in notCompressibleImageTypes
                     processImage(uri, mimeType, shouldBeCompressed)
                 }
-                mimeType.isMimeTypeVideo() -> processVideo(uri, mimeType, mediaOptimizationConfig.videoCompressionPreset)
+                mimeType.isMimeTypeVideo() -> processVideo(
+                    uri = uri,
+                    mimeType = mimeType,
+                    videoCompressionPreset = mediaOptimizationConfig.videoCompressionPreset,
+                    maxUploadSizeBytes = mediaOptimizationConfig.maxUploadSizeBytes,
+                )
                 mimeType.isMimeTypeAudio() -> processAudio(uri, mimeType)
                 else -> processFile(uri, mimeType)
             }
@@ -240,28 +245,27 @@ class AndroidMediaPreProcessor(
         )
     }
 
-    private suspend fun processVideo(uri: Uri, mimeType: String?, videoCompressionPreset: VideoCompressionPreset?): MediaUploadInfo {
-        if (videoCompressionPreset == null) {
+    private suspend fun processVideo(
+        uri: Uri,
+        mimeType: String?,
+        videoCompressionPreset: VideoCompressionPreset?,
+        maxUploadSizeBytes: Long?,
+    ): MediaUploadInfo {
+        // "Original quality" normally uploads the file untouched. But a file that is over the server's limit can
+        // never be uploaded like that, so rather than failing it is re-encoded at the best quality that fits.
+        val preset = videoCompressionPreset
+            ?: VideoCompressionPreset.HIGH.takeIf { isOverUploadLimit(uri, maxUploadSizeBytes) }
+        if (preset == null) {
             return processVideoWithoutCompression(uri, mimeType)
         }
         Timber.d("Processing video ${uri.path.orEmpty().hash()}")
-        val resultFile = runCatchingExceptions {
-            videoCompressor.compress(uri, videoCompressionPreset)
-                .onEach {
-                    if (it is VideoTranscodingEvent.Progress) {
-                        Timber.d("Video compression progress: ${it.value}%")
-                    } else if (it is VideoTranscodingEvent.Completed) {
-                        Timber.d("Video compression completed: ${it.file.path}")
-                    }
-                }
-                .filterIsInstance<VideoTranscodingEvent.Completed>()
-                .first()
-                .file
+        var resultFile = compressVideo(uri, preset, maxUploadSizeBytes, budgetScale = 1.0)
+        if (resultFile != null && maxUploadSizeBytes != null && resultFile.length() > maxUploadSizeBytes) {
+            // The encoder overshot its bitrate target (VBR does that): try once more with a tighter budget.
+            Timber.w("Compressed video is still over the upload limit, retrying with a smaller budget")
+            resultFile.delete()
+            resultFile = compressVideo(uri, preset, maxUploadSizeBytes, budgetScale = 0.6)
         }
-            .onFailure {
-                Timber.e(it, "Failed to compress video: $uri")
-            }
-            .getOrNull()
 
         if (resultFile != null) {
             val thumbnailInfo = thumbnailFactory.createVideoThumbnail(resultFile)
@@ -276,6 +280,37 @@ class AndroidMediaPreProcessor(
             // If the video could not be compressed, just use the original one, but send it as a file
             return processFile(uri, MimeTypes.OctetStream)
         }
+    }
+
+    private suspend fun compressVideo(
+        uri: Uri,
+        preset: VideoCompressionPreset,
+        maxUploadSizeBytes: Long?,
+        budgetScale: Double,
+    ): File? = runCatchingExceptions {
+        videoCompressor.compress(uri, preset, maxUploadSizeBytes, budgetScale)
+            .onEach {
+                if (it is VideoTranscodingEvent.Progress) {
+                    Timber.d("Video compression progress: ${it.value}%")
+                } else if (it is VideoTranscodingEvent.Completed) {
+                    Timber.d("Video compression completed: ${it.file.path}")
+                }
+            }
+            .filterIsInstance<VideoTranscodingEvent.Completed>()
+            .first()
+            .file
+    }
+        .onFailure {
+            Timber.e(it, "Failed to compress video: $uri")
+        }
+        .getOrNull()
+
+    private fun isOverUploadLimit(uri: Uri, maxUploadSizeBytes: Long?): Boolean {
+        if (maxUploadSizeBytes == null) return false
+        val size = runCatchingExceptions {
+            contentResolver.openAssetFileDescriptor(uri, "r")?.use { it.length }
+        }.getOrNull()?.takeIf { it >= 0 } ?: return false
+        return size > maxUploadSizeBytes
     }
 
     /** "HD"/original quality: skip re-encoding entirely and upload the source file unmodified. */

@@ -9,7 +9,9 @@
 package io.element.android.features.share.impl
 
 import androidx.activity.compose.BackHandler
+import android.text.format.Formatter
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import io.element.android.features.lockscreen.impl.biometric.DeviceAuthState
@@ -19,9 +21,13 @@ import io.element.android.libraries.designsystem.components.ProgressDialogType
 import io.element.android.libraries.designsystem.components.async.AsyncActionView
 import io.element.android.libraries.designsystem.components.dialogs.AlertDialog
 import io.element.android.libraries.designsystem.components.dialogs.ConfirmationDialog
+import io.element.android.libraries.designsystem.components.dialogs.ListOption
+import io.element.android.libraries.designsystem.components.dialogs.SingleSelectionDialog
 import io.element.android.libraries.designsystem.preview.ElementPreview
 import io.element.android.libraries.designsystem.preview.PreviewsDayNight
 import io.element.android.libraries.matrix.api.core.RoomId
+import io.element.android.libraries.preferences.api.store.VideoCompressionPreset
+import kotlinx.collections.immutable.persistentListOf
 import io.element.android.libraries.ui.strings.CommonStrings
 
 @Composable
@@ -76,6 +82,13 @@ fun ShareView(
                 onDismiss = { state.eventSink(ShareEvents.ClearImageEditError) },
             )
         }
+        state.videoQualityPrompt != null -> {
+            VideoQualityDialog(
+                prompt = state.videoQualityPrompt,
+                onSelect = { preset -> state.eventSink(ShareEvents.SelectVideoQuality(preset)) },
+                onDismiss = { state.eventSink(ShareEvents.DismissVideoQuality) },
+            )
+        }
         state.pendingAuthState is DeviceAuthState.Authenticating -> {
             ProgressDialog(
                 type = ProgressDialogType.Indeterminate,
@@ -115,5 +128,56 @@ internal fun ShareViewPreview(@PreviewParameter(ShareStateProvider::class) state
     ShareView(
         state = state,
         onShareSuccess = {}
+    )
+}
+
+/**
+ * Lets the user pick the quality of a shared video before sending it, like the HD button on the in-app attachment
+ * preview. The first option sends the original; every option is fitted under the server's upload limit if needed.
+ */
+@Composable
+private fun VideoQualityDialog(
+    prompt: ShareVideoQualityPrompt,
+    onSelect: (VideoCompressionPreset?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val context = LocalContext.current
+    val choices = listOf<VideoCompressionPreset?>(
+        null,
+        VideoCompressionPreset.HIGH,
+        VideoCompressionPreset.STANDARD,
+        VideoCompressionPreset.LOW,
+    )
+    // Informational only: the hint always says 100 MB (roughly what Cloudflare lets through). What really limits the
+    // upload is the server's own setting, which the video processing reads and fits the video under regardless.
+    val maxSizeText = "100 MB"
+    val options = persistentListOf(
+        ListOption(
+            title = stringResource(R.string.screen_share_video_quality_original),
+            subtitle = if (prompt.isOverLimit) {
+                stringResource(R.string.screen_share_video_quality_original_hint_reduced, maxSizeText)
+            } else {
+                stringResource(R.string.screen_share_video_quality_original_hint, maxSizeText)
+            },
+        ),
+        ListOption(title = stringResource(R.string.screen_share_video_quality_high)),
+        ListOption(title = stringResource(R.string.screen_share_video_quality_standard)),
+        ListOption(title = stringResource(R.string.screen_share_video_quality_low)),
+    )
+    val subtitle = if (prompt.isOverLimit && prompt.fileSizeBytes != null && prompt.maxUploadSizeBytes != null) {
+        stringResource(
+            R.string.screen_share_video_quality_too_large,
+            Formatter.formatFileSize(context, prompt.fileSizeBytes),
+            Formatter.formatFileSize(context, prompt.maxUploadSizeBytes),
+        )
+    } else {
+        null
+    }
+    SingleSelectionDialog(
+        title = stringResource(R.string.screen_share_video_quality_title),
+        subtitle = subtitle,
+        options = options,
+        onSelectOption = { index -> onSelect(choices[index]) },
+        onDismissRequest = onDismiss,
     )
 }

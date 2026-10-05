@@ -3,4 +3,12 @@
     <string name="screen_share_lock_auth_failed_title">"Authentication failed"</string>
     <string name="screen_share_lock_no_device_security_title">"Set up a screen lock"</string>
     <string name="screen_share_lock_no_device_security_subtitle">"Add a PIN, pattern, password or biometric unlock to your device to share into this chat."</string>
+    <string name="screen_share_video_quality_title">"Video quality"</string>
+    <string name="screen_share_video_quality_too_large">"This video is %1$s, but the server accepts up to %2$s. It will be compressed to fit."</string>
+    <string name="screen_share_video_quality_original">"Original quality"</string>
+    <string name="screen_share_video_quality_original_hint">"%1$s maximum"</string>
+    <string name="screen_share_video_quality_original_hint_reduced">"%1$s maximum - this video will be reduced to fit"</string>
+    <string name="screen_share_video_quality_high">"High (1080p)"</string>
+    <string name="screen_share_video_quality_standard">"Standard (720p)"</string>
+    <string name="screen_share_video_quality_low">"Low (360p)"</string>
 </resources>

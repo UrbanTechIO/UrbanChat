@@ -18,6 +18,7 @@ class InMemorySessionPreferencesStore(
     isSharePresenceEnabled: Boolean = true,
     isShowOnlineStatusEnabled: Boolean = true,
     isOrganizeChatListsEnabled: Boolean = true,
+    isKeepOriginalVideoSizeEnabled: Boolean = false,
     isSendPublicReadReceiptsEnabled: Boolean = true,
     isRenderReadReceiptsEnabled: Boolean = true,
     isSendTypingNotificationsEnabled: Boolean = true,
@@ -31,6 +32,7 @@ class InMemorySessionPreferencesStore(
     private val isSharePresenceEnabled = MutableStateFlow(isSharePresenceEnabled)
     private val isShowOnlineStatusEnabled = MutableStateFlow(isShowOnlineStatusEnabled)
     private val isOrganizeChatListsEnabled = MutableStateFlow(isOrganizeChatListsEnabled)
+    private val isKeepOriginalVideoSizeEnabled = MutableStateFlow(isKeepOriginalVideoSizeEnabled)
     private val isSendPublicReadReceiptsEnabled = MutableStateFlow(isSendPublicReadReceiptsEnabled)
     private val isRenderReadReceiptsEnabled = MutableStateFlow(isRenderReadReceiptsEnabled)
     private val isSendTypingNotificationsEnabled = MutableStateFlow(isSendTypingNotificationsEnabled)
@@ -60,6 +62,12 @@ class InMemorySessionPreferencesStore(
     }
 
     override fun isOrganizeChatListsEnabled(): Flow<Boolean> = isOrganizeChatListsEnabled
+
+    override suspend fun setKeepOriginalVideoSize(enabled: Boolean) {
+        isKeepOriginalVideoSizeEnabled.tryEmit(enabled)
+    }
+
+    override fun isKeepOriginalVideoSizeEnabled(): Flow<Boolean> = isKeepOriginalVideoSizeEnabled
 
     override suspend fun setSendPublicReadReceipts(enabled: Boolean) {
         isSendPublicReadReceiptsEnabled.tryEmit(enabled)

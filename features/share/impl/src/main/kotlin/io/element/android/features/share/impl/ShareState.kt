@@ -20,5 +20,17 @@ data class ShareState(
     val displayImageEditError: Boolean,
     /** Non-null while sharing into at least one locked room requires unlocking the device first. */
     val pendingAuthState: DeviceAuthState?,
+    /** Non-null while a shared video is waiting for the user to choose its quality before sending. */
+    val videoQualityPrompt: ShareVideoQualityPrompt?,
     val eventSink: (ShareEvents) -> Unit
 )
+
+data class ShareVideoQualityPrompt(
+    /** Size of the shared video, if known. */
+    val fileSizeBytes: Long?,
+    /** The server's upload limit, if known. */
+    val maxUploadSizeBytes: Long?,
+) {
+    val isOverLimit: Boolean
+        get() = fileSizeBytes != null && maxUploadSizeBytes != null && fileSizeBytes > maxUploadSizeBytes
+}

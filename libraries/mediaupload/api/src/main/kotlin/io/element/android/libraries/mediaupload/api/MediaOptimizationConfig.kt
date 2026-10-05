@@ -15,6 +15,11 @@ data class MediaOptimizationConfig(
     val compressImages: Boolean,
     /** Null means the video is uploaded as-is, with no re-encoding ("original quality"). */
     val videoCompressionPreset: VideoCompressionPreset?,
+    /**
+     * The server's maximum upload size, when known. Videos are re-encoded with a bitrate budget so the
+     * result always fits under it, whatever the length of the video (including "original quality" ones).
+     */
+    val maxUploadSizeBytes: Long? = null,
 )
 
 fun VideoCompressionPreset.compressorHelper(): VideoCompressorHelper = when (this) {

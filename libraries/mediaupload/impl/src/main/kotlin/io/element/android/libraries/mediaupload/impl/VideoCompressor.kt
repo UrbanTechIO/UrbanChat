@@ -51,12 +51,19 @@ class VideoCompressor(
     @ApplicationContext private val context: Context,
 ) {
     @OptIn(UnstableApi::class)
-    fun compress(uri: Uri, videoCompressionPreset: VideoCompressionPreset): Flow<VideoTranscodingEvent> = callbackFlow {
+    fun compress(
+        uri: Uri,
+        videoCompressionPreset: VideoCompressionPreset,
+        maxOutputBytes: Long? = null,
+        budgetScale: Double = 1.0,
+    ): Flow<VideoTranscodingEvent> = callbackFlow {
         val metadata = getVideoMetadata(uri)
 
         val videoCompressorConfig = VideoCompressorConfigFactory.create(
             metadata = metadata,
             preset = videoCompressionPreset,
+            maxOutputBytes = maxOutputBytes,
+            budgetScale = budgetScale,
         )
 
         val tmpFile = context.createTmpFile(extension = "mp4")
@@ -165,6 +172,7 @@ class VideoCompressor(
                 val bitrate = it.extractMetadata(MediaMetadataRetriever.METADATA_KEY_BITRATE)?.toLongOrNull() ?: -1
                 val frameRate = it.extractMetadata(MediaMetadataRetriever.METADATA_KEY_CAPTURE_FRAMERATE)?.toIntOrNull() ?: -1
                 val rotation = it.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull() ?: 0
+                val durationMs = it.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
 
                 val (actualWidth, actualHeight) = if (width == -1 || height == -1) {
                     // Try getting the first frame instead
@@ -180,6 +188,7 @@ class VideoCompressor(
                     bitrate = bitrate,
                     frameRate = frameRate,
                     rotation = rotation,
+                    durationMs = durationMs,
                 )
             }
         }.onFailure {
@@ -194,6 +203,7 @@ internal data class VideoFileMetadata(
     val bitrate: Long,
     val frameRate: Int,
     val rotation: Int,
+    val durationMs: Long? = null,
 )
 
 sealed interface VideoTranscodingEvent {

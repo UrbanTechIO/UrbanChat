@@ -44,6 +44,7 @@ class DefaultSessionPreferencesStore(
     private val sharePresenceKey = booleanPreferencesKey("sharePresence")
     private val showOnlineStatusKey = booleanPreferencesKey("showOnlineStatus")
     private val organizeChatListsKey = booleanPreferencesKey("organizeChatLists")
+    private val keepOriginalVideoSizeKey = booleanPreferencesKey("keepOriginalVideoSize")
     private val sendPublicReadReceiptsKey = booleanPreferencesKey("sendPublicReadReceipts")
     private val renderReadReceiptsKey = booleanPreferencesKey("renderReadReceipts")
     private val sendTypingNotificationsKey = booleanPreferencesKey("sendTypingNotifications")
@@ -82,6 +83,8 @@ class DefaultSessionPreferencesStore(
     override fun isShowOnlineStatusEnabled(): Flow<Boolean> = get(showOnlineStatusKey) { true }
     override suspend fun setOrganizeChatLists(enabled: Boolean) = update(organizeChatListsKey, enabled)
     override fun isOrganizeChatListsEnabled(): Flow<Boolean> = get(organizeChatListsKey) { true }
+    override suspend fun setKeepOriginalVideoSize(enabled: Boolean) = update(keepOriginalVideoSizeKey, enabled)
+    override fun isKeepOriginalVideoSizeEnabled(): Flow<Boolean> = get(keepOriginalVideoSizeKey) { false }
 
     override suspend fun setSendPublicReadReceipts(enabled: Boolean) = update(sendPublicReadReceiptsKey, enabled)
     override fun isSendPublicReadReceiptsEnabled(): Flow<Boolean> = get(sendPublicReadReceiptsKey) { true }

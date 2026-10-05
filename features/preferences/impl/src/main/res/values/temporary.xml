@@ -33,6 +33,8 @@
     <string name="screen_advanced_settings_download_to_gallery_description">"Show a download button on received photos and videos. Downloading saves it to your device's Gallery, in an UrbanChat folder, and later plays it from there instead of the server"</string>
     <string name="screen_advanced_settings_disable_link_previews_title">"Disable link previews"</string>
     <string name="screen_advanced_settings_disable_link_previews_description">"When off, messages containing a link show a preview card with its title, description and image"</string>
+    <string name="screen_advanced_settings_original_video_size">"Original Size"</string>
+    <string name="screen_advanced_settings_original_video_size_description">"Send videos untouched, without lowering their quality or size. A video bigger than the server's upload limit is still compressed so it can be sent."</string>
     <string name="screen_advanced_settings_organize_chats">"Organise chats and groups"</string>
     <string name="screen_advanced_settings_organize_chats_description">"Split the chat list into Chats and Groups sections. Turn off to see everything in one list, with the latest activity on top."</string>
     <string name="screen_advanced_settings_show_online_status">"Show my online status"</string>

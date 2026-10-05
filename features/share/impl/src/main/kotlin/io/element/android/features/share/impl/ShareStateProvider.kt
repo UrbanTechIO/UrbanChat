@@ -34,12 +34,16 @@ open class ShareStateProvider : PreviewParameterProvider<ShareState> {
             aShareState(
                 pendingAuthState = DeviceAuthState.Failed(noDeviceSecurity = false),
             ),
+            aShareState(
+                videoQualityPrompt = ShareVideoQualityPrompt(fileSizeBytes = 120_000_000L, maxUploadSizeBytes = 50_000_000L),
+            ),
         )
 }
 
 fun aShareState(
     shareAction: AsyncAction<List<RoomId>> = AsyncAction.Uninitialized,
     pendingAuthState: DeviceAuthState? = null,
+    videoQualityPrompt: ShareVideoQualityPrompt? = null,
     eventSink: (ShareEvents) -> Unit = {}
 ) = ShareState(
     shareAction = shareAction,
@@ -47,5 +51,6 @@ fun aShareState(
     isApplyingImageEdits = false,
     displayImageEditError = false,
     pendingAuthState = pendingAuthState,
+    videoQualityPrompt = videoQualityPrompt,
     eventSink = eventSink
 )

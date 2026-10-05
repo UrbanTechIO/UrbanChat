@@ -21,6 +21,7 @@ data class AdvancedSettingsState(
     val isSharePresenceEnabled: Boolean,
     val isShowOnlineStatusEnabled: Boolean,
     val isOrganizeChatListsEnabled: Boolean,
+    val isKeepOriginalVideoSizeEnabled: Boolean,
     val mediaOptimizationState: MediaOptimizationState?,
     val theme: ThemeOption,
     val availableThemeOptions: ImmutableList<ThemeOption>,

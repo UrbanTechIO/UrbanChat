@@ -180,6 +180,18 @@ fun AdvancedSettingsView(
             ),
             onClick = { state.eventSink(AdvancedSettingsEvents.SetShowOnlineStatusEnabled(!state.isShowOnlineStatusEnabled)) }
         )
+        ListItem(
+            content = {
+                Text(text = stringResource(id = R.string.screen_advanced_settings_original_video_size))
+            },
+            supportingContent = {
+                Text(text = stringResource(id = R.string.screen_advanced_settings_original_video_size_description))
+            },
+            trailingContent = ListItemContent.Switch(
+                checked = state.isKeepOriginalVideoSizeEnabled,
+            ),
+            onClick = { state.eventSink(AdvancedSettingsEvents.SetKeepOriginalVideoSizeEnabled(!state.isKeepOriginalVideoSizeEnabled)) }
+        )
         val compressImages = state.mediaOptimizationState?.shouldCompressImages
 
         when (state.mediaOptimizationState) {

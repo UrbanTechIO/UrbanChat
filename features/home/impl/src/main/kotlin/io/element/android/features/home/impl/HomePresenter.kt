@@ -20,6 +20,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import dev.zacsweers.metro.Inject
 import io.element.android.features.home.impl.calls.HomeCallsState
+import io.element.android.features.home.impl.miniplayer.VoiceMessageMiniPlayerState
 import io.element.android.features.home.impl.roomlist.RoomListState
 import io.element.android.features.home.impl.spaces.HomeSpacesState
 import io.element.android.features.logout.api.direct.DirectLogoutState
@@ -45,6 +46,7 @@ class HomePresenter(
     private val roomListPresenter: Presenter<RoomListState>,
     private val homeSpacesPresenter: Presenter<HomeSpacesState>,
     private val homeCallsPresenter: Presenter<HomeCallsState>,
+    private val voiceMessageMiniPlayerPresenter: Presenter<VoiceMessageMiniPlayerState>,
     private val logoutPresenter: Presenter<DirectLogoutState>,
     private val rageshakeFeatureAvailability: RageshakeFeatureAvailability,
     private val sessionStore: SessionStore,
@@ -68,6 +70,7 @@ class HomePresenter(
         val roomListState = roomListPresenter.present()
         val homeSpacesState = homeSpacesPresenter.present()
         val homeCallsState = homeCallsPresenter.present()
+        val voiceMessageMiniPlayerState = voiceMessageMiniPlayerPresenter.present()
         var currentHomeNavigationBarItemOrdinal by rememberSaveable { mutableIntStateOf(HomeNavigationBarItem.Chats.ordinal) }
         val currentHomeNavigationBarItem by remember {
             derivedStateOf {
@@ -110,6 +113,7 @@ class HomePresenter(
             roomListState = roomListState,
             homeSpacesState = homeSpacesState,
             homeCallsState = homeCallsState,
+            voiceMessageMiniPlayerState = voiceMessageMiniPlayerState,
             snackbarMessage = snackbarMessage,
             canReportBug = canReportBug,
             directLogoutState = directLogoutState,

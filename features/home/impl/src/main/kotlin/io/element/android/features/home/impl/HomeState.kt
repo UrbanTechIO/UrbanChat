@@ -9,6 +9,7 @@
 package io.element.android.features.home.impl
 
 import io.element.android.features.home.impl.calls.HomeCallsState
+import io.element.android.features.home.impl.miniplayer.VoiceMessageMiniPlayerState
 import io.element.android.features.home.impl.roomlist.RoomListState
 import io.element.android.features.home.impl.spacefilters.SpaceFiltersState
 import io.element.android.features.home.impl.spaces.HomeSpacesState
@@ -29,6 +30,7 @@ data class HomeState(
     val roomListState: RoomListState,
     val homeSpacesState: HomeSpacesState,
     val homeCallsState: HomeCallsState,
+    val voiceMessageMiniPlayerState: VoiceMessageMiniPlayerState,
     val snackbarMessage: SnackbarMessage?,
     val canReportBug: Boolean,
     val directLogoutState: DirectLogoutState,

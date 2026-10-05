@@ -17,7 +17,8 @@ import androidx.media3.exoplayer.ExoPlayer
 import dev.zacsweers.metro.BindingContainer
 import dev.zacsweers.metro.ContributesTo
 import dev.zacsweers.metro.Provides
-import io.element.android.libraries.di.RoomScope
+import dev.zacsweers.metro.SingleIn
+import io.element.android.libraries.di.SessionScope
 import io.element.android.libraries.di.annotations.ApplicationContext
 
 /**
@@ -45,10 +46,11 @@ interface SimplePlayer {
     }
 }
 
-@ContributesTo(RoomScope::class)
+@ContributesTo(SessionScope::class)
 @BindingContainer
 object SimplePlayerModule {
     @Provides
+    @SingleIn(SessionScope::class)
     fun simplePlayerProvider(
         @ApplicationContext context: Context,
     ): SimplePlayer {

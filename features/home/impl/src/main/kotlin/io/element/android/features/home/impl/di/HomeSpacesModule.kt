@@ -24,4 +24,9 @@ interface HomeSpacesModule {
 
     @Binds
     fun bindHomeSpacesPresenter(presenter: HomeSpacesPresenter): Presenter<HomeSpacesState>
+
+    @Binds
+    fun bindVoiceMessageMiniPlayerPresenter(
+        presenter: io.element.android.features.home.impl.miniplayer.VoiceMessageMiniPlayerPresenter,
+    ): Presenter<io.element.android.features.home.impl.miniplayer.VoiceMessageMiniPlayerState>
 }

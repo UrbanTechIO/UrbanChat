@@ -107,6 +107,13 @@ class DefaultProximityAudioRouter(
                 previousMode = manager.mode
                 previousSpeakerphoneOn = manager.isSpeakerphoneOn
                 manager.mode = AudioManager.MODE_IN_COMMUNICATION
+                // A voice message only ever plays through the earpiece or the speaker, never Bluetooth. But
+                // switching to MODE_IN_COMMUNICATION makes Android re-pick a "communication" route, and if a
+                // Bluetooth headset is connected it can briefly grab that route before our isSpeakerphoneOn
+                // below takes effect — heard as audio bouncing to the headset and back. Explicitly stopping
+                // SCO first stops Android from ever offering it that route.
+                manager.stopBluetoothSco()
+                manager.isBluetoothScoOn = false
                 manager.isSpeakerphoneOn = true
             }
         }
@@ -135,7 +142,13 @@ class DefaultProximityAudioRouter(
 
     @Suppress("DEPRECATION")
     private fun setSpeakerphoneOn(speakerOn: Boolean) {
-        runCatchingExceptions { audioManager?.isSpeakerphoneOn = speakerOn }
+        runCatchingExceptions {
+            // Keep Bluetooth out of the way here too (see the comment in start()): switching to the
+            // earpiece is also a route change that could otherwise get offered to a connected headset.
+            audioManager?.stopBluetoothSco()
+            audioManager?.isBluetoothScoOn = false
+            audioManager?.isSpeakerphoneOn = speakerOn
+        }
         if (speakerOn) releaseWakeLock() else acquireWakeLock()
     }
 

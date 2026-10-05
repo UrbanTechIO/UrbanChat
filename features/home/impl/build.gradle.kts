@@ -48,6 +48,7 @@ dependencies {
     implementation(projects.libraries.push.api)
     implementation(projects.libraries.sessionStorage.api)
     implementation(projects.features.call.api)
+    implementation(projects.libraries.mediaplayer.api)
     implementation(projects.features.announcement.api)
     implementation(projects.features.invite.api)
     implementation(projects.features.networkmonitor.api)

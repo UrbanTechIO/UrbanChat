@@ -41,6 +41,7 @@ dependencies {
     implementation(projects.libraries.designsystem)
     implementation(projects.libraries.matrixui)
     implementation(projects.libraries.matrixmedia.api)
+    implementation(projects.libraries.mediaplayer.api)
     implementation(projects.libraries.sessionStorage.api)
     implementation(projects.libraries.uiCommon)
     implementation(projects.libraries.uiStrings)

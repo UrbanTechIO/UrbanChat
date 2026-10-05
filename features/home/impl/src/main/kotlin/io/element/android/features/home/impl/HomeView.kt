@@ -11,6 +11,7 @@ package io.element.android.features.home.impl
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.calculateEndPadding
@@ -57,6 +58,7 @@ import io.element.android.features.home.impl.roomlist.RoomListDeclineInviteMenu
 import io.element.android.features.home.impl.roomlist.RoomListEvent
 import io.element.android.features.home.impl.calls.CallLogRow
 import io.element.android.features.home.impl.calls.HomeCallsView
+import io.element.android.features.home.impl.miniplayer.VoiceMessageMiniPlayerView
 import io.element.android.features.home.impl.roomlist.RoomListState
 import io.element.android.features.home.impl.search.RoomListSearchView
 import io.element.android.features.home.impl.spacefilters.SpaceFiltersEvent
@@ -217,31 +219,37 @@ private fun HomeScaffold(
             modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
             containerColor = Color.Transparent,
             topBar = {
-                HomeTopBar(
-                    selectedNavigationItem = state.currentHomeNavigationBarItem,
-                    currentUserAndNeighbors = state.currentUserAndNeighbors,
-                    showAvatarIndicator = state.showAvatarIndicator,
-                    areSearchResultsDisplayed = roomListState.searchState.isSearchActive,
-                    onToggleSearch = { roomListState.eventSink(RoomListEvent.ToggleSearchResults) },
-                    onMenuActionClick = onMenuActionClick,
-                    onOpenSettings = onOpenSettings,
-                    onAccountSwitch = {
-                        state.eventSink(HomeEvent.SwitchToAccount(it))
-                    },
-                    scrollBehavior = scrollBehavior,
-                    displayFilters = state.displayRoomListFilters,
-                    filtersState = roomListState.filtersState,
-                    spaceFiltersState = roomListState.spaceFiltersState,
-                    canReportBug = state.canReportBug,
-                    modifier = if (state.frostedGlassEnabled) {
-                        Modifier.hazeEffect(
-                            state = hazeState,
-                            style = rememberAccentFrostedHazeStyle(state.headerBarOpacity),
-                        )
-                    } else {
-                        Modifier.background(ElementTheme.colors.bgAccentRest.copy(alpha = 0.55f))
-                    }
-                )
+                Column {
+                    HomeTopBar(
+                        selectedNavigationItem = state.currentHomeNavigationBarItem,
+                        currentUserAndNeighbors = state.currentUserAndNeighbors,
+                        showAvatarIndicator = state.showAvatarIndicator,
+                        areSearchResultsDisplayed = roomListState.searchState.isSearchActive,
+                        onToggleSearch = { roomListState.eventSink(RoomListEvent.ToggleSearchResults) },
+                        onMenuActionClick = onMenuActionClick,
+                        onOpenSettings = onOpenSettings,
+                        onAccountSwitch = {
+                            state.eventSink(HomeEvent.SwitchToAccount(it))
+                        },
+                        scrollBehavior = scrollBehavior,
+                        displayFilters = state.displayRoomListFilters,
+                        filtersState = roomListState.filtersState,
+                        spaceFiltersState = roomListState.spaceFiltersState,
+                        canReportBug = state.canReportBug,
+                        modifier = if (state.frostedGlassEnabled) {
+                            Modifier.hazeEffect(
+                                state = hazeState,
+                                style = rememberAccentFrostedHazeStyle(state.headerBarOpacity),
+                            )
+                        } else {
+                            Modifier.background(ElementTheme.colors.bgAccentRest.copy(alpha = 0.55f))
+                        }
+                    )
+                    // Persistent voice-message mini-player, anchored right below the filter chips
+                    // row: playback started from a chat keeps going after navigating away from it,
+                    // and this is how it stays visible/controllable from the home screen.
+                    VoiceMessageMiniPlayerView(state = state.voiceMessageMiniPlayerState)
+                }
             },
             floatingActionButton = {
                 val coroutineScope = rememberCoroutineScope()

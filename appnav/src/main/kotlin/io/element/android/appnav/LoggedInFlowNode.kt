@@ -80,6 +80,7 @@ import io.element.android.libraries.di.SessionScope
 import io.element.android.libraries.di.annotations.SessionCoroutineScope
 import io.element.android.libraries.featureflag.api.FeatureFlagService
 import io.element.android.libraries.matrix.api.MatrixClient
+import io.element.android.libraries.mediaplayer.api.MediaPlayer
 import io.element.android.libraries.matrix.api.core.EventId
 import io.element.android.libraries.matrix.api.core.RoomId
 import io.element.android.libraries.matrix.api.core.RoomIdOrAlias
@@ -133,6 +134,7 @@ class LoggedInFlowNode(
     private val linkNewDeviceEntryPoint: LinkNewDeviceEntryPoint,
     @SessionCoroutineScope
     private val sessionCoroutineScope: CoroutineScope,
+    private val mediaPlayer: MediaPlayer,
     private val ftueService: FtueService,
     private val roomDirectoryEntryPoint: RoomDirectoryEntryPoint,
     private val shareEntryPoint: ShareEntryPoint,
@@ -251,6 +253,9 @@ class LoggedInFlowNode(
                 loggedInFlowProcessor.stopObserving()
                 matrixClient.sessionVerificationService.setListener(null)
                 analyticsRoomListStateWatcher.stop()
+                // The player is session-scoped (see DefaultMediaPlayer) so a voice message keeps playing
+                // across room navigation; it's only torn down here, when the whole session ends.
+                mediaPlayer.close()
             }
         )
         setupSendingQueue()

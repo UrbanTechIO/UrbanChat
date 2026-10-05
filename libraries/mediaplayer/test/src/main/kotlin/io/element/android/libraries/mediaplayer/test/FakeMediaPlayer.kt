@@ -88,6 +88,19 @@ class FakeMediaPlayer(
         }
     }
 
+    override fun stop() {
+        _state.update {
+            MediaPlayer.State(
+                isReady = false,
+                isPlaying = false,
+                isEnded = false,
+                mediaId = null,
+                currentPosition = 0L,
+                duration = null,
+            )
+        }
+    }
+
     override fun seekTo(positionMs: Long) {
         _state.update {
             it.copy(

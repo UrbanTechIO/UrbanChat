@@ -10,6 +10,7 @@ package io.element.android.features.home.impl
 
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import io.element.android.features.home.impl.calls.HomeCallsState
+import io.element.android.features.home.impl.miniplayer.VoiceMessageMiniPlayerState
 import io.element.android.features.home.impl.roomlist.RoomListState
 import io.element.android.features.home.impl.roomlist.RoomListStateProvider
 import io.element.android.features.home.impl.roomlist.aRoomListState
@@ -65,6 +66,13 @@ internal fun aHomeState(
     roomListState: RoomListState = aRoomListState(),
     homeSpacesState: HomeSpacesState = aHomeSpacesState(),
     homeCallsState: HomeCallsState = HomeCallsState(rows = persistentListOf()),
+    voiceMessageMiniPlayerState: VoiceMessageMiniPlayerState = VoiceMessageMiniPlayerState(
+        mediaId = null,
+        isPlaying = false,
+        currentPositionMs = 0L,
+        durationMs = null,
+        eventSink = {},
+    ),
     canReportBug: Boolean = true,
     directLogoutState: DirectLogoutState = aDirectLogoutState(),
     frostedGlassEnabled: Boolean = false,
@@ -81,6 +89,7 @@ internal fun aHomeState(
     roomListState = roomListState,
     homeSpacesState = homeSpacesState,
     homeCallsState = homeCallsState,
+    voiceMessageMiniPlayerState = voiceMessageMiniPlayerState,
     frostedGlassEnabled = frostedGlassEnabled,
     headerBarOpacity = headerBarOpacity,
     eventSink = eventSink,

@@ -230,12 +230,24 @@ private fun RoomsViewList(
         eventSink(RoomListEvent.UpdateVisibleRange(visibleRange))
     }
     // Non-room items (invites, knocks, placeholders) stay unsectioned at the top, in their
-    // existing order. Only actual joined rooms are split into "Chats" (DMs) and "Groups"
+    // existing order. Only actual joined rooms are split into "Favorites", "People" (DMs) and "Groups"
     // (everything else) sections, each rendered as its own contiguous run so the existing
     // recency/importance ordering within each group is preserved.
     val nonRoomItems = state.summaries.filter { it.displayType != RoomSummaryDisplayType.ROOM }
-    val directRooms = state.summaries.filter { it.displayType == RoomSummaryDisplayType.ROOM && (!organizeChatLists || it.isDm) }
-    val groupRooms = if (organizeChatLists) state.summaries.filter { it.displayType == RoomSummaryDisplayType.ROOM && !it.isDm } else emptyList()
+    // Favourites get their own section on top (DMs and groups alike) and are left out of the other two.
+    val favoriteRooms = if (organizeChatLists) {
+        state.summaries.filter { it.displayType == RoomSummaryDisplayType.ROOM && it.isFavorite }
+    } else {
+        emptyList()
+    }
+    val directRooms = state.summaries.filter {
+        it.displayType == RoomSummaryDisplayType.ROOM && (!organizeChatLists || (it.isDm && !it.isFavorite))
+    }
+    val groupRooms = if (organizeChatLists) {
+        state.summaries.filter { it.displayType == RoomSummaryDisplayType.ROOM && !it.isDm && !it.isFavorite }
+    } else {
+        emptyList()
+    }
     LazyColumn(
         state = lazyListState,
         modifier = modifier,
@@ -308,6 +320,33 @@ private fun RoomsViewList(
                     eventSink = eventSink,
                 )
                 if (index != nonRoomItems.lastIndex) {
+                    HorizontalDivider()
+                }
+            }
+            hasPrecedingContent = true
+        }
+
+        if (favoriteRooms.isNotEmpty()) {
+            item {
+                ListSectionHeader(
+                    title = stringResource(R.string.screen_roomlist_section_favorites),
+                    hasDivider = hasPrecedingContent && !isFirstSectionHeader,
+                )
+            }
+            isFirstSectionHeader = false
+            itemsIndexed(
+                items = favoriteRooms,
+                contentType = { _, room -> room.contentType() },
+            ) { index, room ->
+                RoomSummaryRow(
+                    room = room,
+                    hideInviteAvatars = hideInvitesAvatars,
+                    isInviteSeen = false,
+                    showUnreadCount = state.showUnreadCount,
+                    onClick = onRoomClick,
+                    eventSink = eventSink,
+                )
+                if (index != favoriteRooms.lastIndex) {
                     HorizontalDivider()
                 }
             }

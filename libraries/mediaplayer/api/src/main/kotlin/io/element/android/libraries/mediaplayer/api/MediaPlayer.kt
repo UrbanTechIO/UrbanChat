@@ -43,6 +43,13 @@ interface MediaPlayer : AutoCloseable {
     fun pause()
 
     /**
+     * Pauses playback and forgets the currently loaded media, so [State.mediaId] becomes null (unlike
+     * [pause], which keeps it loaded). Used to dismiss a mini-player without releasing the underlying
+     * player — see [close] for that.
+     */
+    fun stop()
+
+    /**
      * Seeks the current media to the given position.
      */
     fun seekTo(positionMs: Long)

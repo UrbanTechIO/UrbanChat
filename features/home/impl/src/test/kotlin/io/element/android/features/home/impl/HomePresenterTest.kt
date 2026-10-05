@@ -9,6 +9,9 @@
 package io.element.android.features.home.impl
 
 import com.google.common.truth.Truth.assertThat
+import io.element.android.features.home.impl.calls.HomeCallsState
+import io.element.android.features.home.impl.miniplayer.VoiceMessageMiniPlayerState
+import kotlinx.collections.immutable.persistentListOf
 import io.element.android.features.home.impl.roomlist.aRoomListState
 import io.element.android.features.home.impl.spaces.HomeSpacesState
 import io.element.android.features.home.impl.spaces.aHomeSpacesState
@@ -156,6 +159,10 @@ internal fun createHomePresenter(
     rageshakeFeatureAvailability: RageshakeFeatureAvailability = RageshakeFeatureAvailability { flowOf(false) },
     indicatorService: IndicatorService = FakeIndicatorService(),
     homeSpacesPresenter: Presenter<HomeSpacesState> = Presenter { aHomeSpacesState() },
+    homeCallsPresenter: Presenter<HomeCallsState> = Presenter { HomeCallsState(rows = persistentListOf()) },
+    voiceMessageMiniPlayerPresenter: Presenter<VoiceMessageMiniPlayerState> = Presenter {
+        VoiceMessageMiniPlayerState(mediaId = null, isPlaying = false, currentPositionMs = 0L, durationMs = null, eventSink = {})
+    },
     sessionStore: SessionStore = InMemorySessionStore(),
     appPreferencesStore: AppPreferencesStore = InMemoryAppPreferencesStore(),
 ) = HomePresenter(
@@ -165,6 +172,8 @@ internal fun createHomePresenter(
     indicatorService = indicatorService,
     roomListPresenter = { aRoomListState() },
     homeSpacesPresenter = homeSpacesPresenter,
+    homeCallsPresenter = homeCallsPresenter,
+    voiceMessageMiniPlayerPresenter = voiceMessageMiniPlayerPresenter,
     logoutPresenter = { aDirectLogoutState() },
     rageshakeFeatureAvailability = rageshakeFeatureAvailability,
     sessionStore = sessionStore,

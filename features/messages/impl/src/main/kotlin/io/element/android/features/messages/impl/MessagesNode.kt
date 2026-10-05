@@ -76,7 +76,6 @@ import io.element.android.libraries.matrix.api.timeline.item.TimelineItemDebugIn
 import io.element.android.libraries.matrix.ui.media.contentvalidation.EventContentValidationCache
 import io.element.android.libraries.matrix.ui.media.contentvalidation.LocalEventContentValidationState
 import io.element.android.libraries.matrix.ui.model.getBestName
-import io.element.android.libraries.mediaplayer.api.MediaPlayer
 import io.element.android.libraries.preferences.api.store.SessionPreferencesStore
 import io.element.android.libraries.ui.strings.CommonStrings
 import io.element.android.libraries.ui.utils.a11y.hasExternalKeyboard
@@ -103,7 +102,6 @@ class MessagesNode(
     presenterFactory: MessagesPresenter.Factory,
     actionListPresenterFactory: ActionListPresenter.Factory,
     private val timelineItemPresenterFactories: TimelineItemPresenterFactories,
-    private val mediaPlayer: MediaPlayer,
     private val permalinkParser: PermalinkParser,
     private val knockRequestsBannerRenderer: KnockRequestsBannerRenderer,
     private val roomMemberModerationRenderer: RoomMemberModerationRenderer,
@@ -168,9 +166,6 @@ class MessagesNode(
             onResume = {
                 analyticsService.finishLongRunningTransaction(LoadMessagesUi)
             },
-            onDestroy = {
-                mediaPlayer.close()
-            }
         )
     }
 

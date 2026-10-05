@@ -16,7 +16,7 @@ import dev.zacsweers.metro.SingleIn
 import io.element.android.libraries.audio.api.AudioFocus
 import io.element.android.libraries.audio.api.AudioFocusRequester
 import io.element.android.libraries.audio.api.ProximityAudioRouter
-import io.element.android.libraries.di.RoomScope
+import io.element.android.libraries.di.SessionScope
 import io.element.android.libraries.di.annotations.SessionCoroutineScope
 import io.element.android.libraries.mediaplayer.api.MediaPlayer
 import kotlinx.coroutines.CoroutineScope
@@ -34,9 +34,14 @@ import kotlin.time.Duration.Companion.seconds
 
 /**
  * Default implementation of [MediaPlayer] backed by a [SimplePlayer].
+ *
+ * Scoped to the session (not the room) so a voice message keeps playing when the user navigates
+ * away from the room, e.g. back to the room list or into a different chat — matching how a normal
+ * media mini-player behaves. It's closed when the session ends (see [close]'s caller), not when a
+ * room screen is torn down.
  */
-@ContributesBinding(RoomScope::class)
-@SingleIn(RoomScope::class)
+@ContributesBinding(SessionScope::class)
+@SingleIn(SessionScope::class)
 class DefaultMediaPlayer(
     private val player: SimplePlayer,
     @SessionCoroutineScope
@@ -154,6 +159,14 @@ class DefaultMediaPlayer(
 
     override fun pause() {
         player.pause()
+    }
+
+    override fun stop() {
+        // Same order as setMedia()'s reset: pause first (fires onIsPlayingChanged(false), which
+        // releases audio focus and stops the proximity router) then clear the item (fires
+        // onMediaItemTransition(null), which clears state.mediaId and hides the mini player).
+        player.pause()
+        player.clearMediaItems()
     }
 
     override fun seekTo(positionMs: Long) {

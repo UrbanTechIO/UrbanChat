@@ -68,10 +68,12 @@ class WebViewAudioManager(
     }
 
     /**
-     * Whether to disable bluetooth audio devices. This must be done on Android versions lower than Android 12,
-     * since the WebView approach breaks when using the legacy Bluetooth audio APIs.
+     * Upstream Element Call disables Bluetooth on Android versions lower than Android 12, claiming the WebView
+     * approach breaks with the legacy Bluetooth audio APIs. Tested on an Android 11 phone, Bluetooth works fine
+     * as long as the SCO link and the call audio mode are handled explicitly (see [selectAudioDevice] below),
+     * so it's enabled everywhere.
      */
-    private val disableBluetoothAudioDevices = Build.VERSION.SDK_INT < Build.VERSION_CODES.S
+    private val disableBluetoothAudioDevices = false
 
     /**
      * This flag indicates whether the WebView audio is enabled or not. By default, it is enabled.
@@ -480,6 +482,15 @@ class WebViewAudioManager(
         }
 
         audioManager.mode = AudioManager.MODE_NORMAL
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            // The legacy Bluetooth path opens an SCO link explicitly (see selectAudioDevice), so close it again.
+            @Suppress("DEPRECATION")
+            runCatchingExceptions {
+                audioManager.isBluetoothScoOn = false
+                audioManager.stopBluetoothSco()
+                audioManager.isSpeakerphoneOn = false
+            }
+        }
         if (!hasRegisteredCallbacks) {
             Timber.w("Audio: tried to disable webview in-call audio mode without registering callbacks")
             return
@@ -679,8 +690,25 @@ class WebViewAudioManager(
                     return
                 }
                 setAudioEnabled(true)
-                isSpeakerphoneOn = device.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
-                isBluetoothScoOn = device.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO
+                runCatchingExceptions {
+                    if (device.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO) {
+                        // Classic Bluetooth calls need the "in communication" mode and an explicit SCO link.
+                        mode = AudioManager.MODE_IN_COMMUNICATION
+                        isSpeakerphoneOn = false
+                        startBluetoothSco()
+                        isBluetoothScoOn = true
+                    } else {
+                        // Stop the Bluetooth link whatever state it currently reports.
+                        isBluetoothScoOn = false
+                        stopBluetoothSco()
+                        // Stay in "phone call" mode: in normal mode Android sends the call to connected Bluetooth
+                        // headphones (like music), so Phone would keep playing through them.
+                        mode = AudioManager.MODE_IN_COMMUNICATION
+                        isSpeakerphoneOn = device.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
+                    }
+                }.onFailure {
+                    Timber.e(it, "Could not select the audio device with the legacy audio APIs")
+                }
             } else {
                 isSpeakerphoneOn = false
                 isBluetoothScoOn = false

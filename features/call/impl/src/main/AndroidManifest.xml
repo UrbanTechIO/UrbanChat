@@ -53,6 +53,12 @@
             android:exported="false"
             android:foregroundServiceType="microphone|mediaProjection" />
 
+        <service
+            android:name=".services.ScreenCaptureService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
+
         <receiver
             android:name=".receivers.DeclineCallBroadcastReceiver"
             android:enabled="true"

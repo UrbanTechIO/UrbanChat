@@ -1,4 +1,158 @@
-<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="viewport-fit=cover,width=device-width,initial-scale=1,maximum-scale=1"><title>Element Call</title><script>window.global = window;</script><script>if (!Promise.withResolvers) {
+<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="viewport-fit=cover,width=device-width,initial-scale=1,maximum-scale=1"><title>Element Call</title><script>window.global = window;</script><script>(function () {
+  if (window.__screenSharePolyfilled) return;
+  window.__screenSharePolyfilled = true;
+  var devices = navigator.mediaDevices;
+  if (!devices) return;
+
+  var canvas = null, ctx = null, stream = null, track = null, pending = null, lastImage = null, heartbeat = null;
+  var root = document.documentElement;
+
+  function cleanup() {
+    if (heartbeat) { clearInterval(heartbeat); heartbeat = null; }
+    canvas = ctx = stream = track = lastImage = null;
+    root.removeAttribute('data-screen-sharing');
+  }
+
+  window.__screenShareStarted = function (w, h) {
+    if (canvas && !pending) {
+      // The phone rotated: same stream, new picture size.
+      canvas.width = w; canvas.height = h; lastImage = null;
+      ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h);
+      return;
+    }
+    if (!pending) return;
+    canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h);
+    stream = canvas.captureStream(15);
+    track = stream.getVideoTracks()[0];
+    // LiveKit stops the track when sharing is turned off: stop the capture with it.
+    var originalStop = track.stop.bind(track);
+    track.stop = function () {
+      originalStop();
+      if (track) { try { screenShareBridge.stop(); } catch (e) {} }
+      cleanup();
+    };
+    // A still screen produces no new frames; repaint now and then so the stream keeps flowing.
+    heartbeat = setInterval(function () {
+      if (ctx && lastImage) { try { ctx.drawImage(lastImage, 0, 0, canvas.width, canvas.height); } catch (e) {} }
+    }, 500);
+    root.setAttribute('data-screen-sharing', '1');
+    var p = pending; pending = null;
+    p.resolve(stream);
+  };
+
+  window.__screenShareFrame = function (b64) {
+    if (!ctx) return;
+    var img = new Image();
+    img.onload = function () {
+      if (!ctx) return;
+      lastImage = img;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    };
+    img.src = 'data:image/jpeg;base64,' + b64;
+  };
+
+  window.__screenShareEnded = function () {
+    if (pending) {
+      var p = pending; pending = null;
+      p.reject(new DOMException('Permission denied', 'NotAllowedError'));
+      return;
+    }
+    if (track) {
+      var t = track;
+      cleanup();
+      try { t.dispatchEvent(new Event('ended')); } catch (e) {}
+    }
+  };
+
+  devices.getDisplayMedia = function () {
+    return new Promise(function (resolve, reject) {
+      if (pending || track) { reject(new DOMException('Already sharing', 'InvalidStateError')); return; }
+      if (typeof screenShareBridge === 'undefined') { reject(new DOMException('Not supported', 'NotSupportedError')); return; }
+      pending = { resolve: resolve, reject: reject };
+      screenShareBridge.start();
+    });
+  };
+
+  // ---- Combined "reactions / share screen" button ----
+  function shareButton() { return document.querySelector('[data-testid="incall_screenshare"]'); }
+  // The reactions button is the one right after the share button in the footer.
+  function reactionsButton() {
+    var share = shareButton();
+    if (!share) return null;
+    var footer = share.closest('[data-testid="footer-container"]');
+    if (!footer) return null;
+    var all = footer.querySelectorAll('button');
+    for (var i = 0; i < all.length; i++) {
+      if (all[i] === share) return all[i + 1] || null;
+    }
+    return null;
+  }
+  window.__toggleShare = function () { var b = shareButton(); if (b) b.click(); };
+  var bypass = false;
+  window.__openReactions = function () {
+    var b = reactionsButton();
+    if (!b) return;
+    bypass = true;
+    b.click();
+    setTimeout(function () { bypass = false; }, 400);
+  };
+
+  var lastOpen = 0;
+  function comboHandler(e) {
+    if (bypass) return;
+    var button = e.target && e.target.closest && e.target.closest('button[data-combo]');
+    if (!button) return;
+    if (e.cancelable) { e.preventDefault(); }
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+    if (e.type === 'pointerup' || e.type === 'touchend' || e.type === 'click') {
+      var now = Date.now();
+      if (now - lastOpen > 500) {
+        lastOpen = now;
+        try { screenShareBridge.openMenu(!!track); } catch (err) {}
+      }
+    }
+  }
+  ['pointerdown', 'mousedown', 'pointerup', 'touchend', 'click'].forEach(function (type) {
+    document.addEventListener(type, comboHandler, true);
+  });
+
+  function icon(screenColor) {
+    var svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none' stroke='#e8eaed' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'>"
+      + "<path d='M13 51 L51 13' stroke='#4a5058' stroke-width='1.8'/>"
+      + "<circle cx='22' cy='22' r='7.5'/><path d='M18.8 24.2c.8 1.1 1.8 1.7 3.2 1.7s2.4-.6 3.2-1.7'/><path d='M19.3 20.2h.01M24.7 20.2h.01'/>"
+      + "<rect x='37' y='38' width='15' height='10' rx='1.6' stroke='" + screenColor + "'/><path d='M41 52h7' stroke='" + screenColor + "'/></svg>";
+    return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '")';
+  }
+  var style = document.createElement('style');
+  style.textContent =
+    '[data-testid="incall_screenshare"]{display:none !important;}' +
+    'button[data-combo]{position:relative !important;}' +
+    'button[data-combo] svg{opacity:0 !important;}' +
+    'button[data-combo]::after{content:"";position:absolute;left:0;top:0;right:0;bottom:0;pointer-events:none;' +
+      'background:' + icon('#e8eaed') + ' center/80% no-repeat;}' +
+    'html[data-screen-sharing] button[data-combo]{background:#1f3d2f !important;}' +
+    'html[data-screen-sharing] button[data-combo]::after{background:' + icon('#5dd39e') + ' center/80% no-repeat;}';
+  (document.head || root).appendChild(style);
+
+  function markCombo() {
+    var b = reactionsButton();
+    if (b && !b.hasAttribute('data-combo')) b.setAttribute('data-combo', '1');
+  }
+  function startObserver() {
+    new MutationObserver(function () { try { markCombo(); } catch (e) {} })
+      .observe(root, { subtree: true, childList: true });
+    markCombo();
+  }
+  if (document.body) { startObserver(); } else { document.addEventListener('DOMContentLoaded', startObserver); }
+
+  try { screenShareBridge.log('screen share script ready'); } catch (e) {}
+})();
+</script><script>if (!Promise.withResolvers) {
         Promise.withResolvers = function () {
           var resolve, reject;
           var promise = new Promise(function (a, b) {
@@ -7,4 +161,4 @@
           });
           return { promise: promise, resolve: resolve, reject: reject };
         };
-      }</script><script type="module" crossorigin src="./assets/index-CskCI6uq.js"></script><link rel="modulepreload" crossorigin href="./assets/rolldown-runtime-CNC7AqOf.js"><link rel="modulepreload" crossorigin href="./assets/dist-p6X2a14y.js"><link rel="modulepreload" crossorigin href="./assets/tslib.es6-qz5pvBR9.js"><link rel="modulepreload" crossorigin href="./assets/matrix-Bf0kx8Wm.js"><link rel="stylesheet" crossorigin href="./assets/matrix-Bs-hm8e-.css"><link rel="stylesheet" crossorigin href="./assets/index-CeOK0Rqx.css"></head><body class="no-theme"><div id="root"></div></body></html>
+      }</script><script type="module" crossorigin src="./assets/index-CSO07bUz.js"></script><link rel="modulepreload" crossorigin href="./assets/rolldown-runtime-CNC7AqOf.js"><link rel="modulepreload" crossorigin href="./assets/dist-p6X2a14y.js"><link rel="modulepreload" crossorigin href="./assets/tslib.es6-qz5pvBR9.js"><link rel="modulepreload" crossorigin href="./assets/matrix-Bf0kx8Wm.js"><link rel="stylesheet" crossorigin href="./assets/matrix-Bs-hm8e-.css"><link rel="stylesheet" crossorigin href="./assets/index-CeOK0Rqx.css"></head><body class="no-theme"><div id="root"></div></body></html>

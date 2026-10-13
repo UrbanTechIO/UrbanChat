@@ -155,8 +155,12 @@ class AudioPickerInterceptor(
                   }, true);
                   var hideStyle = document.createElement('style');
                   hideStyle.textContent =
+                    // Hide only the pop-up menu being driven (the dialog itself, and anything the page puts outside its
+                    // main #root container, which is where modals and their backdrops are portalled to). This must NOT
+                    // match every class containing "overlay": the call's own controls bar and header carry an
+                    // "overlay" class too, so that made the call controls vanish each time this ran.
                     'html[data-audio-picking] [role="dialog"], html[data-audio-picking] [data-radix-popper-content-wrapper],' +
-                    'html[data-audio-picking] [class*="overlay"] { opacity: 0 !important; transition: none !important; }';
+                    'html[data-audio-picking] body > *:not(#root):not(script):not(style) { opacity: 0 !important; transition: none !important; }';
                   document.head.appendChild(hideStyle);
                   window.__pickOutput = function (id) {
                     var root = document.documentElement;

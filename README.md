@@ -69,6 +69,8 @@ Everything below is in UrbanChat and not in Element X. Features Element X alread
 * A speaker choice made while the call is still ringing is kept after it is answered.
 * **Bluetooth audio on Android 11 and older**, which Element X blocks.
 * The call controls no longer flicker, and the microphone keeps working when the screen turns off.
+* **Screen sharing from your phone**, which Element X doesn't have. One button holds both reactions and screen sharing; tapping it opens a sheet to pick one. The shared picture turns with the phone.
+* **Swap video feeds** in a one-to-one video call by double-tapping the small picture, WhatsApp style.
 
 ## Screenshots
 

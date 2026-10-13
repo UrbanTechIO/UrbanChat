@@ -37,7 +37,10 @@ class VoiceMessageMiniPlayerPresenter(
         }
 
         return VoiceMessageMiniPlayerState(
-            mediaId = playerState.mediaId,
+            // Once a voice message has played to the end there's nothing left to control, so the bar goes away.
+            // (The player keeps the finished media loaded, so this is only hiding it. If the next voice message in
+            // the chat starts automatically, its state isn't "ended", so the bar comes straight back for it.)
+            mediaId = playerState.mediaId.takeUnless { playerState.isEnded },
             isPlaying = playerState.isPlaying,
             currentPositionMs = playerState.currentPosition,
             durationMs = playerState.duration,

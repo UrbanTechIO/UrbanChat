@@ -47,6 +47,7 @@ import io.element.android.features.call.impl.pip.PictureInPicturePresenter
 import io.element.android.features.call.impl.pip.PictureInPictureState
 import io.element.android.features.call.impl.pip.PipView
 import io.element.android.features.call.impl.services.CallForegroundService
+import io.element.android.features.call.impl.services.ScreenCaptureService
 import io.element.android.features.enterprise.api.EnterpriseService
 import io.element.android.libraries.androidutils.browser.ConsoleMessageLogger
 import io.element.android.libraries.architecture.Presenter
@@ -81,6 +82,16 @@ class ElementCallActivity :
     private var requestPermissionCallback: RequestPermissionCallback? = null
 
     private val requestPermissionsLauncher = registerPermissionResultLauncher()
+
+    private val screenCaptureLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val data = result.data
+        if (result.resultCode == RESULT_OK && data != null) {
+            ScreenCaptureService.start(this, result.resultCode, data)
+        } else {
+            // Tell the page the request was refused, so its promise does not stay pending.
+            ScreenCaptureService.listener?.onStopped()
+        }
+    }
 
     private val webViewTarget = mutableStateOf<CallData?>(null)
 
@@ -163,7 +174,11 @@ class ElementCallActivity :
                         requestPermissions = { permissions, callback ->
                             requestPermissionCallback = callback
                             requestPermissionsLauncher.launch(permissions)
-                        }
+                        },
+                        requestScreenCapture = {
+                            screenCaptureLauncher.launch(ScreenCaptureService.createConsentIntent(this@ElementCallActivity))
+                        },
+                        stopScreenCapture = { ScreenCaptureService.stop(this@ElementCallActivity) },
                     )
                 }
             }
@@ -221,6 +236,7 @@ class ElementCallActivity :
         super.onDestroy()
         audioFocus.releaseAudioFocus()
         CallForegroundService.stop(this)
+        ScreenCaptureService.stop(this)
         pictureInPicturePresenter.setPipView(null)
     }
 

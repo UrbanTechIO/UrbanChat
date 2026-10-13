@@ -43,8 +43,10 @@ import io.element.android.features.call.impl.R
 import io.element.android.features.call.impl.pip.PictureInPictureEvent
 import io.element.android.features.call.impl.pip.PictureInPictureState
 import io.element.android.features.call.impl.pip.aPictureInPictureState
+import io.element.android.features.call.impl.services.ScreenCaptureService
 import io.element.android.features.call.impl.utils.AudioPickerInterceptor
 import io.element.android.features.call.impl.utils.InvalidAudioDeviceReason
+import io.element.android.features.call.impl.utils.ScreenShareBridge
 import io.element.android.features.call.impl.utils.WebViewAudioManager
 import io.element.android.features.call.impl.utils.WebViewPipController
 import io.element.android.features.call.impl.utils.WebViewWidgetMessageInterceptor
@@ -71,6 +73,8 @@ internal fun CallScreenView(
     pipState: PictureInPictureState,
     onConsoleMessage: (ConsoleMessage) -> Unit,
     requestPermissions: (Array<String>, RequestPermissionCallback) -> Unit,
+    requestScreenCapture: () -> Unit = {},
+    stopScreenCapture: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var callWebView by remember { mutableStateOf<WebView?>(null) }
@@ -100,6 +104,9 @@ internal fun CallScreenView(
         var webViewAudioManager by remember { mutableStateOf<WebViewAudioManager?>(null) }
         var showAudioSheet by remember { mutableStateOf(false) }
         var pendingAudioPick by remember { mutableStateOf<String?>(null) }
+        var showReactionsShareSheet by remember { mutableStateOf(false) }
+        var isScreenSharing by remember { mutableStateOf(false) }
+        var screenShareBridge by remember { mutableStateOf<ScreenShareBridge?>(null) }
         val coroutineScope = rememberCoroutineScope()
 
         var invalidAudioDeviceReason by remember { mutableStateOf<InvalidAudioDeviceReason?>(null) }
@@ -123,6 +130,18 @@ internal fun CallScreenView(
             onCreateWebView = { webView ->
                 callWebView = webView
                 webView.addBackHandler(onBackPressed = ::handleBack)
+                val newScreenShareBridge = ScreenShareBridge(
+                    webView = webView,
+                    onStartRequested = requestScreenCapture,
+                    onStopRequested = stopScreenCapture,
+                    onMenuRequested = { sharing ->
+                        isScreenSharing = sharing
+                        showReactionsShareSheet = true
+                    },
+                )
+                screenShareBridge = newScreenShareBridge
+                ScreenShareBridge.install(webView, newScreenShareBridge)
+                ScreenCaptureService.listener = newScreenShareBridge
                 AudioPickerInterceptor.install(
                     webView,
                     AudioPickerInterceptor(
@@ -149,6 +168,7 @@ internal fun CallScreenView(
                     onUrlLoaded = { url ->
                         webView.evaluateJavascript("controls.onBackButtonPressed = () => { backHandler.onBackPressed() }", null)
                         webView.evaluateJavascript(AudioPickerInterceptor.script(), null)
+                        webView.evaluateJavascript(ScreenShareBridge.script(), null)
                         if (webViewAudioManager?.isInCallMode?.get() == false) {
                             Timber.d("URL $url is loaded, starting in-call audio mode")
                             webViewAudioManager?.onCallStarted()
@@ -169,6 +189,8 @@ internal fun CallScreenView(
             },
             onDestroyWebView = {
                 callWebView = null
+                ScreenCaptureService.listener = null
+                stopScreenCapture()
                 // Reset audio mode
                 webViewAudioManager?.onCallStopped()
             }
@@ -212,6 +234,20 @@ internal fun CallScreenView(
                     callWebView?.evaluateJavascript("window.__audioIcon && window.__audioIcon('$kind');", null)
                     delay(2_000)
                 }
+            }
+            if (showReactionsShareSheet) {
+                CallReactionsShareSheet(
+                    isSharing = isScreenSharing,
+                    onReactions = {
+                        showReactionsShareSheet = false
+                        screenShareBridge?.openReactions()
+                    },
+                    onToggleShare = {
+                        showReactionsShareSheet = false
+                        screenShareBridge?.toggleShare()
+                    },
+                    onDismiss = { showReactionsShareSheet = false },
+                )
             }
             if (showAudioSheet) {
                 CallAudioOutputSheet(

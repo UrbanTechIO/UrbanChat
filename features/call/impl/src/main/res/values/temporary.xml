@@ -12,4 +12,10 @@
     <string name="call_audio_output_bluetooth">"Bluetooth"</string>
     <string name="call_audio_output_wired">"Headphones"</string>
     <string name="call_audio_output_button">"Audio output"</string>
+    <string name="call_screen_share_channel_title">"Screen sharing"</string>
+    <string name="call_screen_share_notification_title">"Sharing your screen"</string>
+    <string name="call_screen_share_notification_message">"Everything on your screen is visible to the call."</string>
+    <string name="call_screen_share_stop">"Stop sharing"</string>
+    <string name="call_screen_share_start">"Share screen"</string>
+    <string name="call_reactions">"Reactions"</string>
 </resources>

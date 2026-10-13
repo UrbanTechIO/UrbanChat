@@ -170,3 +170,74 @@ private fun CallAudioOption.label(): String = when (type) {
     AudioDeviceInfo.TYPE_BLE_BROADCAST -> name.takeIf { it.isNotBlank() } ?: stringResource(R.string.call_audio_output_bluetooth)
     else -> stringResource(R.string.call_audio_output_wired)
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+/** Bottom sheet opened by the call's combined reactions / screen-share button. */
+@Composable
+internal fun CallReactionsShareSheet(
+    isSharing: Boolean,
+    onReactions: () -> Unit,
+    onToggleShare: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        scrollable = false,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+        ) {
+            ReactionsShareOption(
+                icon = CompoundIcons.ReactionSolid(),
+                label = stringResource(R.string.call_reactions),
+                highlighted = false,
+                onClick = onReactions,
+            )
+            ReactionsShareOption(
+                icon = if (isSharing) CompoundIcons.StopSolid() else CompoundIcons.ShareScreenSolid(),
+                label = stringResource(if (isSharing) R.string.call_screen_share_stop else R.string.call_screen_share_start),
+                highlighted = true,
+                onClick = onToggleShare,
+            )
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun ReactionsShareOption(
+    icon: ImageVector,
+    label: String,
+    highlighted: Boolean,
+    onClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(
+            modifier = Modifier
+                .size(72.dp)
+                .clip(CircleShape)
+                .background(if (highlighted) ElementTheme.colors.bgActionPrimaryRest else ElementTheme.colors.bgSubtleSecondary)
+                .padding(20.dp),
+            imageVector = icon,
+            contentDescription = null,
+            tint = if (highlighted) ElementTheme.colors.iconOnSolidPrimary else ElementTheme.colors.iconPrimary,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = label,
+            style = ElementTheme.typography.fontBodyMdMedium,
+            color = ElementTheme.colors.textPrimary,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+        )
+    }
+}

@@ -122,7 +122,7 @@ fun AdvancedSettingsView(
                 state.eventSink(AdvancedSettingsEvents.SetTheme(themeOption))
             }
         )
-        if (state.theme == ThemeOption.Frosted) {
+        if (state.theme == ThemeOption.Frosted || state.theme == ThemeOption.LiquidGlass) {
             FrostedGlassOpacitySliders(
                 headerBarOpacity = state.headerBarOpacity,
                 composerBarOpacity = state.composerBarOpacity,

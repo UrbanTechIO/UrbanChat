@@ -85,5 +85,11 @@ enum class ThemeOption : DropdownOption {
         @Composable
         @ReadOnlyComposable
         override fun getText(): String = stringResource(R.string.theme_frosted)
+    },
+
+    LiquidGlass {
+        @Composable
+        @ReadOnlyComposable
+        override fun getText(): String = stringResource(R.string.theme_liquid_glass)
     }
 }

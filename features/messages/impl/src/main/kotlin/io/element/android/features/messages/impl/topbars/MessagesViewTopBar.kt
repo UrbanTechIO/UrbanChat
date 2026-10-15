@@ -9,6 +9,10 @@
 package io.element.android.features.messages.impl.topbars
 
 import androidx.compose.foundation.clickable
+import com.kyant.backdrop.Backdrop
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -80,6 +84,7 @@ internal fun MessagesViewTopBar(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
     isFrostedGlass: Boolean = false,
+    liquidBackdrop: Backdrop? = null,
     menuActions: @Composable RowScope.() -> Unit,
 ) {
     TopAppBar(
@@ -90,9 +95,12 @@ internal fun MessagesViewTopBar(
             TopAppBarDefaults.topAppBarColors()
         },
         navigationIcon = {
-            BackButton(onClick = onBackClick)
+            LiquidGlassWrap(liquidBackdrop, contentPadding = PaddingValues(2.dp)) {
+                BackButton(onClick = onBackClick)
+            }
         },
         title = {
+          LiquidGlassWrap(liquidBackdrop, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)) {
             val roundedCornerShape = RoundedCornerShape(8.dp)
             Row(
                 modifier = Modifier
@@ -151,8 +159,23 @@ internal fun MessagesViewTopBar(
                     )
                 }
             }
+          }
         },
-        actions = menuActions,
+        actions = {
+            if (liquidBackdrop == null) {
+                menuActions()
+            } else {
+                Row(
+                    modifier = Modifier
+                        .liquidGlassCapsule(liquidBackdrop)
+                        .padding(horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    menuActions()
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+            }
+        },
         windowInsets = WindowInsets(0.dp)
     )
 }

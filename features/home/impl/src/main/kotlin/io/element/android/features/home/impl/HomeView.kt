@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FloatingToolbarDefaults
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
@@ -49,6 +50,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
 import dev.chrisbanes.haze.HazeDefaults
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
@@ -199,6 +207,9 @@ private fun HomeScaffold(
     }
 
     val hazeState = rememberHazeState()
+    // What the Liquid Glass bar and button bend: the list drawn behind them.
+    val liquidBackdrop = rememberLayerBackdrop()
+    val liquidGlassModifier = if (state.liquidGlassEnabled) Modifier.layerBackdrop(liquidBackdrop) else Modifier
     val roomsLazyListState = rememberLazyListState()
     val spacesLazyListState = rememberLazyListState()
     val callsLazyListState = rememberLazyListState()
@@ -244,7 +255,11 @@ private fun HomeScaffold(
                         filtersState = roomListState.filtersState,
                         spaceFiltersState = roomListState.spaceFiltersState,
                         canReportBug = state.canReportBug,
-                        modifier = if (state.frostedGlassEnabled) {
+                        liquidBackdrop = if (state.liquidGlassEnabled) liquidBackdrop else null,
+                        modifier = if (state.liquidGlassEnabled) {
+                            // Liquid Glass: no full-width bar; the buttons float as separate glass capsules.
+                            Modifier
+                        } else if (state.frostedGlassEnabled) {
                             Modifier.hazeEffect(
                                 state = hazeState,
                                 style = rememberAccentFrostedHazeStyle(state.headerBarOpacity),
@@ -262,9 +277,11 @@ private fun HomeScaffold(
             floatingActionButton = {
                 val coroutineScope = rememberCoroutineScope()
                 val fabHazeState = if (state.frostedGlassEnabled) hazeState else null
+                val fabBackdrop = if (state.liquidGlassEnabled) liquidBackdrop else null
                 val fabHazeStyle = rememberAccentFrostedHazeStyle(state.headerBarOpacity)
                 HomeBottomBar(
                     frostedHazeState = if (state.frostedGlassEnabled) hazeState else null,
+                    liquidBackdrop = fabBackdrop,
                     frostedHazeStyle = rememberAccentFrostedHazeStyle(state.headerBarOpacity),
                     // The Scaffold uses top-only insets so the scrollable content can go edge-to-edge behind the
                     // navigation bar, so the floating toolbar has to apply the bottom inset itself to avoid overlapping it.
@@ -293,10 +310,10 @@ private fun HomeScaffold(
                     floatingActionButton = {
                         when (state.currentHomeNavigationBarItem) {
                             HomeNavigationBarItem.Chats -> {
-                                HomeFloatingActionButton(onStartChatClick, CommonStrings.action_create_room, fabHazeState, fabHazeStyle)
+                                HomeFloatingActionButton(onStartChatClick, CommonStrings.action_create_room, fabHazeState, fabHazeStyle, fabBackdrop)
                             }
                             HomeNavigationBarItem.Spaces -> {
-                                HomeFloatingActionButton(onCreateSpaceClick, CommonStrings.action_create_space, fabHazeState, fabHazeStyle)
+                                HomeFloatingActionButton(onCreateSpaceClick, CommonStrings.action_create_space, fabHazeState, fabHazeStyle, fabBackdrop)
                             }
                             HomeNavigationBarItem.Calls -> Unit
                         }
@@ -346,6 +363,7 @@ private fun HomeScaffold(
                                 // dark rows, never the accent-tinted gradient itself.
                                 .background(pageBackgroundBrush)
                                 .hazeSource(state = hazeState)
+                                .then(liquidGlassModifier)
                         )
                         SpaceFiltersView(roomListState.spaceFiltersState)
                     }
@@ -356,7 +374,8 @@ private fun HomeScaffold(
                                 .padding(outerPadding)
                                 .consumeWindowInsets(outerPadding)
                                 .background(pageBackgroundBrush)
-                                .hazeSource(state = hazeState),
+                                .hazeSource(state = hazeState)
+                                .then(liquidGlassModifier),
                             contentPadding = lazyColumnContentPadding + contentPadding,
                             state = state.homeSpacesState,
                             lazyListState = spacesLazyListState,
@@ -379,7 +398,8 @@ private fun HomeScaffold(
                                 .padding(outerPadding)
                                 .consumeWindowInsets(outerPadding)
                                 .background(pageBackgroundBrush)
-                                .hazeSource(state = hazeState),
+                                .hazeSource(state = hazeState)
+                                .then(liquidGlassModifier),
                         )
                     }
                 }
@@ -417,12 +437,28 @@ private fun HomeFloatingActionButton(
     contentDescription: Int,
     frostedHazeState: HazeState?,
     frostedHazeStyle: HazeStyle,
+    liquidBackdrop: Backdrop?,
     modifier: Modifier = Modifier,
 ) {
     val fabShape = FloatingActionButtonDefaults.shape
     FloatingActionButton(
         onClick = onClick,
-        modifier = if (frostedHazeState != null) {
+        modifier = if (liquidBackdrop != null) {
+            // Liquid Glass: the list behind the button is bent like a lens, with a faint light wash on top.
+            modifier.drawBackdrop(
+                backdrop = liquidBackdrop,
+                shape = { RoundedCornerShape(20.dp) },
+                effects = {
+                    vibrancy()
+                    blur(6f.dp.toPx())
+                    lens(14f.dp.toPx(), 28f.dp.toPx())
+                },
+                onDrawSurface = {
+                    drawRect(Color(0xFF0B1220).copy(alpha = 0.10f))
+                    drawRect(Color.White.copy(alpha = 0.08f))
+                },
+            )
+        } else if (frostedHazeState != null) {
             // Same glass as the top bar and the toolbar: transparent button, blur drawn behind the icon.
             modifier
                 .clip(fabShape)
@@ -430,9 +466,9 @@ private fun HomeFloatingActionButton(
         } else {
             modifier
         },
-        shape = fabShape,
-        containerColor = if (frostedHazeState != null) Color.Transparent else ElementTheme.colors.bgAccentRest,
-        elevation = if (frostedHazeState != null) {
+        shape = if (liquidBackdrop != null) RoundedCornerShape(20.dp) else fabShape,
+        containerColor = if (frostedHazeState != null || liquidBackdrop != null) Color.Transparent else ElementTheme.colors.bgAccentRest,
+        elevation = if (frostedHazeState != null || liquidBackdrop != null) {
             FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp)
         } else {
             FloatingActionButtonDefaults.elevation()
@@ -452,6 +488,7 @@ private fun HomeBottomBar(
     onItemClick: (HomeNavigationBarItem) -> Unit,
     frostedHazeState: HazeState?,
     frostedHazeStyle: HazeStyle,
+    liquidBackdrop: Backdrop?,
     modifier: Modifier = Modifier,
     floatingActionButton: (@Composable () -> Unit)?,
 ) {
@@ -467,12 +504,12 @@ private fun HomeBottomBar(
                 isSelected = isSelected,
                 onClick = { onItemClick(item) },
                 // On the frosted bar the selected item is a soft light wash instead of a dark blob.
-                selectedContainerColor = if (frostedHazeState != null) Color.White.copy(alpha = 0.22f) else ElementTheme.colors.bgCanvasDefault,
-                selectedContentColor = if (frostedHazeState != null) Color.White else ElementTheme.colors.iconPrimary,
+                selectedContainerColor = if (frostedHazeState != null || liquidBackdrop != null) Color.White.copy(alpha = 0.22f) else ElementTheme.colors.bgCanvasDefault,
+                selectedContentColor = if (frostedHazeState != null || liquidBackdrop != null) Color.White else ElementTheme.colors.iconPrimary,
             )
         }
     }
-    if (frostedHazeState == null) {
+    if (frostedHazeState == null && liquidBackdrop == null) {
         HorizontalFloatingToolbar(
             floatingActionButton = floatingActionButton,
             modifier = modifier
@@ -493,8 +530,29 @@ private fun HomeBottomBar(
         ) {
             Row(
                 modifier = Modifier
-                    .clip(CircleShape)
-                    .hazeEffect(state = frostedHazeState, style = frostedHazeStyle)
+                    .then(
+                        if (liquidBackdrop != null) {
+                            // Liquid Glass: bends the list behind the bar instead of only blurring it.
+                            Modifier.drawBackdrop(
+                                backdrop = liquidBackdrop,
+                                shape = { CircleShape },
+                                effects = {
+                                    vibrancy()
+                                    blur(8f.dp.toPx())
+                                    lens(18f.dp.toPx(), 36f.dp.toPx())
+                                },
+                                onDrawSurface = {
+                                    // A faint dark wash for readability, then the light sheen that makes it look like glass.
+                                    drawRect(Color(0xFF0B1220).copy(alpha = 0.10f))
+                                    drawRect(Color.White.copy(alpha = 0.08f))
+                                },
+                            )
+                        } else {
+                            Modifier
+                                .clip(CircleShape)
+                                .hazeEffect(state = frostedHazeState!!, style = frostedHazeStyle)
+                        }
+                    )
                     .padding(FloatingToolbarDefaults.ContentPadding),
                 verticalAlignment = Alignment.CenterVertically,
             ) {

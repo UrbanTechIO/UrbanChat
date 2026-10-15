@@ -39,4 +39,5 @@
     <string name="screen_advanced_settings_organize_chats_description">"Split the chat list into Chats and Groups sections. Turn off to see everything in one list, with the latest activity on top."</string>
     <string name="screen_advanced_settings_show_online_status">"Show my online status"</string>
     <string name="screen_advanced_settings_show_online_status_description">"Let others see when you're online. Turning this off makes you appear offline to everyone."</string>
+    <string name="theme_liquid_glass">"Liquid Glass"</string>
 </resources>

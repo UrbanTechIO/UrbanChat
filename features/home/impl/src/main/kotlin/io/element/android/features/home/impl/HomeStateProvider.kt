@@ -76,6 +76,7 @@ internal fun aHomeState(
     canReportBug: Boolean = true,
     directLogoutState: DirectLogoutState = aDirectLogoutState(),
     frostedGlassEnabled: Boolean = false,
+    liquidGlassEnabled: Boolean = false,
     headerBarOpacity: Float = 0.3f,
     eventSink: (HomeEvent) -> Unit = {}
 ) = HomeState(
@@ -91,6 +92,7 @@ internal fun aHomeState(
     homeCallsState = homeCallsState,
     voiceMessageMiniPlayerState = voiceMessageMiniPlayerState,
     frostedGlassEnabled = frostedGlassEnabled,
+    liquidGlassEnabled = liquidGlassEnabled,
     headerBarOpacity = headerBarOpacity,
     eventSink = eventSink,
 )

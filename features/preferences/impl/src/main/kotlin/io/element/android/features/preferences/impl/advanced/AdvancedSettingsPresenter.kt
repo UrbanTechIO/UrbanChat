@@ -94,6 +94,10 @@ class AdvancedSettingsPresenter(
             appPreferencesStore.isFrostedGlassEnabledFlow()
         }.collectAsState(initial = false)
 
+        val liquidGlassEnabled by remember {
+            appPreferencesStore.isLiquidGlassEnabledFlow()
+        }.collectAsState(initial = false)
+
         val headerBarOpacity by remember {
             appPreferencesStore.getHeaderBarOpacityFlow()
         }.collectAsState(initial = 0.3f)
@@ -148,7 +152,9 @@ class AdvancedSettingsPresenter(
 
         val themeOption by remember {
             derivedStateOf {
-                if (frostedGlassEnabled) {
+                if (frostedGlassEnabled && liquidGlassEnabled && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    ThemeOption.LiquidGlass
+                } else if (frostedGlassEnabled) {
                     ThemeOption.Frosted
                 } else {
                     when (theme.value) {
@@ -166,11 +172,11 @@ class AdvancedSettingsPresenter(
         }
 
         val availableThemeOptions = remember(isBlackThemeAllowed) {
-            if (isBlackThemeAllowed) {
-                ThemeOption.entries
-            } else {
-                ThemeOption.entries.filterNot { it == ThemeOption.Black }
-            }.toImmutableList()
+            ThemeOption.entries
+                .filterNot { it == ThemeOption.Black && !isBlackThemeAllowed }
+                // Liquid Glass bends light with a GPU shader that only exists on Android 13 (API 33) and newer.
+                .filterNot { it == ThemeOption.LiquidGlass && android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU }
+                .toImmutableList()
         }
 
         val mediaOptimizationState by produceState<MediaOptimizationState?>(null) {
@@ -215,23 +221,35 @@ class AdvancedSettingsPresenter(
                     when (event.theme) {
                         ThemeOption.System -> {
                             appPreferencesStore.setFrostedGlassEnabled(false)
+                            appPreferencesStore.setLiquidGlassEnabled(false)
                             appPreferencesStore.setTheme(Theme.System.name)
                         }
                         ThemeOption.Dark -> {
                             appPreferencesStore.setFrostedGlassEnabled(false)
+                            appPreferencesStore.setLiquidGlassEnabled(false)
                             appPreferencesStore.setTheme(Theme.Dark.name)
                         }
                         ThemeOption.Black -> {
                             appPreferencesStore.setFrostedGlassEnabled(false)
+                            appPreferencesStore.setLiquidGlassEnabled(false)
                             appPreferencesStore.setTheme(Theme.Black.name)
                         }
                         ThemeOption.Light -> {
                             appPreferencesStore.setFrostedGlassEnabled(false)
+                            appPreferencesStore.setLiquidGlassEnabled(false)
                             appPreferencesStore.setTheme(Theme.Light.name)
                         }
                         // Frosted isn't a light/dark scheme: keep whichever scheme is already active and just
                         // switch the header/composer bars to the blurred, translucent overlay.
-                        ThemeOption.Frosted -> appPreferencesStore.setFrostedGlassEnabled(true)
+                        ThemeOption.Frosted -> {
+                            appPreferencesStore.setFrostedGlassEnabled(true)
+                            appPreferencesStore.setLiquidGlassEnabled(false)
+                        }
+                        // Liquid Glass is the frosted look plus lens-bending bars, so it turns both settings on.
+                        ThemeOption.LiquidGlass -> {
+                            appPreferencesStore.setFrostedGlassEnabled(true)
+                            appPreferencesStore.setLiquidGlassEnabled(true)
+                        }
                     }
                 }
                 is AdvancedSettingsEvents.SetHideInviteAvatars -> mediaPreviewConfigStateStore.setHideInviteAvatars(event.value)

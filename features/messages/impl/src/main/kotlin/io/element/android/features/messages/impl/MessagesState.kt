@@ -69,6 +69,7 @@ data class MessagesState(
     val chatBackgroundColorHex: String?,
     val chatBackgroundImagePath: String?,
     val frostedGlassEnabled: Boolean,
+    val liquidGlassEnabled: Boolean,
     val headerBarOpacity: Float,
     val composerBarOpacity: Float,
     val bubbleBarOpacity: Float,

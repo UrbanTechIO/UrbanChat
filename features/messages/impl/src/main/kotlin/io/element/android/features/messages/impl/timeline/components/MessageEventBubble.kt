@@ -54,6 +54,11 @@ import io.element.android.libraries.testtags.TestTags
 import io.element.android.libraries.testtags.testTag
 import io.element.android.libraries.ui.utils.a11y.isTalkbackActive
 import io.element.android.libraries.ui.utils.graphics.drawInLayer
+import androidx.compose.foundation.shape.CornerBasedShape
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
 import dev.chrisbanes.haze.HazeDefaults
 import dev.chrisbanes.haze.hazeEffect
 
@@ -98,6 +103,7 @@ fun MessageEventBubble(
     // hazeEffect nested inside its own hazeSource renders nothing, so a bubble can't blur the very
     // message list it's itself a part of. The background is a separate layer it safely can.)
     val frostedGlass = LocalFrostedGlassBubbleState.current
+    val liquidBackdrop = LocalLiquidGlassState.current.backgroundBackdrop
     val isBubbleFrosted = frostedGlass.enabled
     val frostedHazeState = frostedGlass.hazeState
     // 0 = solid bubble colour, 1 = mostly see-through (small floor so it never fully disappears);
@@ -110,7 +116,19 @@ fun MessageEventBubble(
     BoxWithConstraints(
         modifier = modifier
             .let {
-                if (isBubbleFrosted && frostedHazeState != null) {
+                if (liquidBackdrop != null) {
+                    // Liquid Glass: the chat background bends through the bubble, tinted by the bubble colour.
+                    it.drawBackdrop(
+                        backdrop = liquidBackdrop,
+                        shape = { bubbleShape },
+                        effects = {
+                            vibrancy()
+                            blur(6f.dp.toPx())
+                            if (bubbleShape is CornerBasedShape) lens(6f.dp.toPx(), 14f.dp.toPx())
+                        },
+                        onDrawSurface = { drawRect(frostedFillColor) },
+                    )
+                } else if (isBubbleFrosted && frostedHazeState != null) {
                     it.clip(bubbleShape).hazeEffect(
                         state = frostedHazeState,
                         style = HazeDefaults.style(
@@ -140,7 +158,7 @@ fun MessageEventBubble(
                         // already painted the tinted backdrop; a flat fill here would just cover it.
                         if (!isBubbleFrosted) {
                             drawRect(backgroundBubbleColor)
-                        } else if (frostedHazeState == null) {
+                        } else if (frostedHazeState == null && liquidBackdrop == null) {
                             drawRect(frostedFillColor)
                         }
 

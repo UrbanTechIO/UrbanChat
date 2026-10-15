@@ -118,6 +118,16 @@ import io.element.android.libraries.designsystem.preview.PreviewsDayNight
 import io.element.android.libraries.designsystem.text.toAnnotatedString
 import io.element.android.libraries.designsystem.text.toDp
 import io.element.android.libraries.designsystem.theme.components.BottomSheetDragHandle
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
+import io.element.android.features.messages.impl.timeline.components.LiquidGlassState
+import io.element.android.features.messages.impl.timeline.components.LocalLiquidGlassState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
 import dev.chrisbanes.haze.HazeDefaults
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.hazeEffect
@@ -251,7 +261,16 @@ fun MessagesView(
     // they're themselves a part of (a hazeEffect nested inside its own hazeSource renders nothing,
     // so bubbles need a source layer that doesn't include the list of bubbles itself).
     val chatBackgroundHazeState = rememberHazeState()
+    // Liquid Glass: the same two layers as above, for bending light instead of only blurring it.
+    val liquidBackgroundBackdrop = rememberLayerBackdrop()
+    val liquidTimelineBackdrop = rememberLayerBackdrop()
+    val extraBottomContentPadding = if (state.liquidGlassEnabled) {
+        with(LocalDensity.current) { expandableState.sheetHeightPx.toDp() }
+    } else {
+        0.dp
+    }
     ExpandableBottomSheetLayout(
+        overlaySheet = state.liquidGlassEnabled,
         modifier = modifier
             .fillMaxSize()
             .imePadding()
@@ -266,7 +285,10 @@ fun MessagesView(
             Scaffold(
                 contentWindowInsets = scaffoldScrollableContentInsets,
                 topBar = {
-                    val topBarModifier = if (state.frostedGlassEnabled) {
+                    val topBarModifier = if (state.liquidGlassEnabled) {
+                        // Liquid Glass: no full-width bar; the buttons float as separate glass capsules.
+                        Modifier
+                    } else if (state.frostedGlassEnabled) {
                         Modifier.hazeEffect(state = hazeState, style = rememberFrostedHazeStyle(state.headerBarOpacity))
                     } else {
                         Modifier
@@ -295,6 +317,7 @@ fun MessagesView(
                             onRoomDetailsClick = { hidingKeyboard { onRoomDetailsClick() } },
                             modifier = topBarModifier,
                             isFrostedGlass = state.frostedGlassEnabled,
+                            liquidBackdrop = if (state.liquidGlassEnabled) liquidTimelineBackdrop else null,
                             menuActions = {
                                 MessagesMenuActions(
                                     displayThreads = state.timelineState.timelineMode !is Timeline.Mode.Thread && state.threads.hasThreads,
@@ -333,6 +356,7 @@ fun MessagesView(
                             // Combined background+list source, unchanged from before: what the header
                             // and composer bars blur.
                             .let { if (state.frostedGlassEnabled) it.hazeSource(state = hazeState) else it }
+                            .let { if (state.liquidGlassEnabled) it.layerBackdrop(liquidTimelineBackdrop) else it }
                     ) {
                         Box(
                             modifier = Modifier
@@ -346,6 +370,7 @@ fun MessagesView(
                                 // A second, narrower source containing only the background, not the
                                 // message list: see chatBackgroundHazeState's own comment above for why.
                                 .let { if (state.frostedGlassEnabled) it.hazeSource(state = chatBackgroundHazeState) else it }
+                                .let { if (state.liquidGlassEnabled) it.layerBackdrop(liquidBackgroundBackdrop) else it }
                         ) {
                             if (state.chatBackgroundImagePath != null) {
                                 AsyncImage(
@@ -380,6 +405,10 @@ fun MessagesView(
                         CompositionLocalProvider(
                             LocalBubbleColors provides bubbleColors,
                             LocalFrostedGlassBubbleState provides frostedGlassBubbleState,
+                            LocalLiquidGlassState provides LiquidGlassState(
+                                backgroundBackdrop = if (state.liquidGlassEnabled) liquidBackgroundBackdrop else null,
+                                timelineBackdrop = if (state.liquidGlassEnabled) liquidTimelineBackdrop else null,
+                            ),
                             LocalMediaDownloadContext provides mediaDownloadContext,
                             LocalUrlPreviewContext provides urlPreviewContext,
                             LocalFloatingVideoPlayerController provides floatingVideoPlayerController,
@@ -388,6 +417,7 @@ fun MessagesView(
                             state = state,
                             onContentClick = ::onContentClick,
                             extraTopContentPadding = if (state.frostedGlassEnabled) padding.calculateTopPadding() else 0.dp,
+                            extraBottomContentPadding = extraBottomContentPadding,
                             onGalleryItemClick = { event, index ->
                                 val hideKeyboard = onGalleryEventItemClick(
                                     state.timelineState.isLive,
@@ -462,7 +492,24 @@ fun MessagesView(
         bottomSheetContent = {
             CompositionLocalProvider(LocalIsFrostedGlassEnabled provides state.frostedGlassEnabled) {
                 Box(
-                    modifier = if (state.frostedGlassEnabled) {
+                    modifier = if (state.liquidGlassEnabled) {
+                        // Liquid Glass: the message bar floats as a rounded glass pill that bends the chat behind it.
+                        Modifier
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                            .drawBackdrop(
+                                backdrop = liquidTimelineBackdrop,
+                                shape = { RoundedCornerShape(26.dp) },
+                                effects = {
+                                    vibrancy()
+                                    blur(8f.dp.toPx())
+                                    lens(14f.dp.toPx(), 28f.dp.toPx())
+                                },
+                                onDrawSurface = {
+                                    drawRect(Color(0xFF0B1220).copy(alpha = 0.10f))
+                                    drawRect(Color.White.copy(alpha = 0.08f))
+                                },
+                            )
+                    } else if (state.frostedGlassEnabled) {
                         Modifier.hazeEffect(state = hazeState, style = rememberFrostedHazeStyle(state.composerBarOpacity))
                     } else {
                         Modifier
@@ -627,6 +674,7 @@ private fun MessagesViewContent(
     onSwipeToReply: (TimelineItem.Event) -> Unit,
     modifier: Modifier = Modifier,
     extraTopContentPadding: Dp = 0.dp,
+    extraBottomContentPadding: Dp = 0.dp,
     knockRequestsBannerView: @Composable () -> Unit,
 ) {
     Box(
@@ -686,6 +734,7 @@ private fun MessagesViewContent(
                 nestedScrollConnection = scrollBehavior.nestedScrollConnection,
                 floatingDateTopOffset = topBannersHeightDp,
                 extraTopContentPadding = extraTopContentPadding,
+                extraBottomContentPadding = extraBottomContentPadding,
             )
 
             if (state.timelineState.timelineMode !is Timeline.Mode.Thread) {

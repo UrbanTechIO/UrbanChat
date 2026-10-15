@@ -169,6 +169,7 @@ fun aMessagesState(
     chatBackgroundColorHex = null,
     chatBackgroundImagePath = null,
     frostedGlassEnabled = false,
+    liquidGlassEnabled = false,
     headerBarOpacity = 0.3f,
     composerBarOpacity = 0.15f,
     bubbleBarOpacity = 0.5f,

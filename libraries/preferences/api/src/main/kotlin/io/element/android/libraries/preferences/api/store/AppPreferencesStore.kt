@@ -41,6 +41,8 @@ interface AppPreferencesStore {
     /** Whether the chat header and composer should render as blurred, translucent "frosted glass" bars. */
     suspend fun setFrostedGlassEnabled(enabled: Boolean)
     fun isFrostedGlassEnabledFlow(): Flow<Boolean>
+    suspend fun setLiquidGlassEnabled(enabled: Boolean)
+    fun isLiquidGlassEnabledFlow(): Flow<Boolean>
 
     /** Tint opacity of the frosted header bar, 0f (fully transparent) to 1f (opaque). Blur stays constant either way. */
     suspend fun setHeaderBarOpacity(opacity: Float)

@@ -59,6 +59,7 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.haze)
     implementation(libs.haze.materials)
+    implementation(libs.kyant.backdrop)
     implementation(projects.features.preferences.impl)
     implementation(projects.features.lockscreen.impl)
     implementation(projects.features.reportroom.api)

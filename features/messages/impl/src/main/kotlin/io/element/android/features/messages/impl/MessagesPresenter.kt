@@ -199,6 +199,12 @@ class MessagesPresenter(
             appPreferencesStore.isFrostedGlassEnabledFlow()
         }.collectAsState(initial = false)
 
+        val liquidGlassSetting by remember {
+            appPreferencesStore.isLiquidGlassEnabledFlow()
+        }.collectAsState(initial = false)
+        // The bending-light effect needs a GPU shader that only exists from Android 13 (API 33).
+        val liquidGlassEnabled = liquidGlassSetting && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU
+
         val headerBarOpacity by remember {
             appPreferencesStore.getHeaderBarOpacityFlow()
         }.collectAsState(initial = 0.3f)
@@ -398,6 +404,7 @@ class MessagesPresenter(
             chatBackgroundColorHex = chatBackgroundColorHex,
             chatBackgroundImagePath = chatBackgroundImagePath,
             frostedGlassEnabled = frostedGlassEnabled,
+            liquidGlassEnabled = liquidGlassEnabled,
             headerBarOpacity = headerBarOpacity,
             composerBarOpacity = composerBarOpacity,
             bubbleBarOpacity = bubbleBarOpacity,

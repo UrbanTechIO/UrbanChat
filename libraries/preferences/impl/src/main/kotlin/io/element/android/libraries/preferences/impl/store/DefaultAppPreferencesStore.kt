@@ -36,6 +36,7 @@ private val accentColorKey = stringPreferencesKey("accentColor")
 private val chatBackgroundColorKey = stringPreferencesKey("chatBackgroundColor")
 private val chatBackgroundImagePathKey = stringPreferencesKey("chatBackgroundImagePath")
 private val frostedGlassEnabledKey = booleanPreferencesKey("frostedGlassEnabled")
+private val liquidGlassEnabledKey = booleanPreferencesKey("liquidGlassEnabled")
 private val headerBarOpacityKey = floatPreferencesKey("headerBarOpacity")
 private val composerBarOpacityKey = floatPreferencesKey("composerBarOpacity")
 private val bubbleBarOpacityKey = floatPreferencesKey("bubbleBarOpacity")
@@ -153,6 +154,14 @@ class DefaultAppPreferencesStore(
 
     override fun isFrostedGlassEnabledFlow(): Flow<Boolean> {
         return store.data.map { prefs -> prefs[frostedGlassEnabledKey] ?: false }
+    }
+
+    override suspend fun setLiquidGlassEnabled(enabled: Boolean) {
+        store.edit { prefs -> prefs[liquidGlassEnabledKey] = enabled }
+    }
+
+    override fun isLiquidGlassEnabledFlow(): Flow<Boolean> {
+        return store.data.map { prefs -> prefs[liquidGlassEnabledKey] ?: false }
     }
 
     override suspend fun setHeaderBarOpacity(opacity: Float) {

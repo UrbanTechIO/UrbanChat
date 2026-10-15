@@ -226,6 +226,7 @@ google_zxing = "com.google.zxing:core:3.5.4"
 google_guava = "com.google.guava:guava:33.6.0-android"
 
 haze = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }
+kyant_backdrop = { module = "io.github.kyant0:backdrop", version = "2.0.1" }
 haze_materials = { module = "dev.chrisbanes.haze:haze-materials", version.ref = "haze" }
 color_picker = "io.mhssn:colorpicker:1.0.0"
 

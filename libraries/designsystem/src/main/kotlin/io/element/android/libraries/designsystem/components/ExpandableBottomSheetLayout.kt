@@ -76,6 +76,8 @@ fun ExpandableBottomSheetLayout(
     modifier: Modifier = Modifier,
     sheetShape: Shape = RectangleShape,
     backgroundColor: Color = Color.Transparent,
+    // When true the sheet floats over the content instead of taking its own strip below it.
+    overlaySheet: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     var minBottomContentHeightPx by remember { mutableIntStateOf(0) }
@@ -189,8 +191,11 @@ fun ExpandableBottomSheetLayout(
             }
 
             val contentPlaceable = contentMeasurables.measure(
-                Constraints.fixed(constraints.maxWidth, remainingHeight)
+                Constraints.fixed(constraints.maxWidth, if (overlaySheet) constraints.maxHeight else remainingHeight)
             )
+            if (state.sheetHeightPx != currentBottomContentHeightPx) {
+                state.sheetHeightPx = currentBottomContentHeightPx
+            }
 
             layout(constraints.maxWidth, constraints.maxHeight) {
                 contentPlaceable.place(0, 0)

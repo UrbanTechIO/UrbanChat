@@ -11,6 +11,11 @@ package io.element.android.features.home.impl.components
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
+import com.kyant.backdrop.Backdrop
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
@@ -98,6 +103,7 @@ fun HomeTopBar(
     filtersState: RoomListFiltersState,
     spaceFiltersState: SpaceFiltersState,
     modifier: Modifier = Modifier,
+    liquidBackdrop: Backdrop? = null,
 ) {
     val contentPadding = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal).asPaddingValues()
     Column {
@@ -133,21 +139,40 @@ fun HomeTopBar(
                 )
             },
             navigationIcon = {
-                NavigationIcon(
-                    currentUserAndNeighbors = currentUserAndNeighbors,
-                    showAvatarIndicator = showAvatarIndicator,
-                    onAccountSwitch = onAccountSwitch,
-                    onClick = onOpenSettings,
-                )
+                LiquidGlassWrap(liquidBackdrop, contentPadding = PaddingValues(2.dp)) {
+                    NavigationIcon(
+                        currentUserAndNeighbors = currentUserAndNeighbors,
+                        showAvatarIndicator = showAvatarIndicator,
+                        onAccountSwitch = onAccountSwitch,
+                        onClick = onOpenSettings,
+                    )
+                }
             },
             actions = {
                 if (selectedNavigationItem == HomeNavigationBarItem.Chats) {
-                    RoomListMenuItems(
-                        onToggleSearch = onToggleSearch,
-                        onMenuActionClick = onMenuActionClick,
-                        canReportBug = canReportBug,
-                        spaceFiltersState = spaceFiltersState,
-                    )
+                    if (liquidBackdrop == null) {
+                        RoomListMenuItems(
+                            onToggleSearch = onToggleSearch,
+                            onMenuActionClick = onMenuActionClick,
+                            canReportBug = canReportBug,
+                            spaceFiltersState = spaceFiltersState,
+                        )
+                    } else {
+                        Row(
+                            modifier = Modifier
+                                .liquidGlassCapsule(liquidBackdrop)
+                                .padding(horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RoomListMenuItems(
+                                onToggleSearch = onToggleSearch,
+                                onMenuActionClick = onMenuActionClick,
+                                canReportBug = canReportBug,
+                                spaceFiltersState = spaceFiltersState,
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
                 }
             },
             // We want a 16dp left padding for the navigationIcon :

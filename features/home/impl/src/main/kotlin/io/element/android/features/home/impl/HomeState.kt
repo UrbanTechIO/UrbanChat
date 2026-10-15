@@ -35,6 +35,8 @@ data class HomeState(
     val canReportBug: Boolean,
     val directLogoutState: DirectLogoutState,
     val frostedGlassEnabled: Boolean,
+    /** Liquid Glass look for the floating bottom bar and plus button (Android 13 and newer only). */
+    val liquidGlassEnabled: Boolean,
     val headerBarOpacity: Float,
     val eventSink: (HomeEvent) -> Unit,
 ) {

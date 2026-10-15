@@ -43,6 +43,12 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Color
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
+import io.element.android.features.messages.impl.timeline.components.LocalLiquidGlassState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -144,6 +150,7 @@ fun TimelineView(
     nestedScrollConnection: NestedScrollConnection = rememberNestedScrollInteropConnection(),
     floatingDateTopOffset: Dp = 0.dp,
     extraTopContentPadding: Dp = 0.dp,
+    extraBottomContentPadding: Dp = 0.dp,
 ) {
     fun clearFocusRequestState() {
         state.eventSink(TimelineEvent.ClearFocusRequestState)
@@ -201,7 +208,7 @@ fun TimelineView(
                 state = lazyListState,
                 reverseLayout = true,
                 contentPadding = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal).asPaddingValues() +
-                    PaddingValues(top = 64.dp + extraTopContentPadding, bottom = 8.dp),
+                    PaddingValues(top = 64.dp + extraTopContentPadding, bottom = 8.dp + extraBottomContentPadding),
             ) {
                 items(
                     items = state.timelineItems,
@@ -245,6 +252,7 @@ fun TimelineView(
             )
 
             TimelineScrollHelper(
+                extraBottomContentPadding = extraBottomContentPadding,
                 hasAnyEvent = state.hasAnyEvent,
                 lazyListState = lazyListState,
                 forceJumpToBottomVisibility = forceJumpToBottomVisibility,
@@ -330,6 +338,7 @@ private fun TimelinePrefetchingHelper(
 
 @Composable
 private fun BoxScope.TimelineScrollHelper(
+    extraBottomContentPadding: Dp,
     hasAnyEvent: Boolean,
     lazyListState: LazyListState,
     newEventState: NewEventState,
@@ -441,7 +450,7 @@ private fun BoxScope.TimelineScrollHelper(
     Column(
         modifier = Modifier
             .align(Alignment.BottomEnd)
-            .padding(end = 24.dp, bottom = 16.dp)
+            .padding(end = 24.dp, bottom = 16.dp + extraBottomContentPadding)
     ) {
         JumpToPositionButton(
             icon = CompoundIcons.ChevronUp(),
@@ -489,13 +498,35 @@ private fun JumpToPositionButton(
         exit = scaleOut(animationSpec = tween(180), targetScale = 0.8f) + fadeOut(animationSpec = tween(180)),
     ) {
         var menuExpanded by remember { mutableStateOf(false) }
+        val liquidBackdrop = LocalLiquidGlassState.current.backgroundBackdrop
         Box {
             Box(
                 modifier = Modifier
                     .size(36.dp)
-                    .background(color = ElementTheme.colors.bgCanvasDefault, shape = CircleShape)
+                    .then(
+                        if (liquidBackdrop != null) {
+                            // Liquid Glass: a small glass disc that bends the chat behind it.
+                            Modifier.drawBackdrop(
+                                backdrop = liquidBackdrop,
+                                shape = { CircleShape },
+                                effects = {
+                                    vibrancy()
+                                    blur(4f.dp.toPx())
+                                    lens(8f.dp.toPx(), 16f.dp.toPx())
+                                },
+                                onDrawSurface = {
+                                    drawRect(Color(0xFF0B1220).copy(alpha = 0.10f))
+                                    drawRect(Color.White.copy(alpha = 0.08f))
+                                },
+                            )
+                        } else {
+                            Modifier
+                                .background(color = ElementTheme.colors.bgCanvasDefault, shape = CircleShape)
+                                .clip(CircleShape)
+                                .border(1.dp, ElementTheme.colors.borderDisabled, CircleShape)
+                        }
+                    )
                     .clip(CircleShape)
-                    .border(1.dp, ElementTheme.colors.borderDisabled, CircleShape)
                     .combinedClickable(
                         onClick = onClick,
                         onLongClick = { menuExpanded = true },

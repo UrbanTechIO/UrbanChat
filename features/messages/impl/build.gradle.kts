@@ -72,6 +72,7 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.haze)
     implementation(libs.haze.materials)
+    implementation(libs.kyant.backdrop)
     implementation(libs.datetime)
     implementation(libs.jsoup)
     implementation(libs.androidx.constraintlayout)

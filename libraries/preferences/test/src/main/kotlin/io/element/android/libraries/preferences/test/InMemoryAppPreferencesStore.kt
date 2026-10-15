@@ -131,6 +131,16 @@ class InMemoryAppPreferencesStore(
         return frostedGlassEnabled
     }
 
+    private val liquidGlassEnabled = MutableStateFlow(false)
+
+    override suspend fun setLiquidGlassEnabled(enabled: Boolean) {
+        liquidGlassEnabled.value = enabled
+    }
+
+    override fun isLiquidGlassEnabledFlow(): Flow<Boolean> {
+        return liquidGlassEnabled
+    }
+
     override suspend fun setHeaderBarOpacity(opacity: Float) {
         headerBarOpacity.value = opacity
     }

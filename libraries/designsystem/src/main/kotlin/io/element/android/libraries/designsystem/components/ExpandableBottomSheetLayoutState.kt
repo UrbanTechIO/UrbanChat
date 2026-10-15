@@ -11,6 +11,7 @@ package io.element.android.libraries.designsystem.components
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -31,6 +32,10 @@ fun rememberExpandableBottomSheetLayoutState(): ExpandableBottomSheetLayoutState
 @Stable
 class ExpandableBottomSheetLayoutState {
     internal var internalPosition: Position by mutableStateOf(Position.COLLAPSED)
+
+    /** The height the bottom sheet currently takes, in pixels. */
+    var sheetHeightPx: Int by mutableIntStateOf(0)
+        internal set
 
     /**
      * The current position of the bottom sheet layout.

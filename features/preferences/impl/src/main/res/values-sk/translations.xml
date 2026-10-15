@@ -5,8 +5,8 @@
   <string name="screen_advanced_settings_choose_distributor_dialog_title_android">"Vyberte spôsob prijímania oznámení"</string>
   <string name="screen_advanced_settings_developer_mode">"Vývojársky režim"</string>
   <string name="screen_advanced_settings_developer_mode_description">"Umožniť prístup k možnostiam a funkciám pre vývojárov."</string>
-  <string name="screen_advanced_settings_element_call_base_url">"Vlastná Element Call základná URL adresa"</string>
-  <string name="screen_advanced_settings_element_call_base_url_description">"Nastaviť vlastnú základnú URL adresu pre Element Call."</string>
+  <string name="screen_advanced_settings_element_call_base_url">"Vlastná UrbanChat Call základná URL adresa"</string>
+  <string name="screen_advanced_settings_element_call_base_url_description">"Nastaviť vlastnú základnú URL adresu pre UrbanChat Call."</string>
   <string name="screen_advanced_settings_element_call_base_url_validation_error">"Neplatná adresa URL, uistite sa, že ste uviedli protokol (http/https) a správnu adresu."</string>
   <string name="screen_advanced_settings_hide_invite_avatars_toggle_title">"Skrytie profilové obrázky v žiadostiach o pozvánku do miestnosti"</string>
   <string name="screen_advanced_settings_hide_timeline_media_toggle_title">"Skryť ukážky médií na časovej osi"</string>

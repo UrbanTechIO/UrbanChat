@@ -143,7 +143,7 @@ private fun GitCategory(
 private fun ElementCallCategory(
     state: AppDeveloperSettingsState,
 ) {
-    PreferenceCategory(title = "Element Call") {
+    PreferenceCategory(title = "UrbanChat Call") {
         val callUrlState = state.customElementCallBaseUrlState
 
         val supportingText = if (callUrlState.baseUrl.isNullOrEmpty()) {

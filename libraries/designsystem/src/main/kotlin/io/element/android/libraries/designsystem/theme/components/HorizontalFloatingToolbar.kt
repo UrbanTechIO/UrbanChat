@@ -116,6 +116,8 @@ fun HorizontalFloatingToolbarItem(
     modifier: Modifier = Modifier,
     counter: Int? = null,
     forceRenderingTooltip: Boolean = false,
+    selectedContainerColor: Color = ElementTheme.colors.bgCanvasDefault,
+    selectedContentColor: Color = ElementTheme.colors.iconPrimary,
 ) {
     TooltipBox(
         positionProvider =
@@ -130,8 +132,8 @@ fun HorizontalFloatingToolbarItem(
     ) {
         val colors = if (isSelected) {
             IconButtonDefaults.filledIconButtonColors().copy(
-                containerColor = ElementTheme.colors.bgCanvasDefault,
-                contentColor = ElementTheme.colors.iconPrimary,
+                containerColor = selectedContainerColor,
+                contentColor = selectedContentColor,
             )
         } else {
             IconButtonDefaults.filledIconButtonColors().copy(

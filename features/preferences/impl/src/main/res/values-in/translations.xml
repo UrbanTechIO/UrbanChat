@@ -5,8 +5,8 @@
   <string name="screen_advanced_settings_choose_distributor_dialog_title_android">"Pilih cara menerima notifikasi"</string>
   <string name="screen_advanced_settings_developer_mode">"Mode pengembang"</string>
   <string name="screen_advanced_settings_developer_mode_description">"Aktifkan untuk mengakses fitur dan fungsi untuk para pengembang."</string>
-  <string name="screen_advanced_settings_element_call_base_url">"URL dasar Element Call khusus"</string>
-  <string name="screen_advanced_settings_element_call_base_url_description">"Tetapkan URL dasar khusus untuk Element Call."</string>
+  <string name="screen_advanced_settings_element_call_base_url">"URL dasar UrbanChat Call khusus"</string>
+  <string name="screen_advanced_settings_element_call_base_url_description">"Tetapkan URL dasar khusus untuk UrbanChat Call."</string>
   <string name="screen_advanced_settings_element_call_base_url_validation_error">"URL tidak valid, pastikan Anda menyertakan protokol (http/https) dan alamat yang benar."</string>
   <string name="screen_advanced_settings_hide_invite_avatars_toggle_title">"Sembunyikan avatar dalam permintaan undangan ruangan"</string>
   <string name="screen_advanced_settings_hide_timeline_media_toggle_title">"Sembunyikan pratinjau media pada lini masa"</string>

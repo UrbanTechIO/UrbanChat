@@ -5,8 +5,8 @@
   <string name="screen_advanced_settings_choose_distributor_dialog_title_android">"Valitse, miten haluat vastaanottaa ilmoituksia"</string>
   <string name="screen_advanced_settings_developer_mode">"Kehittäjätila"</string>
   <string name="screen_advanced_settings_developer_mode_description">"Ottamalla käyttöön pääset käsiksi kehittäjille tarkoitettuihin ominaisuuksiin."</string>
-  <string name="screen_advanced_settings_element_call_base_url">"Mukautettu Element Call URL-osoite"</string>
-  <string name="screen_advanced_settings_element_call_base_url_description">"Aseta mukautettu URL-osoite Element Callille."</string>
+  <string name="screen_advanced_settings_element_call_base_url">"Mukautettu UrbanChat Call URL-osoite"</string>
+  <string name="screen_advanced_settings_element_call_base_url_description">"Aseta mukautettu URL-osoite UrbanChat Callille."</string>
   <string name="screen_advanced_settings_element_call_base_url_validation_error">"Virheellinen URL-osoite. Varmista, että sisällytät protokollan (http/https) ja oikean osoitteen."</string>
   <string name="screen_advanced_settings_hide_invite_avatars_toggle_title">"Piilota huoneiden avatarit kutsuista"</string>
   <string name="screen_advanced_settings_hide_timeline_media_toggle_title">"Piilota median esikatselu aikajanalla"</string>

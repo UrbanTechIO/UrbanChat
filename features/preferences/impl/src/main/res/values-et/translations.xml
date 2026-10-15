@@ -5,8 +5,8 @@
   <string name="screen_advanced_settings_choose_distributor_dialog_title_android">"Vali kuidas sa soovid saada teavitusi"</string>
   <string name="screen_advanced_settings_developer_mode">"Arendaja valikud"</string>
   <string name="screen_advanced_settings_developer_mode_description">"Selle eelistuse sisselülitamisel lisanduvad rakendusse arendaja tööks vajalikud valikud."</string>
-  <string name="screen_advanced_settings_element_call_base_url">"Element Calli kohandatud teenuseaadress"</string>
-  <string name="screen_advanced_settings_element_call_base_url_description">"Seadista kohandatud teenuseaadress Element Calli jaoks."</string>
+  <string name="screen_advanced_settings_element_call_base_url">"UrbanChat Calli kohandatud teenuseaadress"</string>
+  <string name="screen_advanced_settings_element_call_base_url_description">"Seadista kohandatud teenuseaadress UrbanChat Calli jaoks."</string>
   <string name="screen_advanced_settings_element_call_base_url_validation_error">"Vigane url. Palun vaata, et url algaks protokolliga (http/https) ning aadress ise oleks ka õige."</string>
   <string name="screen_advanced_settings_hide_invite_avatars_toggle_title">"Peida jututubade kutsetest tunnuspildid"</string>
   <string name="screen_advanced_settings_hide_timeline_media_toggle_title">"Peida meedia eelvaated ajajoonel"</string>

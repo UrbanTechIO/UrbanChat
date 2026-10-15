@@ -5,8 +5,8 @@
   <string name="screen_advanced_settings_choose_distributor_dialog_title_android">"Odaberite kako želite primati obavijesti"</string>
   <string name="screen_advanced_settings_developer_mode">"Način rada za razvojne inženjere"</string>
   <string name="screen_advanced_settings_developer_mode_description">"Omogućite pristup značajkama i funkcionalnostima za razvojne inženjere."</string>
-  <string name="screen_advanced_settings_element_call_base_url">"Prilagođeni osnovni URL za Element Call"</string>
-  <string name="screen_advanced_settings_element_call_base_url_description">"Postavite prilagođeni osnovni URL za Element Call."</string>
+  <string name="screen_advanced_settings_element_call_base_url">"Prilagođeni osnovni URL za UrbanChat Call"</string>
+  <string name="screen_advanced_settings_element_call_base_url_description">"Postavite prilagođeni osnovni URL za UrbanChat Call."</string>
   <string name="screen_advanced_settings_element_call_base_url_validation_error">"Nevažeći URL; provjerite jeste li uključili protokol (http/https) i ispravnu adresu."</string>
   <string name="screen_advanced_settings_hide_invite_avatars_toggle_title">"Sakrij avatare u zahtjevima za poziv u sobu"</string>
   <string name="screen_advanced_settings_hide_timeline_media_toggle_title">"Sakrij preglede medija na vremenskoj traci"</string>

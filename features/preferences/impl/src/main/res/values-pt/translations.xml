@@ -5,8 +5,8 @@
   <string name="screen_advanced_settings_choose_distributor_dialog_title_android">"Escolhe como receber notificações"</string>
   <string name="screen_advanced_settings_developer_mode">"Modo de programador"</string>
   <string name="screen_advanced_settings_developer_mode_description">"Permite o acesso a funcionalidades para programadores."</string>
-  <string name="screen_advanced_settings_element_call_base_url">"URL base para Element Call personalizado"</string>
-  <string name="screen_advanced_settings_element_call_base_url_description">"Define um URL base para a Element Call."</string>
+  <string name="screen_advanced_settings_element_call_base_url">"URL base para UrbanChat Call personalizado"</string>
+  <string name="screen_advanced_settings_element_call_base_url_description">"Define um URL base para a UrbanChat Call."</string>
   <string name="screen_advanced_settings_element_call_base_url_validation_error">"URL inválido, certifica-te de que incluis o protocolo (http/https) e o endereço correto."</string>
   <string name="screen_advanced_settings_hide_invite_avatars_toggle_title">"Ocultar avatares nos pedidos de acesso a salas"</string>
   <string name="screen_advanced_settings_hide_timeline_media_toggle_title">"Ocultar pré-visualizações de multimédia na cronologia"</string>

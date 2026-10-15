@@ -32,7 +32,7 @@
   <string name="screen_room_timeline_add_reaction">"Thêm biểu cảm"</string>
   <string name="screen_room_timeline_beginning_of_room">"Đây là sự kiện khởi đầu của phòng %1$s ."</string>
   <string name="screen_room_timeline_beginning_of_room_no_name">"Đây là khởi đầu của cuộc trò chuyện này."</string>
-  <string name="screen_room_timeline_legacy_call">"Cuộc gọi không được hỗ trợ. Hãy hỏi xem người gọi có thể sử dụng ứng dụng Element X mới hay không."</string>
+  <string name="screen_room_timeline_legacy_call">"Cuộc gọi không được hỗ trợ. Hãy hỏi xem người gọi có thể sử dụng ứng dụng UrbanChat mới hay không."</string>
   <string name="screen_room_timeline_less_reactions">"Thu gọn"</string>
   <string name="screen_room_timeline_message_copied">"Đã sao chép tin nhắn"</string>
   <string name="screen_room_timeline_no_permission_to_post">"Bạn không có quyền gửi tin nhắn trong phòng này"</string>

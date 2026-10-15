@@ -6,7 +6,7 @@
   <string name="screen_advanced_settings_developer_mode">"Udviklertilstand"</string>
   <string name="screen_advanced_settings_developer_mode_description">"Aktivér for at få adgang til funktioner og funktionalitet for udviklere."</string>
   <string name="screen_advanced_settings_element_call_base_url">"Brugerdefineret URL til opkaldsbase for Element"</string>
-  <string name="screen_advanced_settings_element_call_base_url_description">"Angiv en brugerdefineret basis-URL til Element Call."</string>
+  <string name="screen_advanced_settings_element_call_base_url_description">"Angiv en brugerdefineret basis-URL til UrbanChat Call."</string>
   <string name="screen_advanced_settings_element_call_base_url_validation_error">"Ugyldig URL, sørg for at inkludere protokollen (http/https) og den korrekte adresse."</string>
   <string name="screen_advanced_settings_hide_invite_avatars_toggle_title">"Skjul avatarer i anmodninger om invitation til rum"</string>
   <string name="screen_advanced_settings_hide_timeline_media_toggle_title">"Skjul forhåndsvisning af medier i tidslinjen"</string>

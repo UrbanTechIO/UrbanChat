@@ -33,7 +33,7 @@
   <string name="screen_room_timeline_add_reaction">"Afegeix reacció"</string>
   <string name="screen_room_timeline_beginning_of_room">"Aquest és el principi de %1$s."</string>
   <string name="screen_room_timeline_beginning_of_room_no_name">"Principi d\'aquesta conversa."</string>
-  <string name="screen_room_timeline_legacy_call">"Trucada no compatible. Comprova si la persona que truca està utilitzant la nova aplicació Element X."</string>
+  <string name="screen_room_timeline_legacy_call">"Trucada no compatible. Comprova si la persona que truca està utilitzant la nova aplicació UrbanChat."</string>
   <string name="screen_room_timeline_less_reactions">"Mostra\'n menys"</string>
   <string name="screen_room_timeline_message_copied">"Missatge copiat"</string>
   <string name="screen_room_timeline_no_permission_to_post">"No tens permís per enviar res en aquesta sala"</string>

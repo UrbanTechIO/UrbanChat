@@ -6,7 +6,7 @@
   <string name="screen_advanced_settings_developer_mode">"개발자 모드"</string>
   <string name="screen_advanced_settings_developer_mode_description">"개발자가 기능에 액세스할 수 있도록 합니다."</string>
   <string name="screen_advanced_settings_element_call_base_url">"사용자 정의 요소 호출 베이스 URL"</string>
-  <string name="screen_advanced_settings_element_call_base_url_description">"Element Call에 대한 사용자 지정 기본 URL을 설정하세요."</string>
+  <string name="screen_advanced_settings_element_call_base_url_description">"UrbanChat Call에 대한 사용자 지정 기본 URL을 설정하세요."</string>
   <string name="screen_advanced_settings_element_call_base_url_validation_error">"URL이 잘못되었습니다. 프로토콜(http/https)과 올바른 주소를 포함했는지 확인하세요."</string>
   <string name="screen_advanced_settings_hide_invite_avatars_toggle_title">"방 초대 요청에서 아바타 숨기기"</string>
   <string name="screen_advanced_settings_hide_timeline_media_toggle_title">"타임라인에서 미디어 미리 보기 숨기기"</string>

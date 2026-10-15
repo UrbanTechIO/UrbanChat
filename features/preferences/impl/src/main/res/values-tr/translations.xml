@@ -5,8 +5,8 @@
   <string name="screen_advanced_settings_choose_distributor_dialog_title_android">"Bildirimleri nasıl alacağınızı seçin"</string>
   <string name="screen_advanced_settings_developer_mode">"Geliştirici modu"</string>
   <string name="screen_advanced_settings_developer_mode_description">"Geliştiriciler için özelliklere ve işlevlere erişim sağlayın."</string>
-  <string name="screen_advanced_settings_element_call_base_url">"Özel Element Call temel URL\'si"</string>
-  <string name="screen_advanced_settings_element_call_base_url_description">"Element Call için özel bir temel URL ayarlayın."</string>
+  <string name="screen_advanced_settings_element_call_base_url">"Özel UrbanChat Call temel URL\'si"</string>
+  <string name="screen_advanced_settings_element_call_base_url_description">"UrbanChat Call için özel bir temel URL ayarlayın."</string>
   <string name="screen_advanced_settings_element_call_base_url_validation_error">"Geçersiz URL, lütfen protokolü (http/https) ve doğru adresi eklediğinizden emin olun."</string>
   <string name="screen_advanced_settings_hide_invite_avatars_toggle_title">"Oda davet isteklerinde avatarları gizle"</string>
   <string name="screen_advanced_settings_hide_timeline_media_toggle_title">"Zaman çizelgesinde medya ön izlemelerini kapat"</string>

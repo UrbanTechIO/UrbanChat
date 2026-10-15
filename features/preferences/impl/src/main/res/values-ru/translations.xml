@@ -5,8 +5,8 @@
   <string name="screen_advanced_settings_choose_distributor_dialog_title_android">"Выберите способ получения уведомлений"</string>
   <string name="screen_advanced_settings_developer_mode">"Режим разработчика"</string>
   <string name="screen_advanced_settings_developer_mode_description">"Предоставьте разработчикам доступ к функциям и функциональным возможностям."</string>
-  <string name="screen_advanced_settings_element_call_base_url">"URL сервера Element Call"</string>
-  <string name="screen_advanced_settings_element_call_base_url_description">"Укажите собственный сервер Element Call."</string>
+  <string name="screen_advanced_settings_element_call_base_url">"URL сервера UrbanChat Call"</string>
+  <string name="screen_advanced_settings_element_call_base_url_description">"Укажите собственный сервер UrbanChat Call."</string>
   <string name="screen_advanced_settings_element_call_base_url_validation_error">"Адрес указан неверно, удостоверьтесь, что вы указали протокол (http/https) и правильный адрес."</string>
   <string name="screen_advanced_settings_hide_invite_avatars_toggle_title">"Скрывать аватары в приглашениях"</string>
   <string name="screen_advanced_settings_hide_timeline_media_toggle_title">"Скрывать предпросмотр медиа в истории сообщений"</string>

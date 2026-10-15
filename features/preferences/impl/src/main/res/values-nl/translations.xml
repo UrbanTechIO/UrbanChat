@@ -5,8 +5,8 @@
   <string name="screen_advanced_settings_choose_distributor_dialog_title_android">"Kies hoe je meldingen wilt ontvangen"</string>
   <string name="screen_advanced_settings_developer_mode">"Ontwikkelaarsmodus"</string>
   <string name="screen_advanced_settings_developer_mode_description">"Schakel in om toegang te krijgen tot tools en functies voor ontwikkelaars."</string>
-  <string name="screen_advanced_settings_element_call_base_url">"Aangepaste basis-URL voor Element Call"</string>
-  <string name="screen_advanced_settings_element_call_base_url_description">"Stel een aangepaste basis-URL in voor Element Call."</string>
+  <string name="screen_advanced_settings_element_call_base_url">"Aangepaste basis-URL voor UrbanChat Call"</string>
+  <string name="screen_advanced_settings_element_call_base_url_description">"Stel een aangepaste basis-URL in voor UrbanChat Call."</string>
   <string name="screen_advanced_settings_element_call_base_url_validation_error">"Ongeldige URL, zorg ervoor dat je het protocol (http/https) en het juiste adres invult."</string>
   <string name="screen_advanced_settings_push_provider_android">"Push-meldingen provider"</string>
   <string name="screen_advanced_settings_rich_text_editor_description">"Schakel de uitgebreide tekstverwerker uit om Markdown handmatig te typen."</string>

@@ -5,8 +5,8 @@
   <string name="screen_advanced_settings_choose_distributor_dialog_title_android">"Виберіть спосіб отримання сповіщень"</string>
   <string name="screen_advanced_settings_developer_mode">"Режим розробника"</string>
   <string name="screen_advanced_settings_developer_mode_description">"Увімкніть доступ до функцій і можливостей для розробників."</string>
-  <string name="screen_advanced_settings_element_call_base_url">"Користувацька URL-адреса Element Call"</string>
-  <string name="screen_advanced_settings_element_call_base_url_description">"Встановіть URL-адресу для Element Call."</string>
+  <string name="screen_advanced_settings_element_call_base_url">"Користувацька URL-адреса UrbanChat Call"</string>
+  <string name="screen_advanced_settings_element_call_base_url_description">"Встановіть URL-адресу для UrbanChat Call."</string>
   <string name="screen_advanced_settings_element_call_base_url_validation_error">"Неправильна URL-адреса. Переконайтеся, що ви вказали протокол (http/https) та правильну адресу."</string>
   <string name="screen_advanced_settings_hide_invite_avatars_toggle_title">"Сховати аватари у запитах на запрошення до кімнат"</string>
   <string name="screen_advanced_settings_hide_timeline_media_toggle_title">"Сховати попередній перегляд медіа у стрічці"</string>

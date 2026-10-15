@@ -5,8 +5,8 @@
   <string name="screen_advanced_settings_choose_distributor_dialog_title_android">"Tria com vols rebre les notificacions"</string>
   <string name="screen_advanced_settings_developer_mode">"Mode desenvolupador"</string>
   <string name="screen_advanced_settings_developer_mode_description">"Activa-ho per tenir accés a característiques i funcionalitats per a desenvolupadors."</string>
-  <string name="screen_advanced_settings_element_call_base_url">"URL base d\'Element Call personalitzat"</string>
-  <string name="screen_advanced_settings_element_call_base_url_description">"Estableix un URL base personalitzat d\'Element Call."</string>
+  <string name="screen_advanced_settings_element_call_base_url">"URL base d\'UrbanChat Call personalitzat"</string>
+  <string name="screen_advanced_settings_element_call_base_url_description">"Estableix un URL base personalitzat d\'UrbanChat Call."</string>
   <string name="screen_advanced_settings_element_call_base_url_validation_error">"URL invàlid, assegura\'t d\'incloure el protocol (http/https) i l\'adreça correctament."</string>
   <string name="screen_advanced_settings_hide_timeline_media_toggle_title">"Amaga les previsualitzacions multimèdia a la cronologia"</string>
   <string name="screen_advanced_settings_media_compression_description">"Puja fotos i vídeos més ràpidament i redueix l\'ús de dades"</string>

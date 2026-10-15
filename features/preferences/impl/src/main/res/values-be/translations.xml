@@ -5,8 +5,8 @@
   <string name="screen_advanced_settings_choose_distributor_dialog_title_android">"Выберыце спосаб атрымання апавяшчэнняў"</string>
   <string name="screen_advanced_settings_developer_mode">"Рэжым распрацоўшчыка"</string>
   <string name="screen_advanced_settings_developer_mode_description">"Падайце распрацоўнікам доступ да функцый і функцыянальным магчымасцям."</string>
-  <string name="screen_advanced_settings_element_call_base_url">"Карыстальніцкі URL сервера Element Call"</string>
-  <string name="screen_advanced_settings_element_call_base_url_description">"Усталюйце карыстальніцкі асноўны URL для Element Call."</string>
+  <string name="screen_advanced_settings_element_call_base_url">"Карыстальніцкі URL сервера UrbanChat Call"</string>
+  <string name="screen_advanced_settings_element_call_base_url_description">"Усталюйце карыстальніцкі асноўны URL для UrbanChat Call."</string>
   <string name="screen_advanced_settings_element_call_base_url_validation_error">"Адрас пазначаны няправільна, пераканайцеся, што вы ўказалі пратакол (http/https) і правільны адрас."</string>
   <string name="screen_advanced_settings_push_provider_android">"Пастаўшчык push-апавяшчэнняў"</string>
   <string name="screen_advanced_settings_rich_text_editor_description">"Адключыць рэдактар фарматаванага тэксту і ўключыць Markdown."</string>

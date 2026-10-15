@@ -11,6 +11,12 @@ package io.element.android.features.home.impl
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.FloatingToolbarDefaults
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
@@ -26,6 +32,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FabPosition
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
@@ -43,6 +50,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import dev.chrisbanes.haze.HazeDefaults
+import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
@@ -253,7 +261,11 @@ private fun HomeScaffold(
             },
             floatingActionButton = {
                 val coroutineScope = rememberCoroutineScope()
+                val fabHazeState = if (state.frostedGlassEnabled) hazeState else null
+                val fabHazeStyle = rememberAccentFrostedHazeStyle(state.headerBarOpacity)
                 HomeBottomBar(
+                    frostedHazeState = if (state.frostedGlassEnabled) hazeState else null,
+                    frostedHazeStyle = rememberAccentFrostedHazeStyle(state.headerBarOpacity),
                     // The Scaffold uses top-only insets so the scrollable content can go edge-to-edge behind the
                     // navigation bar, so the floating toolbar has to apply the bottom inset itself to avoid overlapping it.
                     modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars),
@@ -281,10 +293,10 @@ private fun HomeScaffold(
                     floatingActionButton = {
                         when (state.currentHomeNavigationBarItem) {
                             HomeNavigationBarItem.Chats -> {
-                                HomeFloatingActionButton(onStartChatClick, CommonStrings.action_create_room)
+                                HomeFloatingActionButton(onStartChatClick, CommonStrings.action_create_room, fabHazeState, fabHazeStyle)
                             }
                             HomeNavigationBarItem.Spaces -> {
-                                HomeFloatingActionButton(onCreateSpaceClick, CommonStrings.action_create_space)
+                                HomeFloatingActionButton(onCreateSpaceClick, CommonStrings.action_create_space, fabHazeState, fabHazeStyle)
                             }
                             HomeNavigationBarItem.Calls -> Unit
                         }
@@ -403,9 +415,29 @@ private fun rememberAccentFrostedHazeStyle(opacity: Float): HazeStyle {
 private fun HomeFloatingActionButton(
     onClick: () -> Unit,
     contentDescription: Int,
+    frostedHazeState: HazeState?,
+    frostedHazeStyle: HazeStyle,
     modifier: Modifier = Modifier,
 ) {
-    FloatingActionButton(onClick = onClick, modifier = modifier) {
+    val fabShape = FloatingActionButtonDefaults.shape
+    FloatingActionButton(
+        onClick = onClick,
+        modifier = if (frostedHazeState != null) {
+            // Same glass as the top bar and the toolbar: transparent button, blur drawn behind the icon.
+            modifier
+                .clip(fabShape)
+                .hazeEffect(state = frostedHazeState, style = frostedHazeStyle)
+        } else {
+            modifier
+        },
+        shape = fabShape,
+        containerColor = if (frostedHazeState != null) Color.Transparent else ElementTheme.colors.bgAccentRest,
+        elevation = if (frostedHazeState != null) {
+            FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp)
+        } else {
+            FloatingActionButtonDefaults.elevation()
+        },
+    ) {
         Icon(
             imageVector = CompoundIcons.Plus(),
             contentDescription = stringResource(id = contentDescription),
@@ -418,14 +450,12 @@ private fun HomeFloatingActionButton(
 private fun HomeBottomBar(
     currentHomeNavigationBarItem: HomeNavigationBarItem,
     onItemClick: (HomeNavigationBarItem) -> Unit,
+    frostedHazeState: HazeState?,
+    frostedHazeStyle: HazeStyle,
     modifier: Modifier = Modifier,
     floatingActionButton: (@Composable () -> Unit)?,
 ) {
-    HorizontalFloatingToolbar(
-        floatingActionButton = floatingActionButton,
-        modifier = modifier
-            .zIndex(1f),
-    ) {
+    val items: @Composable RowScope.() -> Unit = {
         HomeNavigationBarItem.entries.forEachIndexed { index, item ->
             if (index > 0) {
                 HorizontalFloatingToolbarSeparator()
@@ -436,7 +466,40 @@ private fun HomeBottomBar(
                 tooltipLabel = stringResource(item.labelRes),
                 isSelected = isSelected,
                 onClick = { onItemClick(item) },
+                // On the frosted bar the selected item is a soft light wash instead of a dark blob.
+                selectedContainerColor = if (frostedHazeState != null) Color.White.copy(alpha = 0.22f) else ElementTheme.colors.bgCanvasDefault,
+                selectedContentColor = if (frostedHazeState != null) Color.White else ElementTheme.colors.iconPrimary,
             )
+        }
+    }
+    if (frostedHazeState == null) {
+        HorizontalFloatingToolbar(
+            floatingActionButton = floatingActionButton,
+            modifier = modifier
+                .zIndex(1f),
+            content = items,
+        )
+    } else {
+        // Frosted glass: the toolbar surface is made fully transparent and shadow-less, and the same blur the top bar
+        // uses is drawn behind the items instead, clipped to the toolbar pill shape.
+        HorizontalFloatingToolbar(
+            floatingActionButton = floatingActionButton,
+            modifier = modifier
+                .zIndex(1f),
+            colors = FloatingToolbarDefaults.standardFloatingToolbarColors(toolbarContainerColor = Color.Transparent),
+            contentPadding = PaddingValues(0.dp),
+            collapsedShadowElevation = 0.dp,
+            expandedShadowElevation = 0.dp,
+        ) {
+            Row(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .hazeEffect(state = frostedHazeState, style = frostedHazeStyle)
+                    .padding(FloatingToolbarDefaults.ContentPadding),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                items()
+            }
         }
     }
 }

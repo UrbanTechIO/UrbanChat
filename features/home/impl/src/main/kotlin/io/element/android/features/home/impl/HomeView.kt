@@ -428,7 +428,7 @@ private fun rememberAccentFrostedHazeStyle(opacity: Float): HazeStyle {
             tint = HazeDefaults.tint(accent.copy(alpha = tintAlpha)),
             blurRadius = HazeDefaults.blurRadius,
             noiseFactor = HazeDefaults.noiseFactor,
-        )
+        ).copy(fallbackTint = HazeDefaults.tint(accent.copy(alpha = tintAlpha.coerceAtLeast(0.85f))))
     }
 }
 

@@ -140,7 +140,7 @@ fun MessageEventBubble(
                             tint = HazeDefaults.tint(frostedFillColor),
                             blurRadius = HazeDefaults.blurRadius,
                             noiseFactor = HazeDefaults.noiseFactor,
-                        ),
+                        ).copy(fallbackTint = HazeDefaults.tint(frostedFillColor.copy(alpha = frostedFillColor.alpha.coerceAtLeast(0.85f)))),
                     )
                 } else {
                     it

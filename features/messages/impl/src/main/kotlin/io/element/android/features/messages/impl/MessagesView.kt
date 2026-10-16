@@ -362,7 +362,10 @@ fun MessagesView(
                             .let { if (state.liquidGlassEnabled) it.layerBackdrop(liquidTimelineBackdrop) else it }
                     ) {
                         Box(
+                            // matchParentSize: with a plain colour there is no child to give this box a size,
+                            // so without it the colour is drawn into a 0x0 area and never shows.
                             modifier = Modifier
+                                .matchParentSize()
                                 .let {
                                     if (state.chatBackgroundImagePath == null && chatBackgroundColor != null) {
                                         it.background(chatBackgroundColor)
@@ -799,7 +802,7 @@ private fun rememberFrostedHazeStyle(opacity: Float): HazeStyle {
             tint = HazeDefaults.tint(containerColor.copy(alpha = tintAlpha)),
             blurRadius = HazeDefaults.blurRadius,
             noiseFactor = HazeDefaults.noiseFactor,
-        )
+        ).copy(fallbackTint = HazeDefaults.tint(containerColor.copy(alpha = tintAlpha.coerceAtLeast(0.85f))))
     }
 }
 

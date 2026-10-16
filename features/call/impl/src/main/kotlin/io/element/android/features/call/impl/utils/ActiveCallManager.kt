@@ -93,6 +93,8 @@ interface ActiveCallManager {
 }
 
 @SingleIn(AppScope::class)
+private const val RINGING_EVENT_TYPE = "io.urbanchat.call.ringing"
+
 @ContributesBinding(AppScope::class)
 class DefaultActiveCallManager(
     @ApplicationContext context: Context,
@@ -159,6 +161,8 @@ class DefaultActiveCallManager(
             timedOutCallJob = coroutineScope.launch {
                 setUpCoil(notificationData.sessionId)
                 showIncomingCallNotification(notificationData)
+                // Let the caller know that this phone is ringing (separate job so it can never delay the timeout)
+                coroutineScope.launch { sendRingingSignal(notificationData) }
 
                 // Wait for the ringing call to time out
                 delay(timeMillis = ringDuration)
@@ -171,6 +175,23 @@ class DefaultActiveCallManager(
                 activeWakeLock.acquire(ringDuration)
             }
         }
+    }
+
+    /**
+     * UrbanChat: tells the caller's UrbanChat that this phone is ringing, so it can show "Ringing…" instead of "Calling…".
+     * The signal is a small room event that refers to the call notification; it is encrypted like any message in encrypted rooms.
+     */
+    private suspend fun sendRingingSignal(notificationData: CallNotificationData) {
+        val client = matrixClientProvider.getOrRestore(notificationData.sessionId).getOrNull()
+        val room = client?.getJoinedRoom(notificationData.roomId)
+        if (room == null) {
+            Timber.tag(tag).d("No room to send the ringing signal to")
+            return
+        }
+        val content = """{"m.relates_to":{"rel_type":"m.reference","event_id":"${notificationData.eventId.value}"}}"""
+        room.sendRaw(RINGING_EVENT_TYPE, content)
+            .onSuccess { Timber.tag(tag).d("Ringing signal sent") }
+            .onFailure { Timber.tag(tag).w(it, "Couldn't send the ringing signal") }
     }
 
     @OptIn(DelicateCoilApi::class)

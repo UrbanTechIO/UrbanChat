@@ -85,6 +85,7 @@ import org.matrix.rustcomponents.sdk.TypingNotificationsListener
 import org.matrix.rustcomponents.sdk.UserPowerLevelUpdate
 import org.matrix.rustcomponents.sdk.WidgetCapabilities
 import org.matrix.rustcomponents.sdk.WidgetCapabilitiesProvider
+import org.matrix.rustcomponents.sdk.WidgetEventFilter
 import org.matrix.rustcomponents.sdk.getElementCallRequiredPermissions
 import org.matrix.rustcomponents.sdk.use
 import timber.log.Timber
@@ -484,7 +485,10 @@ class JoinedRustRoom(
                 room = innerRoom,
                 widgetCapabilitiesProvider = object : WidgetCapabilitiesProvider {
                     override fun acquireCapabilities(capabilities: WidgetCapabilities): WidgetCapabilities {
-                        return getElementCallRequiredPermissions(sessionId.value, baseRoom.deviceId.value)
+                        val permissions = getElementCallRequiredPermissions(sessionId.value, baseRoom.deviceId.value)
+                        // UrbanChat: let the call page read the "ringing" signal sent by the person we are calling.
+                        permissions.read = permissions.read + WidgetEventFilter.MessageLikeWithType("io.urbanchat.call.ringing")
+                        return permissions
                     }
                 },
             )

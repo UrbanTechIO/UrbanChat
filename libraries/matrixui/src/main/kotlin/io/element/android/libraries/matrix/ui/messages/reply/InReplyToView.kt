@@ -39,6 +39,7 @@ import io.element.android.libraries.designsystem.atomic.atoms.PlaceholderAtom
 import io.element.android.libraries.designsystem.icons.CompoundDrawables
 import io.element.android.libraries.designsystem.preview.ElementPreview
 import io.element.android.libraries.designsystem.preview.PreviewsDayNight
+import io.element.android.libraries.designsystem.theme.LocalIsFrostedGlassEnabled
 import io.element.android.libraries.designsystem.theme.components.Icon
 import io.element.android.libraries.designsystem.theme.components.Text
 import io.element.android.libraries.matrix.api.core.UserId
@@ -96,9 +97,11 @@ private fun ReplyToReadyContent(
     } else {
         PaddingValues(horizontal = 8.dp)
     }
+    // Frosted and Liquid Glass themes: no opaque canvas here, the wrapping box already draws the light wash.
+    val isGlass = LocalIsFrostedGlassEnabled.current
     Row(
         modifier
-            .background(ElementTheme.colors.bgCanvasDefault)
+            .then(if (isGlass) Modifier else Modifier.background(ElementTheme.colors.bgCanvasDefault))
             .padding(paddings)
     ) {
         if (metadata is InReplyToMetadata.Thumbnail) {

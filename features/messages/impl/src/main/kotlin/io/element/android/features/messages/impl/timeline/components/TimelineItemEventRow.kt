@@ -69,6 +69,7 @@ import androidx.constraintlayout.compose.ConstrainScope
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import io.element.android.compound.theme.ElementTheme
+import io.element.android.libraries.designsystem.theme.LocalIsFrostedGlassEnabled
 import io.element.android.compound.tokens.generated.CompoundIcons
 import io.element.android.features.messages.impl.timeline.TimelineEvent
 import io.element.android.features.messages.impl.timeline.TimelineRoomInfo
@@ -85,6 +86,7 @@ import io.element.android.features.messages.impl.timeline.model.TimelineItemThre
 import io.element.android.features.messages.impl.timeline.model.bubble.BubbleState
 import io.element.android.features.messages.impl.timeline.model.event.TimelineItemAttachmentsContent
 import io.element.android.features.messages.impl.timeline.model.event.TimelineItemGalleryContent
+import io.element.android.features.messages.impl.timeline.components.event.isStickerLike
 import io.element.android.features.messages.impl.timeline.model.event.TimelineItemImageContent
 import io.element.android.features.messages.impl.timeline.model.event.TimelineItemLocationContent
 import io.element.android.features.messages.impl.timeline.model.event.TimelineItemPollContent
@@ -534,6 +536,10 @@ private fun TimelineItemEventRowContent(
             onLongClick = onLongClick,
             customBackgroundColor = dangerousContentBubbleColor ?: userBubbleColor,
             borderColor = borderColor,
+            transparent = !needsInvalidContentCustomisations && (
+                event.content is TimelineItemStickerContent ||
+                    (event.content as? TimelineItemImageContent)?.isStickerLike() == true
+                ),
         ) {
             MessageEventBubbleContent(
                 event = event,
@@ -868,8 +874,18 @@ private fun MessageEventBubbleContent(
             }
 
             val contentHasError = currentContentValidationState.hasError()
-            val borderColor = if (contentHasError) ElementTheme.colors.borderCriticalSubtle else ElementTheme.colors.separatorPrimary
-            val backgroundColor = if (contentHasError) ElementTheme.colors.bgCriticalSubtle else ElementTheme.colors.bgCanvasDefault
+            // Frosted and Liquid Glass themes: light wash so the quote blends with the glass bubble.
+            val isGlass = LocalIsFrostedGlassEnabled.current
+            val borderColor = when {
+                contentHasError -> ElementTheme.colors.borderCriticalSubtle
+                isGlass -> Color.White.copy(alpha = 0.28f)
+                else -> ElementTheme.colors.separatorPrimary
+            }
+            val backgroundColor = when {
+                contentHasError -> ElementTheme.colors.bgCriticalSubtle
+                isGlass -> Color.White.copy(alpha = 0.10f)
+                else -> ElementTheme.colors.bgCanvasDefault
+            }
             Box(
                 modifier = talkbackCompatModifier
                     .border(1.dp, borderColor, shape)

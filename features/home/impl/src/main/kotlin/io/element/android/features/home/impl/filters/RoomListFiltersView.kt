@@ -57,7 +57,9 @@ import io.element.android.libraries.testtags.testTag
 @Composable
 fun RoomListFiltersView(
     state: RoomListFiltersState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    // Frosted and Liquid Glass themes: translucent white chips with a thin light border.
+    glass: Boolean = false,
 ) {
     fun onClearFiltersClick() {
         state.eventSink(RoomListFiltersEvent.ClearSelectedFilters)
@@ -125,6 +127,7 @@ fun RoomListFiltersView(
                         .zIndex(zIndex),
                     roomListFilter = filterWithSelection.filter,
                     selected = filterWithSelection.isSelected,
+                    glass = glass,
                     onClick = {
                         previousFilters.value = state.selectedFilters()
                         onToggleFilter(it)
@@ -167,20 +170,35 @@ private fun RoomListFilterView(
     roomListFilter: RoomListFilter,
     selected: Boolean,
     onClick: (RoomListFilter) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    glass: Boolean = false,
 ) {
     val background = animateColorAsState(
-        targetValue = if (selected) ElementTheme.colors.bgActionPrimaryRest else ElementTheme.colors.bgSubtlePrimary,
+        targetValue = when {
+            glass && selected -> Color.White.copy(alpha = 0.30f)
+            glass -> Color.White.copy(alpha = 0.14f)
+            selected -> ElementTheme.colors.bgActionPrimaryRest
+            else -> ElementTheme.colors.bgSubtlePrimary
+        },
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
         label = "chip background colour",
     )
     val textColour = animateColorAsState(
-        targetValue = if (selected) ElementTheme.colors.textOnSolidPrimary else ElementTheme.colors.textPrimary,
+        targetValue = when {
+            glass -> Color.White
+            selected -> ElementTheme.colors.textOnSolidPrimary
+            else -> ElementTheme.colors.textPrimary
+        },
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
         label = "chip text colour",
     )
     val borderColour = animateColorAsState(
-        targetValue = if (selected) Color.Transparent else ElementTheme.colors.borderInteractiveSecondary,
+        targetValue = when {
+            glass && selected -> Color.White.copy(alpha = 0.55f)
+            glass -> Color.White.copy(alpha = 0.35f)
+            selected -> Color.Transparent
+            else -> ElementTheme.colors.borderInteractiveSecondary
+        },
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
         label = "chip border colour",
     )
@@ -206,6 +224,9 @@ private fun RoomListFilterView(
             enabled = true,
             selected = selected,
             borderColor = borderColour.value,
+            selectedBorderColor = borderColour.value,
+            borderWidth = if (glass) 0.5.dp else 1.dp,
+            selectedBorderWidth = if (glass) 0.5.dp else 1.dp,
         ),
     )
 }

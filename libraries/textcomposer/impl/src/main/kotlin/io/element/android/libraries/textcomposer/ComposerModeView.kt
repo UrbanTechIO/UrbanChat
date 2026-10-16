@@ -30,8 +30,10 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import io.element.android.compound.theme.ElementTheme
+import io.element.android.libraries.designsystem.theme.LocalIsFrostedGlassEnabled
 import io.element.android.compound.tokens.generated.CompoundIcons
 import io.element.android.libraries.designsystem.preview.ElementPreview
 import io.element.android.libraries.designsystem.preview.PreviewsDayNight
@@ -144,17 +146,28 @@ private fun ReplyToModeView(
     val currentValidationState by contentValidationState.collectOverallState()
 
     val contentHasErrors = currentValidationState.hasError()
+    // Frosted and Liquid Glass themes: a soft light wash with a thin light border, so the quoted message blends with the
+    // chat behind it but still reads as separate from the message being written.
+    val isGlass = LocalIsFrostedGlassEnabled.current
 
     Box(
         modifier
             .clip(shape)
             .background(
-                color = if (contentHasErrors) ElementTheme.colors.bgCriticalSubtle else ElementTheme.colors.bgCanvasDefault,
+                color = when {
+                    contentHasErrors -> ElementTheme.colors.bgCriticalSubtle
+                    isGlass -> Color.White.copy(alpha = 0.10f)
+                    else -> ElementTheme.colors.bgCanvasDefault
+                },
                 shape = shape,
             )
             .border(
-                width = 1.dp,
-                color = if (contentHasErrors) ElementTheme.colors.borderCriticalSubtle else ElementTheme.colors.separatorPrimary,
+                width = if (isGlass) 0.5.dp else 1.dp,
+                color = when {
+                    contentHasErrors -> ElementTheme.colors.borderCriticalSubtle
+                    isGlass -> Color.White.copy(alpha = 0.28f)
+                    else -> ElementTheme.colors.separatorPrimary
+                },
                 shape = shape,
             )
             .padding(4.dp)

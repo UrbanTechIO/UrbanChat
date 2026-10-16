@@ -34,6 +34,8 @@ import io.element.android.compound.theme.ElementTheme
 import io.element.android.features.knockrequests.api.banner.KnockRequestsBannerRenderer
 import io.element.android.features.lockscreen.impl.biometric.BiometricAuthenticatorManager
 import io.element.android.features.lockscreen.impl.biometric.ChatLockUnlockTracker
+import io.element.android.libraries.matrix.api.MatrixClient
+import io.element.android.features.messages.impl.stickers.StickerController
 import io.element.android.features.messages.impl.actionlist.ActionListPresenter
 import io.element.android.features.messages.impl.lock.RoomLockGate
 import io.element.android.features.messages.impl.actionlist.model.TimelineItemActionPostProcessor
@@ -110,6 +112,7 @@ class MessagesNode(
     private val sessionPreferencesStore: SessionPreferencesStore,
     private val biometricAuthenticatorManager: BiometricAuthenticatorManager,
     private val chatLockUnlockTracker: ChatLockUnlockTracker,
+    matrixClient: MatrixClient,
 ) : Node(buildContext, plugins = plugins), MessagesNavigator {
     data class Inputs(
         val focusedEventId: EventId?,
@@ -119,6 +122,7 @@ class MessagesNode(
     private val callback: Callback = callback()
 
     private val timelineController = TimelineController(room, room.liveTimeline)
+    private val stickerController = StickerController(context, matrixClient, room)
     private val presenter = presenterFactory.create(
         navigator = this,
         composerPresenter = messageComposerPresenterFactory.create(timelineController, this, threadRoot = null),
@@ -351,6 +355,7 @@ class MessagesNode(
                     callback.navigateToRoomCall(room.roomId, isAudioCall)
                 },
                 onViewAllPinnedMessagesClick = callback::navigateToPinnedMessagesList,
+                stickerController = stickerController,
                 modifier = modifier,
                 knockRequestsBannerView = {
                     knockRequestsBannerRenderer.View(

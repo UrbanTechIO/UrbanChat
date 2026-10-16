@@ -311,6 +311,12 @@ class JoinedRustRoom(
         }
     }
 
+    override suspend fun sendRaw(eventType: String, content: String): Result<Unit> = withContext(roomDispatcher) {
+        runCatchingExceptions {
+            innerRoom.sendRaw(eventType, content)
+        }
+    }
+
     override suspend fun inviteUserById(id: UserId): Result<Unit> = withContext(roomDispatcher) {
         runCatchingExceptions {
             innerRoom.inviteUserById(id.value)

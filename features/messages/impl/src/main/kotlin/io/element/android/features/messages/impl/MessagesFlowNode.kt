@@ -55,6 +55,7 @@ import io.element.android.features.messages.impl.timeline.model.event.TimelineIt
 import io.element.android.features.messages.impl.timeline.model.event.TimelineItemFileContent
 import io.element.android.features.messages.impl.timeline.model.event.TimelineItemGalleryContent
 import io.element.android.features.messages.impl.timeline.model.event.TimelineItemImageContent
+import io.element.android.features.messages.impl.timeline.model.event.TimelineItemStickerContent
 import io.element.android.features.messages.impl.timeline.model.event.TimelineItemLocationContent
 import io.element.android.features.messages.impl.timeline.model.event.TimelineItemVideoContent
 import io.element.android.features.messages.impl.timeline.model.event.TimelineItemVoiceContent
@@ -797,6 +798,34 @@ class MessagesFlowNode(
                     canUseOverlay = canUseOverlay,
                 )
             }
+            is TimelineItemStickerContent -> {
+                // Stickers are not part of the images/videos timeline, so open them as a one-item gallery.
+                val content = event.content
+                NavTarget.GalleryViewer(
+                    eventId = event.eventId,
+                    galleryInfo = GalleryInfo(
+                        caption = null,
+                        senderId = event.senderId,
+                        senderName = event.safeSenderName,
+                        senderAvatar = event.senderAvatar.url,
+                        dateSent = dateFormatter.format(event.sentTimeMillis, mode = DateFormatterMode.Day),
+                        dateSentFull = dateFormatter.format(timestamp = event.sentTimeMillis, mode = DateFormatterMode.Full),
+                        initialIndex = 0,
+                    ),
+                    canUseOverlay = canUseOverlay,
+                    galleryItems = listOf(
+                        GalleryItemData(
+                            filename = content.filename,
+                            mimeType = content.mimeType,
+                            mediaSource = content.preferredMediaSource ?: content.mediaSource,
+                            thumbnailSource = content.thumbnailSource,
+                            type = GalleryItemData.Type.Image,
+                            blurHash = content.blurhash,
+                        )
+                    ),
+                    fromPinnedMessages = timelineMode is Timeline.Mode.PinnedEvents,
+                )
+            }
             is TimelineItemVideoContent -> {
                 buildMediaViewerNavTarget(
                     mode = MediaViewerEntryPoint.MediaViewerMode.TimelineImagesAndVideos(timelineMode),
@@ -859,6 +888,14 @@ class MessagesFlowNode(
             }
             is NavTarget.LocationViewer -> {
                 backstack.push(navTarget)
+                true
+            }
+            is NavTarget.GalleryViewer -> {
+                if (canUseOverlay) {
+                    overlay.show(navTarget)
+                } else {
+                    backstack.push(navTarget)
+                }
                 true
             }
             else -> false

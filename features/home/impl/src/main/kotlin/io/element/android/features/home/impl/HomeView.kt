@@ -256,6 +256,7 @@ private fun HomeScaffold(
                         spaceFiltersState = roomListState.spaceFiltersState,
                         canReportBug = state.canReportBug,
                         liquidBackdrop = if (state.liquidGlassEnabled) liquidBackdrop else null,
+                        glassChips = state.frostedGlassEnabled,
                         modifier = if (state.liquidGlassEnabled) {
                             // Liquid Glass: no full-width bar; the buttons float as separate glass capsules.
                             Modifier
@@ -271,7 +272,7 @@ private fun HomeScaffold(
                     // Persistent voice-message mini-player, anchored right below the filter chips
                     // row: playback started from a chat keeps going after navigating away from it,
                     // and this is how it stays visible/controllable from the home screen.
-                    VoiceMessageMiniPlayerView(state = state.voiceMessageMiniPlayerState)
+                    VoiceMessageMiniPlayerView(state = state.voiceMessageMiniPlayerState, glass = state.frostedGlassEnabled)
                 }
             },
             floatingActionButton = {

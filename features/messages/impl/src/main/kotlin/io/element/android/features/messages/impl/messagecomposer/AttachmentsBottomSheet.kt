@@ -46,6 +46,7 @@ internal fun AttachmentsBottomSheet(
     onCreatePollClick: () -> Unit,
     enableTextFormatting: Boolean,
     modifier: Modifier = Modifier,
+    onStickerClick: (() -> Unit)? = null,
 ) {
     val localView = LocalView.current
     var isVisible by rememberSaveable { mutableStateOf(state.showAttachmentSourcePicker) }
@@ -85,6 +86,12 @@ internal fun AttachmentsBottomSheet(
                 enableTextFormatting = enableTextFormatting,
                 onSendLocationClick = onSendLocationClick,
                 onCreatePollClick = onCreatePollClick,
+                onStickerClick = onStickerClick?.let { click ->
+                    {
+                        isVisible = false
+                        click()
+                    }
+                },
             )
         }
     }
@@ -96,6 +103,7 @@ private fun AttachmentSourcePickerMenu(
     onSendLocationClick: () -> Unit,
     onCreatePollClick: () -> Unit,
     enableTextFormatting: Boolean,
+    onStickerClick: (() -> Unit)?,
 ) {
     Column(
         modifier = Modifier
@@ -141,6 +149,13 @@ private fun AttachmentSourcePickerMenu(
             leadingContent = ListItemContent.Icon(IconSource.Vector(CompoundIcons.Polls())),
             content = { Text(stringResource(R.string.screen_room_attachment_source_poll)) },
         )
+        if (onStickerClick != null) {
+            ListItem(
+                modifier = Modifier.clickable { onStickerClick() },
+                leadingContent = ListItemContent.Icon(IconSource.Vector(CompoundIcons.Favourite())),
+                content = { Text("Sticker") },
+            )
+        }
         if (enableTextFormatting) {
             ListItem(
                 modifier = Modifier.clickable { state.eventSink(MessageComposerEvent.ToggleTextFormatting(enabled = true)) },

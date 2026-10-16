@@ -8,7 +8,6 @@
 
 package io.element.android.features.messages.impl.timeline.components.event
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,7 +19,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -32,7 +30,6 @@ import io.element.android.features.messages.impl.timeline.model.event.TimelineIt
 import io.element.android.features.messages.impl.timeline.protection.ProtectedView
 import io.element.android.features.messages.impl.timeline.protection.coerceRatioWhenHidingContent
 import io.element.android.features.messages.impl.timeline.util.handleAsyncImageStateChange
-import io.element.android.libraries.designsystem.components.blurhash.blurHashBackground
 import io.element.android.libraries.designsystem.modifiers.onKeyboardContextMenuAction
 import io.element.android.libraries.designsystem.preview.ElementPreview
 import io.element.android.libraries.designsystem.preview.PreviewsDayNight
@@ -63,7 +60,7 @@ fun TimelineItemStickerView(
         modifier = modifier.semantics { contentDescription = description }.wrapContentWidth(Alignment.CenterHorizontally),
     ) {
         TimelineItemAspectRatioBox(
-            modifier = Modifier.blurHashBackground(content.blurhash, alpha = 0.9f),
+            modifier = Modifier,
             aspectRatio = coerceRatioWhenHidingContent(content.aspectRatio, hideMediaContent),
             minHeight = STICKER_SIZE_IN_DP,
             maxHeight = STICKER_SIZE_IN_DP,
@@ -77,7 +74,6 @@ fun TimelineItemStickerView(
                 AsyncImage(
                     modifier = Modifier
                         .fillMaxSize()
-                        .then(if (isThumbnailLoaded) Modifier.background(Color.White) else Modifier)
                         .then(
                             if (onContentClick != null) {
                                 Modifier
@@ -98,7 +94,7 @@ fun TimelineItemStickerView(
                             mimeType = content.mimeType,
                         ),
                     ),
-                    contentScale = ContentScale.Crop,
+                    contentScale = ContentScale.Fit,
                     alignment = Alignment.Center,
                     contentDescription = description,
                     onState = { state ->

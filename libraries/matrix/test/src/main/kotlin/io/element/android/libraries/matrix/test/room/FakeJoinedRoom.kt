@@ -121,6 +121,8 @@ class FakeJoinedRoom(
         typingNoticeResult(isTyping)
     }
 
+    override suspend fun sendRaw(eventType: String, content: String): Result<Unit> = Result.success(Unit)
+
     override suspend fun inviteUserById(id: UserId): Result<Unit> = simulateLongTask {
         inviteUserResult(id)
     }

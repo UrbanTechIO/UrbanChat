@@ -149,7 +149,7 @@ enum class FeatureFlags(
         key = "feature.send_gallery_messages",
         title = "Send gallery messages",
         description = "Allow sending multiple media items in a single message.",
-        defaultValue = { false },
+        defaultValue = { true },
         isFinished = false,
     ),
     UserStatus(

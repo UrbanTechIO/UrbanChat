@@ -76,6 +76,8 @@ fun MessageEventBubble(
     modifier: Modifier = Modifier,
     customBackgroundColor: Color? = null,
     borderColor: Color? = null,
+    // Stickers: no bubble at all, only the sticker itself is drawn (still clickable).
+    transparent: Boolean = false,
     content: @Composable BoxScope.() -> Unit = {},
 ) {
     val clickableModifier = if (isTalkbackActive()) {
@@ -116,7 +118,9 @@ fun MessageEventBubble(
     BoxWithConstraints(
         modifier = modifier
             .let {
-                if (liquidBackdrop != null) {
+                if (transparent) {
+                    it
+                } else if (liquidBackdrop != null) {
                     // Liquid Glass: the chat background bends through the bubble, tinted by the bubble colour.
                     it.drawBackdrop(
                         backdrop = liquidBackdrop,
@@ -156,7 +160,9 @@ fun MessageEventBubble(
                     ) {
                         // When Haze is actively blurring the background behind this bubble, it has
                         // already painted the tinted backdrop; a flat fill here would just cover it.
-                        if (!isBubbleFrosted) {
+                        if (transparent) {
+                            // No bubble background for stickers.
+                        } else if (!isBubbleFrosted) {
                             drawRect(backgroundBubbleColor)
                         } else if (frostedHazeState == null && liquidBackdrop == null) {
                             drawRect(frostedFillColor)
@@ -167,7 +173,7 @@ fun MessageEventBubble(
 
                         // A subtle glass-edge highlight for frosted bubbles, or the dangerous-content
                         // border colour, if any.
-                        if (isBubbleFrosted) {
+                        if (isBubbleFrosted && !transparent) {
                             drawOutline(outline, frostedBorderColor, style = Stroke(width = 1.dp.toPx()))
                         }
                         updatedBorderColor?.let { drawOutline(outline, it, style = Stroke(width = 1.dp.toPx())) }

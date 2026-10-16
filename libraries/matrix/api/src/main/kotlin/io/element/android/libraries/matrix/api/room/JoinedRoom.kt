@@ -63,6 +63,9 @@ interface JoinedRoom : BaseRoom {
      */
     suspend fun typingNotice(isTyping: Boolean): Result<Unit>
 
+    /** Sends a raw event of [eventType] with the given JSON [content] (used for `m.sticker`). */
+    suspend fun sendRaw(eventType: String, content: String): Result<Unit>
+
     suspend fun inviteUserById(id: UserId): Result<Unit>
 
     suspend fun updateAvatar(mimeType: String, data: ByteArray): Result<Unit>

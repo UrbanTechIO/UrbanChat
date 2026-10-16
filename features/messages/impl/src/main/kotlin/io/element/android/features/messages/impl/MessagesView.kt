@@ -85,6 +85,8 @@ import io.element.android.features.messages.impl.messagecomposer.suggestions.Sug
 import io.element.android.features.messages.impl.pinned.banner.PinnedMessagesBannerState
 import io.element.android.features.messages.impl.pinned.banner.PinnedMessagesBannerView
 import io.element.android.features.messages.impl.pinned.banner.PinnedMessagesBannerViewDefaults
+import io.element.android.features.messages.impl.stickers.StickerController
+import io.element.android.features.messages.impl.stickers.StickerTray
 import io.element.android.features.messages.impl.timeline.FOCUS_ON_PINNED_EVENT_DEBOUNCE_DURATION_IN_MILLIS
 import io.element.android.features.messages.impl.timeline.TimelineEvent
 import io.element.android.features.messages.impl.timeline.TimelineView
@@ -191,6 +193,7 @@ fun MessagesView(
     knockRequestsBannerView: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     forceJumpToBottomVisibility: Boolean = false,
+    stickerController: StickerController? = null,
     customReactionBottomSheet: @Composable () -> Unit,
 ) {
     val eventContentValidationState = LocalEventContentValidationState.current
@@ -404,6 +407,7 @@ fun MessagesView(
                         }
                         CompositionLocalProvider(
                             LocalBubbleColors provides bubbleColors,
+                            LocalIsFrostedGlassEnabled provides state.frostedGlassEnabled,
                             LocalFrostedGlassBubbleState provides frostedGlassBubbleState,
                             LocalLiquidGlassState provides LiquidGlassState(
                                 backgroundBackdrop = if (state.liquidGlassEnabled) liquidBackgroundBackdrop else null,
@@ -450,6 +454,7 @@ fun MessagesView(
                             },
                             onSendLocationClick = onSendLocationClick,
                             onCreatePollClick = onCreatePollClick,
+                            stickerController = stickerController,
                             onSwipeToReply = { targetEvent ->
                                 state.eventSink(MessagesEvent.HandleAction(TimelineItemAction.Reply, targetEvent))
                             },
@@ -671,6 +676,7 @@ private fun MessagesViewContent(
     onViewAllPinnedMessagesClick: () -> Unit,
     onJoinCallClick: (isAudioCall: Boolean) -> Unit,
     forceJumpToBottomVisibility: Boolean,
+    stickerController: StickerController?,
     onSwipeToReply: (TimelineItem.Event) -> Unit,
     modifier: Modifier = Modifier,
     extraTopContentPadding: Dp = 0.dp,
@@ -683,12 +689,17 @@ private fun MessagesViewContent(
             .navigationBarsPadding()
             .imePadding(),
     ) {
+        var showStickerTray by remember { mutableStateOf(false) }
         AttachmentsBottomSheet(
             state = state.composerState,
             onSendLocationClick = onSendLocationClick,
             onCreatePollClick = onCreatePollClick,
             enableTextFormatting = state.enableTextFormatting,
+            onStickerClick = stickerController?.let { { showStickerTray = true } },
         )
+        if (showStickerTray && stickerController != null) {
+            StickerTray(controller = stickerController, onDismiss = { showStickerTray = false })
+        }
 
         if (state.voiceMessageComposerState.showPermissionRationaleDialog) {
             VoiceMessagePermissionRationaleDialog(

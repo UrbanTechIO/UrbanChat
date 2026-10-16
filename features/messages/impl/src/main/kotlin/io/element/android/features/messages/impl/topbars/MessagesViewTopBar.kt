@@ -88,19 +88,27 @@ internal fun MessagesViewTopBar(
     menuActions: @Composable RowScope.() -> Unit,
 ) {
     TopAppBar(
-        modifier = modifier.padding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal).asPaddingValues()),
+        modifier = modifier
+            .padding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal).asPaddingValues())
+            .then(
+                if (liquidBackdrop != null) {
+                    // Liquid Glass: back button, name and call buttons all sit in one floating glass bar.
+                    Modifier
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                        .liquidGlassCapsule(liquidBackdrop)
+                } else {
+                    Modifier
+                }
+            ),
         colors = if (isFrostedGlass) {
             TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
         } else {
             TopAppBarDefaults.topAppBarColors()
         },
         navigationIcon = {
-            LiquidGlassWrap(liquidBackdrop, contentPadding = PaddingValues(2.dp)) {
-                BackButton(onClick = onBackClick)
-            }
+            BackButton(onClick = onBackClick)
         },
         title = {
-          LiquidGlassWrap(liquidBackdrop, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)) {
             val roundedCornerShape = RoundedCornerShape(8.dp)
             Row(
                 modifier = Modifier
@@ -159,23 +167,8 @@ internal fun MessagesViewTopBar(
                     )
                 }
             }
-          }
         },
-        actions = {
-            if (liquidBackdrop == null) {
-                menuActions()
-            } else {
-                Row(
-                    modifier = Modifier
-                        .liquidGlassCapsule(liquidBackdrop)
-                        .padding(horizontal = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    menuActions()
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-            }
-        },
+        actions = menuActions,
         windowInsets = WindowInsets(0.dp)
     )
 }

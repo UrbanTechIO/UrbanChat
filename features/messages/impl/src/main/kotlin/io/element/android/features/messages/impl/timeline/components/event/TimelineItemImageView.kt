@@ -53,6 +53,14 @@ import io.element.android.libraries.matrix.ui.media.contentvalidation.collectOve
 import io.element.android.libraries.ui.strings.CommonStrings
 import io.element.android.libraries.ui.utils.a11y.isTalkbackActive
 
+/**
+ * Sticker-like images (keyboard stickers, transparent PNG/WebP/GIF) sent without a caption are shown on their own, with no
+ * bubble, white box or blurhash behind them, so only the transparent artwork appears.
+ */
+fun TimelineItemImageContent.isStickerLike(): Boolean {
+    return !showCaption && mimeType.lowercase() in setOf("image/png", "image/webp", "image/gif")
+}
+
 @Composable
 fun TimelineItemImageView(
     content: TimelineItemImageContent,
@@ -97,7 +105,7 @@ fun TimelineItemImageView(
         val isContentBeingValidated = !eventContentValidation.isValidated()
         TimelineItemAspectRatioBox(
             modifier = containerModifier
-                .blurHashBackground(content.blurhash, alpha = 0.9f)
+                .then(if (content.isStickerLike()) Modifier else Modifier.blurHashBackground(content.blurhash, alpha = 0.9f))
                 .align(Alignment.CenterHorizontally),
             aspectRatio = coerceRatioWhenHidingContent(content.aspectRatio, hideMediaContent),
         ) {
@@ -112,7 +120,7 @@ fun TimelineItemImageView(
                     AsyncImage(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .then(if (isLoaded) Modifier.background(Color.White) else Modifier)
+                            .then(if (isLoaded && !content.isStickerLike()) Modifier.background(Color.White) else Modifier)
                             .then(
                                 if (!isTalkbackActive() && onContentClick != null) {
                                     Modifier

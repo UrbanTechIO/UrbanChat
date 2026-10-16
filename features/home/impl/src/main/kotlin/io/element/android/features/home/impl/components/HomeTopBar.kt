@@ -104,6 +104,7 @@ fun HomeTopBar(
     spaceFiltersState: SpaceFiltersState,
     modifier: Modifier = Modifier,
     liquidBackdrop: Backdrop? = null,
+    glassChips: Boolean = false,
 ) {
     val contentPadding = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal).asPaddingValues()
     Column {
@@ -115,7 +116,17 @@ fun HomeTopBar(
         TopAppBar(
             modifier = modifier
                 .statusBarsPadding()
-                .padding(contentPadding),
+                .padding(contentPadding)
+                .then(
+                    if (liquidBackdrop != null) {
+                        // Liquid Glass: profile picture, title and search all sit in one floating glass bar.
+                        Modifier
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                            .liquidGlassCapsule(liquidBackdrop)
+                    } else {
+                        Modifier
+                    }
+                ),
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = Color.Transparent,
                 scrolledContainerColor = Color.Transparent,
@@ -139,40 +150,21 @@ fun HomeTopBar(
                 )
             },
             navigationIcon = {
-                LiquidGlassWrap(liquidBackdrop, contentPadding = PaddingValues(2.dp)) {
-                    NavigationIcon(
-                        currentUserAndNeighbors = currentUserAndNeighbors,
-                        showAvatarIndicator = showAvatarIndicator,
-                        onAccountSwitch = onAccountSwitch,
-                        onClick = onOpenSettings,
-                    )
-                }
+                NavigationIcon(
+                    currentUserAndNeighbors = currentUserAndNeighbors,
+                    showAvatarIndicator = showAvatarIndicator,
+                    onAccountSwitch = onAccountSwitch,
+                    onClick = onOpenSettings,
+                )
             },
             actions = {
                 if (selectedNavigationItem == HomeNavigationBarItem.Chats) {
-                    if (liquidBackdrop == null) {
-                        RoomListMenuItems(
-                            onToggleSearch = onToggleSearch,
-                            onMenuActionClick = onMenuActionClick,
-                            canReportBug = canReportBug,
-                            spaceFiltersState = spaceFiltersState,
-                        )
-                    } else {
-                        Row(
-                            modifier = Modifier
-                                .liquidGlassCapsule(liquidBackdrop)
-                                .padding(horizontal = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RoomListMenuItems(
-                                onToggleSearch = onToggleSearch,
-                                onMenuActionClick = onMenuActionClick,
-                                canReportBug = canReportBug,
-                                spaceFiltersState = spaceFiltersState,
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
+                    RoomListMenuItems(
+                        onToggleSearch = onToggleSearch,
+                        onMenuActionClick = onMenuActionClick,
+                        canReportBug = canReportBug,
+                        spaceFiltersState = spaceFiltersState,
+                    )
                 }
             },
             // We want a 16dp left padding for the navigationIcon :
@@ -190,6 +182,7 @@ fun HomeTopBar(
             ) {
                 RoomListFiltersView(
                     state = filtersState,
+                    glass = glassChips,
                     modifier = Modifier.padding(top = 8.dp, bottom = 16.dp).padding(contentPadding)
                 )
             }

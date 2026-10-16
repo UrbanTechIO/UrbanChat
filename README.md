@@ -30,6 +30,8 @@ Everything below is in UrbanChat and not in Element X. Features Element X alread
 
 * **Theme colour** that tints the home screen and headers.
 * **Frosted glass** chat header, message bar and home header, with separate transparency sliders for the header bar, the composer bar and the message bubbles.
+* **Liquid Glass** theme (Android 13 and newer), an Apple-style look built on the Frosted theme: one floating glass bar for the header on the chat list and in every chat, a glass bottom bar and add button, a floating glass message bar and glass message bubbles that bend the wallpaper behind them.
+* **Glass details**: in both glass themes the filter chips (Unreads, People, Rooms, Favorites), the voice message mini player and reply quotes, in the composer and in the chat, share the same translucent look.
 * **Chat background**: a solid colour or your own photo as wallpaper.
 * **Custom message colours** for outgoing and incoming bubbles.
 
@@ -37,7 +39,7 @@ Everything below is in UrbanChat and not in Element X. Features Element X alread
 
 * **Favorites, People and Groups sections**, with a switch to turn the sections off and see one list sorted by latest activity. A **Direct chat** setting in room details lets you choose whether a chat counts as a private 1:1 conversation on your device.
 * **Calls tab** with a call log: outgoing, incoming, missed and declined calls and how long answered ones lasted. Tapping an entry opens that chat at the call.
-* **Voice message mini player** under the filter chips, with play/pause, progress and a close button.
+* **Voice message mini player** under the filter chips, with play/pause, progress and a close button. It matches the glass look when a glass theme is on.
 * **Online status**: a green or grey dot next to people in the chat list and in the chat header, and a switch to hide your own status.
 
 ### Privacy
@@ -50,10 +52,18 @@ Everything below is in UrbanChat and not in Element X. Features Element X alread
 * **Search inside a chat.**
 * **Sound for open chats**: play a sound for messages that arrive in the chat you are looking at.
 * **Download to Gallery**: a download button on received photos and videos that saves them to an UrbanChat folder in your gallery.
+* **Pick many photos and videos at once** from Photo & Video Library or Files (up to 60), preview them in a swipeable pager and send them together.
 * **Image editor** before sending, also when sharing from another app: crop, rotate, flip, draw, arrows, text, pixelate an area, and undo.
 * **Large videos always send**: a video is re-encoded to fit the server's upload limit instead of failing, whatever its length.
 * **Sharing a video from another app follows your upload settings**, with a quality choice (original, 1080p, 720p, 360p) when optimisation is off and the quality is high.
 * **Original Size** switch: send videos untouched. A video over the server limit is still compressed so it can be sent.
+
+### Stickers
+
+* **Sticker tray** in the attach menu: add your own images from the gallery with the **+** tile, tap one to send it as a real Matrix sticker (`m.sticker`), long-press to remove it. The tray lives on your phone only.
+* **Stickers without a bubble**: stickers and caption-less PNG, WebP and GIF images, such as stickers from your keyboard, show on their own with no bubble, white box or blurred backdrop, like WhatsApp.
+* **Tap a sticker to open it full-screen.**
+* Known limits: sticker images are uploaded unencrypted for now, and there are no online sticker packs yet.
 
 ### Voice messages
 
@@ -74,25 +84,15 @@ Everything below is in UrbanChat and not in Element X. Features Element X alread
 
 ## Screenshots
 
-Here are some screenshots of the application:
+Personal details are hidden in these screenshots.
 
-<!--
-Commands run before taking the screenshots:
-adb shell settings put system time_12_24 24
-adb shell am broadcast -a com.android.systemui.demo -e command enter
-adb shell am broadcast -a com.android.systemui.demo -e command clock -e hhmm 1337
-adb shell am broadcast -a com.android.systemui.demo -e command network -e mobile show -e level 4
-adb shell am broadcast -a com.android.systemui.demo -e command network -e wifi show -e level 4
-adb shell am broadcast -a com.android.systemui.demo -e command notifications -e visible false
-adb shell am broadcast -a com.android.systemui.demo -e command battery -e plugged false -e level 100
+|<img src="./docs/screenshots/home-mini-player.png" width="220" />|<img src="./docs/screenshots/chat-liquid-glass.png" width="220" />|<img src="./docs/screenshots/chat-sticker.png" width="220" />|
+|-|-|-|
+|Liquid Glass header, glass chips and the voice message mini player|Liquid Glass chat with glass bubbles, reply quotes and message bar|Sticker without a bubble|
 
-And to exit demo mode:
-adb shell am broadcast -a com.android.systemui.demo -e command exit
--->
-
-|<img src="./docs/images-lfs/screen_1_light.png" width="280" />|<img src="./docs/images-lfs/screen_2_light.png" width="280" />|<img src="./docs/images-lfs/screen_3_light.png" width="280" />|<img src="./docs/images-lfs/screen_4_light.png" width="280" />|
-|-|-|-|-|
-|<img src="./docs/images-lfs/screen_1_dark.png" width="280" />|<img src="./docs/images-lfs/screen_2_dark.png" width="280" />|<img src="./docs/images-lfs/screen_3_dark.png" width="280" />|<img src="./docs/images-lfs/screen_4_dark.png" width="280" />|
+|<img src="./docs/screenshots/attach-menu.png" width="220" />|<img src="./docs/screenshots/sticker-tray.png" width="220" />|
+|-|-|
+|Attach menu with the new Sticker entry|Sticker tray|
 
 ## Rust SDK
 

@@ -91,9 +91,9 @@ Personal details are hidden in these screenshots.
 |-|-|-|
 |Liquid Glass header, glass chips and the voice message mini player|Liquid Glass chat with glass bubbles, reply quotes and message bar|Sticker without a bubble|
 
-|<img src="./docs/screenshots/settings-appearance.png" width="220" />|<img src="./docs/screenshots/attach-menu.png" width="220" />|<img src="./docs/screenshots/sticker-tray.png" width="220" />|
-|-|-|-|
-|Appearance setting with the Liquid Glass option|Attach menu with the new Sticker entry|Sticker tray|
+|<img src="./docs/screenshots/settings-appearance.png" width="220" />|<img src="./docs/screenshots/settings-colours.png" width="220" />|<img src="./docs/screenshots/attach-menu.png" width="220" />|<img src="./docs/screenshots/sticker-tray.png" width="220" />|
+|-|-|-|-|
+|Appearance setting with the Liquid Glass option|Colours: theme, chat background and message colours|Attach menu with the new Sticker entry|Sticker tray|
 
 The Frosted theme:
 

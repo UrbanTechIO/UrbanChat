@@ -31,6 +31,7 @@ Everything below is in UrbanChat and not in Element X. Features Element X alread
 * **Theme colour** that tints the home screen and headers.
 * **Frosted glass** chat header, message bar and home header, with separate transparency sliders for the header bar, the composer bar and the message bubbles.
 * **Liquid Glass** theme (Android 13 and newer), an Apple-style look built on the Frosted theme: one floating glass bar for the header on the chat list and in every chat, a glass bottom bar and add button, a floating glass message bar and glass message bubbles that bend the wallpaper behind them.
+* **Appearance setting** in Advanced settings: choose System, Light, Dark, Frosted or Liquid Glass. Liquid Glass appears only on Android 13 and newer. The header, composer bar and message bubble transparency sliders apply to both Frosted and Liquid Glass.
 * **Glass details**: in both glass themes the filter chips (Unreads, People, Rooms, Favorites), the voice message mini player and reply quotes, in the composer and in the chat, share the same translucent look.
 * **Chat background**: a solid colour or your own photo as wallpaper.
 * **Custom message colours** for outgoing and incoming bubbles.
@@ -90,9 +91,15 @@ Personal details are hidden in these screenshots.
 |-|-|-|
 |Liquid Glass header, glass chips and the voice message mini player|Liquid Glass chat with glass bubbles, reply quotes and message bar|Sticker without a bubble|
 
-|<img src="./docs/screenshots/attach-menu.png" width="220" />|<img src="./docs/screenshots/sticker-tray.png" width="220" />|
+|<img src="./docs/screenshots/settings-appearance.png" width="220" />|<img src="./docs/screenshots/attach-menu.png" width="220" />|<img src="./docs/screenshots/sticker-tray.png" width="220" />|
+|-|-|-|
+|Appearance setting with the Liquid Glass option|Attach menu with the new Sticker entry|Sticker tray|
+
+The Frosted theme:
+
+|<img src="./docs/screenshots/frosted-home.png" width="220" />|<img src="./docs/screenshots/frosted-chat.png" width="220" />|
 |-|-|
-|Attach menu with the new Sticker entry|Sticker tray|
+|Frosted chat list with glass chips|Frosted chat with translucent bubbles and reply quotes|
 
 ## Rust SDK
 

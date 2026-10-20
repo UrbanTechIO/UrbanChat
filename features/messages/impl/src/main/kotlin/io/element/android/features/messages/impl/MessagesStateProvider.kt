@@ -177,6 +177,7 @@ fun aMessagesState(
     mediaDownloadCoordinator = object : MediaDownloadCoordinator {
         override fun stateFor(mediaSource: io.element.android.libraries.matrix.api.media.MediaSource) = MediaDownloadState.NotDownloaded
         override fun bytesDownloadedFor(mediaSource: io.element.android.libraries.matrix.api.media.MediaSource): Long? = null
+        override fun cancelDownload(mediaSource: io.element.android.libraries.matrix.api.media.MediaSource) = Unit
         override fun localUriFor(mediaSource: io.element.android.libraries.matrix.api.media.MediaSource): android.net.Uri? = null
         override fun verifyLocalFileStillExists(mediaSource: io.element.android.libraries.matrix.api.media.MediaSource): Boolean = false
         override fun ensureDownloaded(

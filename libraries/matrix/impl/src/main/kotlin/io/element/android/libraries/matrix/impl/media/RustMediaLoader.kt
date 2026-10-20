@@ -13,12 +13,14 @@ import io.element.android.libraries.core.extensions.mapFailure
 import io.element.android.libraries.core.extensions.runCatchingExceptions
 import io.element.android.libraries.core.mimetype.MimeTypes
 import io.element.android.libraries.matrix.api.media.MatrixMediaLoader
+import io.element.android.libraries.matrix.api.media.MediaDownloadProgress
 import io.element.android.libraries.matrix.api.media.MediaFile
 import io.element.android.libraries.matrix.api.media.MediaSource
 import io.element.android.libraries.matrix.impl.exception.mapClientException
 import kotlinx.coroutines.withContext
 import org.matrix.rustcomponents.sdk.Client
 import org.matrix.rustcomponents.sdk.use
+import timber.log.Timber
 import java.io.File
 import org.matrix.rustcomponents.sdk.MediaSource as RustMediaSource
 
@@ -28,6 +30,7 @@ class RustMediaLoader(
     private val innerClient: Client,
 ) : MatrixMediaLoader {
     private val mediaDispatcher = dispatchers.io.limitedParallelism(32)
+    private val streamingDownloader = StreamingMediaDownloader(innerClient, baseCacheDirectory)
     private val cacheDirectory
         get() = File(baseCacheDirectory, "temp/media").apply {
             if (!exists()) mkdirs() // Must always ensure that this directory exists because "Clear cache" does not restart an app's process.
@@ -64,8 +67,24 @@ class RustMediaLoader(
         mimeType: String?,
         filename: String?,
         useCache: Boolean,
+        trackProgress: Boolean,
     ): Result<MediaFile> =
         withContext(mediaDispatcher) {
+            if (trackProgress) {
+                val key = source.safeUrl
+                val streamed = runCatchingExceptions {
+                    streamingDownloader.download(
+                        source = source,
+                        mimeType = mimeType,
+                        filename = filename,
+                        keepCached = useCache,
+                        onProgress = { downloaded, total -> MediaDownloadProgress.update(key, downloaded, total) },
+                    )
+                }
+                MediaDownloadProgress.clear(key)
+                streamed.onFailure { Timber.w(it, "Streaming media download failed, falling back to the SDK") }
+                streamed.getOrNull()?.let { return@withContext Result.success(it) }
+            }
             runCatchingExceptions {
                 source.toRustMediaSource().use { mediaSource ->
                     val mediaFile = innerClient.getMediaFile(

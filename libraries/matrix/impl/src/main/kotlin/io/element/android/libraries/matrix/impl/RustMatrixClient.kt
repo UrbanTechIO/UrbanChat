@@ -312,6 +312,10 @@ class RustMatrixClient(
         // Make sure the session delegate has a reference to the client to be able to logout on auth error
         sessionDelegate.bindClient(this)
 
+        // Without this the SDK only reports a single "100%" progress when a media upload finishes, so the upload
+        // progress ring would always look full.
+        runCatchingExceptions { innerClient.enableSendQueueUploadProgress(true) }
+
         sessionCoroutineScope.launch {
             // Start notification settings
             notificationSettingsService.start()

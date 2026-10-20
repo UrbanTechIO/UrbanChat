@@ -32,7 +32,9 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import io.element.android.features.messages.impl.timeline.aTimelineItemEvent
 import io.element.android.features.messages.impl.timeline.components.ATimelineItemEventRow
+import io.element.android.features.messages.impl.timeline.components.DownloadProgressOverlay
 import io.element.android.features.messages.impl.timeline.media.LocalMediaDownloadContext
+import io.element.android.features.messages.impl.timeline.media.MediaDownloadState
 import io.element.android.features.messages.impl.timeline.model.TimelineItemGroupPosition
 import io.element.android.features.messages.impl.timeline.model.event.TimelineItemImageContent
 import io.element.android.features.messages.impl.timeline.model.event.TimelineItemImageContentProvider
@@ -45,6 +47,7 @@ import io.element.android.libraries.designsystem.modifiers.onKeyboardContextMenu
 import io.element.android.libraries.designsystem.preview.ElementPreview
 import io.element.android.libraries.designsystem.preview.PreviewsDayNight
 import io.element.android.libraries.designsystem.theme.components.CircularProgressIndicator
+import io.element.android.libraries.matrix.api.media.MediaDownloadProgress
 import io.element.android.libraries.matrix.ui.media.contentvalidation.ContentValidationState
 import io.element.android.libraries.matrix.ui.media.contentvalidation.LocalEventContentValidationState
 import io.element.android.libraries.matrix.ui.media.contentvalidation.NoopContentValidationState
@@ -149,10 +152,23 @@ fun TimelineItemImageView(
                         },
                     )
                 }
+                // The full-size image is being saved in the background: show how far along it is, if it is big enough to take a while.
+                val downloadState = mediaDownloadContext.coordinator.stateFor(content.mediaSource)
+                val imageSize = content.fileSize ?: 0L
+                if (downloadState is MediaDownloadState.Downloading && imageSize >= LARGE_IMAGE_BYTES && !hideMediaContent) {
+                    DownloadProgressOverlay(
+                        progress = MediaDownloadProgress.get(content.mediaSource),
+                        fallbackTotalBytes = content.fileSize,
+                        onCancelClick = { mediaDownloadContext.coordinator.cancelDownload(content.mediaSource) },
+                        modifier = Modifier.align(Alignment.TopEnd),
+                    )
+                }
             }
         }
     }
 }
+
+private const val LARGE_IMAGE_BYTES = 1_500_000L
 
 @PreviewsDayNight
 @Composable

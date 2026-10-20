@@ -85,7 +85,9 @@ import io.element.android.libraries.designsystem.components.BigIcon
 import io.element.android.libraries.designsystem.components.async.AsyncFailure
 import io.element.android.libraries.designsystem.components.async.AsyncIndicator
 import io.element.android.libraries.designsystem.components.async.AsyncLoading
+import io.element.android.libraries.designsystem.components.async.DownloadProgressRing
 import io.element.android.libraries.designsystem.components.button.BackButton
+import io.element.android.libraries.matrix.api.media.MediaDownloadProgress
 import io.element.android.libraries.designsystem.components.dialogs.RetryDialog
 import io.element.android.libraries.designsystem.preview.ElementPreviewDark
 import io.element.android.libraries.designsystem.theme.components.HorizontalDivider
@@ -112,6 +114,7 @@ import io.element.android.libraries.mediaviewer.impl.util.bgCanvasWithTransparen
 import io.element.android.libraries.textcomposer.ElementRichTextEditorStyle
 import io.element.android.libraries.ui.strings.CommonStrings
 import io.element.android.wysiwyg.compose.EditorStyledText
+import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import me.saket.telephoto.zoomable.OverzoomEffect
 import me.saket.telephoto.zoomable.ZoomSpec
@@ -416,10 +419,17 @@ private fun MediaViewerPage(
             }
 
             if (showProgress) {
-                LinearProgressIndicator(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(2.dp)
+                // Real bytes received so far (the ring just spins until the first ones arrive).
+                val progress = MediaDownloadProgress.get(data.mediaSource)
+                val label = progress?.totalBytes?.takeIf { it > 0 }?.let { total ->
+                    val totalMb = total / (1024f * 1024f)
+                    "${(progress.downloadedBytes / (1024f * 1024f)).coerceAtMost(totalMb).roundToInt()}/${totalMb.roundToInt()} MB"
+                }
+                DownloadProgressRing(
+                    fraction = progress?.fraction,
+                    label = label,
+                    size = 72.dp,
+                    modifier = Modifier.align(Alignment.Center),
                 )
             }
 

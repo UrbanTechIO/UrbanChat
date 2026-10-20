@@ -56,6 +56,7 @@ class VideoCompressor(
         videoCompressionPreset: VideoCompressionPreset,
         maxOutputBytes: Long? = null,
         budgetScale: Double = 1.0,
+        fillBudget: Boolean = false,
     ): Flow<VideoTranscodingEvent> = callbackFlow {
         val metadata = getVideoMetadata(uri)
 
@@ -64,6 +65,7 @@ class VideoCompressor(
             preset = videoCompressionPreset,
             maxOutputBytes = maxOutputBytes,
             budgetScale = budgetScale,
+            fillBudget = fillBudget,
         )
 
         val tmpFile = context.createTmpFile(extension = "mp4")

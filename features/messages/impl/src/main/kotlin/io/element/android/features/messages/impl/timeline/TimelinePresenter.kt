@@ -262,6 +262,12 @@ class TimelinePresenter(
                         focusedEventId = event.focusedEvent,
                     )
                 }
+                is TimelineEvent.CancelUpload -> sessionCoroutineScope.launch {
+                    timelineController.invokeOnCurrentTimeline {
+                        redactEvent(eventOrTransactionId = event.eventOrTransactionId, reason = null)
+                            .onFailure { Timber.e(it, "Could not cancel the upload") }
+                    }
+                }
                 is TimelineEvent.ValidateMedia -> {
                     timelineProtectionState.eventSink(TimelineProtectionEvent.ValidateContent(event.mediaSources, event.validationState))
                 }

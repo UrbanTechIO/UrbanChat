@@ -27,7 +27,9 @@ interface MatrixMediaLoader {
      * @param source to fetch the data for.
      * @param mimeType: optional mime type.
      * @param filename: optional String which will be used to name the file.
-     * @param useCache: if true, the rust sdk will cache the media in its store.
+     * @param useCache: if true, the media is cached (by the rust sdk, or in the app cache when [trackProgress] is set).
+     * @param trackProgress: if true, the download is done with a streaming downloader that publishes the real number of
+     * bytes received in [MediaDownloadProgress] (the rust sdk cannot report it). Falls back to the sdk if that fails.
      * @return a [Result] of [MediaFile]
      */
     suspend fun downloadMediaFile(
@@ -35,5 +37,6 @@ interface MatrixMediaLoader {
         mimeType: String?,
         filename: String?,
         useCache: Boolean = true,
+        trackProgress: Boolean = false,
     ): Result<MediaFile>
 }

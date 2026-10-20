@@ -36,6 +36,12 @@ internal object VideoCompressorConfigFactory {
         maxOutputBytes: Long? = null,
         /** Scales [maxOutputBytes] down further, used to retry when a first attempt still came out too large. */
         budgetScale: Double = 1.0,
+        /**
+         * The video is only being re-encoded because the original is over the limit (the user asked for the original
+         * quality), so spend the whole size budget instead of the preset's smaller natural bitrate, never going above
+         * the bitrate the source already has.
+         */
+        fillBudget: Boolean = false,
     ): VideoCompressorConfig {
         val width = metadata?.width?.takeIf { it >= 0 } ?: Int.MAX_VALUE
         val height = metadata?.height?.takeIf { it >= 0 } ?: Int.MAX_VALUE
@@ -68,6 +74,11 @@ internal object VideoCompressorConfigFactory {
                 resizer = VideoCompressionPreset.LOW.compressorHelper()
                 newBitrate = videoBitrateBudget.coerceAtLeast(MIN_VIDEO_BITRATE)
             }
+        }
+
+        if (fillBudget && videoBitrateBudget != null) {
+            val sourceBitrate = metadata?.bitrate?.takeIf { it > 0 } ?: Long.MAX_VALUE
+            newBitrate = maxOf(newBitrate, minOf(videoBitrateBudget, sourceBitrate))
         }
 
         return VideoCompressorConfig(

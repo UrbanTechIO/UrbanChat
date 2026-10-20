@@ -17,22 +17,15 @@ import io.element.android.libraries.di.RoomScope
 import io.element.android.libraries.di.annotations.ApplicationContext
 import io.element.android.libraries.di.annotations.SessionCoroutineScope
 import io.element.android.libraries.matrix.api.media.MatrixMediaLoader
+import io.element.android.libraries.matrix.api.media.MediaDownloadProgress
 import io.element.android.libraries.matrix.api.media.MediaSource
 import io.element.android.libraries.matrix.api.media.toFile
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
-
-// Must match RustMediaLoader's own `cacheDirectory` (features/messages/impl has no access to that
-// class, which lives in a lower-level module): the tempDir the Rust SDK is told to stream a
-// download's bytes into while it's in flight, which the SDK's own Kotlin API otherwise never
-// hands us a live look at.
-private const val MEDIA_TEMP_DIR_RELATIVE_PATH = "temp/media"
 
 /**
  * Automatic "download to Gallery" for images and videos, both sent and received — no manual
@@ -72,6 +65,12 @@ interface MediaDownloadCoordinator {
      * before the first poll finds a plausible file to track.
      */
     fun bytesDownloadedFor(mediaSource: MediaSource): Long?
+
+    /**
+     * Stops an in-flight download started by [ensureDownloaded]. The media is then left as [MediaDownloadState.Failed], which
+     * the UI treats like "not downloaded": it can still be streamed from the server by tapping it.
+     */
+    fun cancelDownload(mediaSource: MediaSource)
 
     /** The local Gallery file's content URI, once [stateFor] reports [MediaDownloadState.Downloaded]. */
     fun localUriFor(mediaSource: MediaSource): Uri?
@@ -115,21 +114,28 @@ class DefaultMediaDownloadCoordinator(
     private val states = mutableStateMapOf<String, MediaDownloadState>()
     private val localUris = mutableStateMapOf<String, Uri>()
 
-    // Real, polled-from-disk progress, keyed the same as [states]; absent (rather than 0) until
-    // the first poll finds a plausible in-flight file, so the UI can fall back to its own
-    // time-based estimate for that initial gap instead of showing a misleading "0 MB".
-    private val bytesDownloaded = mutableStateMapOf<String, Long>()
-
     // Plain (non-Compose) guard so [ensureDownloaded] only ever kicks off one existence
     // check/download per media item, regardless of how many times the composable recomposes.
     private val checkedKeys = ConcurrentHashMap.newKeySet<String>()
+
+    // The running download job per media item, so it can be cancelled from the UI.
+    private val downloadJobs = ConcurrentHashMap<String, Job>()
 
     override fun stateFor(mediaSource: MediaSource): MediaDownloadState {
         return states[mediaSource.safeUrl] ?: MediaDownloadState.NotDownloaded
     }
 
     override fun bytesDownloadedFor(mediaSource: MediaSource): Long? {
-        return bytesDownloaded[mediaSource.safeUrl]
+        return MediaDownloadProgress.get(mediaSource)?.downloadedBytes
+    }
+
+    override fun cancelDownload(mediaSource: MediaSource) {
+        val key = mediaSource.safeUrl
+        downloadJobs.remove(key)?.cancel()
+        MediaDownloadProgress.clear(key)
+        if (states[key] is MediaDownloadState.Downloading) {
+            states[key] = MediaDownloadState.Failed
+        }
     }
 
     override fun localUriFor(mediaSource: MediaSource): Uri? {
@@ -185,16 +191,16 @@ class DefaultMediaDownloadCoordinator(
         val current = states[key]
         if (current is MediaDownloadState.Downloading || current is MediaDownloadState.Downloaded) return
         states[key] = MediaDownloadState.Downloading(startTimeMs = System.currentTimeMillis())
-        val pollJob = sessionCoroutineScope.launch { pollDownloadedBytes(key) }
-        sessionCoroutineScope.launch {
+        val job = sessionCoroutineScope.launch {
             mediaLoader.downloadMediaFile(
                 source = mediaSource,
                 mimeType = mimeType,
                 filename = filename,
+                // The saved Gallery copy is the keeper, so don't also keep the downloaded file in the app cache.
+                useCache = false,
+                trackProgress = true,
             ).fold(
                 onSuccess = { mediaFile ->
-                    pollJob.cancel()
-                    bytesDownloaded.remove(key)
                     val savedUri = runCatchingExceptions {
                         mediaFile.use { galleryMediaLookup.saveToGallery(mediaFile.toFile(), key, fileExtension, mimeType, isSent) }
                     }.onFailure {
@@ -208,37 +214,12 @@ class DefaultMediaDownloadCoordinator(
                     }
                 },
                 onFailure = {
-                    pollJob.cancel()
-                    bytesDownloaded.remove(key)
                     Timber.e(it, "Failed to download media")
                     states[key] = MediaDownloadState.Failed
                 },
             )
         }
-    }
-
-    /**
-     * Polls the SDK's own media-download temp directory for a file that appeared or grew since we
-     * started, and reports its size as our best real signal for "bytes downloaded so far". This
-     * relies on internal behaviour (see [MEDIA_TEMP_DIR_RELATIVE_PATH]'s doc), not a public
-     * contract, so it's written defensively: any failure to read the directory just means no
-     * update this tick, never a crash, and the caller (via [bytesDownloadedFor] returning null)
-     * falls back to a time-based estimate instead.
-     */
-    private suspend fun pollDownloadedBytes(key: String) {
-        val tempDir = File(cacheDirectory, MEDIA_TEMP_DIR_RELATIVE_PATH)
-        val before = runCatchingExceptions {
-            tempDir.listFiles()?.associate { it.name to it.length() }
-        }.getOrNull() ?: emptyMap()
-        while (currentCoroutineContext().isActive) {
-            delay(250)
-            runCatchingExceptions {
-                tempDir.listFiles()
-                    ?.filter { it.name !in before || it.length() != before.getValue(it.name) }
-                    ?.maxByOrNull { it.length() }
-            }.getOrNull()?.let { candidate ->
-                bytesDownloaded[key] = candidate.length()
-            }
-        }
+        downloadJobs[key] = job
+        job.invokeOnCompletion { downloadJobs.remove(key, job) }
     }
 }

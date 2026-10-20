@@ -123,6 +123,7 @@ import io.element.android.libraries.matrix.api.core.toThreadId
 import io.element.android.libraries.matrix.api.timeline.Timeline
 import io.element.android.libraries.matrix.api.timeline.item.EmbeddedEventInfo
 import io.element.android.libraries.matrix.api.timeline.item.ThreadSummary
+import io.element.android.libraries.matrix.api.timeline.item.event.LocalEventSendState
 import io.element.android.libraries.matrix.api.timeline.item.event.EventOrTransactionId
 import io.element.android.libraries.matrix.api.timeline.item.event.MessageContent
 import io.element.android.libraries.matrix.api.timeline.item.event.MessageShield
@@ -550,6 +551,14 @@ private fun TimelineItemEventRowContent(
                 eventSink = eventSink,
                 eventContentView = eventContentView,
             )
+            val sendState = event.localSendState
+            if (sendState is LocalEventSendState.Sending && event.content.isMedia) {
+                UploadProgressOverlay(
+                    sendState = sendState,
+                    onCancelClick = { eventSink(TimelineEvent.CancelUpload(event.eventOrTransactionId)) },
+                    modifier = Modifier.align(Alignment.TopEnd),
+                )
+            }
         }
 
         // Focused-message glow, drawn as its own ConstraintLayout child matching the bubble's exact

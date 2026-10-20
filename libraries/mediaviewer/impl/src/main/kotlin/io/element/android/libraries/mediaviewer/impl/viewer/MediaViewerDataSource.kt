@@ -254,7 +254,8 @@ class MediaViewerDataSource(
             .downloadMediaFile(
                 source = data.mediaSource,
                 mimeType = data.mediaInfo.mimeType,
-                filename = data.mediaInfo.filename
+                filename = data.mediaInfo.filename,
+                trackProgress = true,
             )
             .onSuccess { mediaFile ->
                 mediaFiles[data.mediaSource] = mediaFile

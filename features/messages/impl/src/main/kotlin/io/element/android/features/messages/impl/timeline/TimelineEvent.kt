@@ -14,6 +14,7 @@ import io.element.android.libraries.matrix.api.core.EventId
 import io.element.android.libraries.matrix.api.core.RoomId
 import io.element.android.libraries.matrix.api.core.ThreadId
 import io.element.android.libraries.matrix.api.media.MediaSource
+import io.element.android.libraries.matrix.api.timeline.item.event.EventOrTransactionId
 import io.element.android.libraries.matrix.api.timeline.Timeline
 import io.element.android.libraries.matrix.ui.media.contentvalidation.ContentValidationState
 import kotlin.time.Duration
@@ -63,6 +64,11 @@ sealed interface TimelineEvent {
     ) : TimelineItemPollEvent
 
     data object StopLiveLocationShare : TimelineItemEvent
+
+    /**
+     * Cancel the upload of a media message that is still being sent (removes the local echo and stops the send).
+     */
+    data class CancelUpload(val eventOrTransactionId: EventOrTransactionId) : TimelineItemEvent
 
     data class ValidateMedia(
         val eventId: EventId,

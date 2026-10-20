@@ -29,6 +29,7 @@ val LocalMediaDownloadContext = compositionLocalOf {
         coordinator = object : MediaDownloadCoordinator {
             override fun stateFor(mediaSource: MediaSource) = MediaDownloadState.NotDownloaded
             override fun bytesDownloadedFor(mediaSource: MediaSource): Long? = null
+            override fun cancelDownload(mediaSource: MediaSource) = Unit
             override fun localUriFor(mediaSource: MediaSource): Uri? = null
             override fun verifyLocalFileStillExists(mediaSource: MediaSource): Boolean = false
             override fun ensureDownloaded(

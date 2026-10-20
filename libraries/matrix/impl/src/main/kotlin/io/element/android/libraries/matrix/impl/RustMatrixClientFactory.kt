@@ -226,7 +226,11 @@ class RustMatrixClientFactory(
             .dmRoomDefinition(DmRoomDefinition.TWO_MEMBERS)
             .requestConfig(
                 RequestConfig(
-                    timeout = 30_000uL,
+                    // In encrypted rooms the SDK uploads media with this client-wide timeout (it only scales the timeout with
+                    // the file size for unencrypted rooms), and the per-request timeout cannot be set from here. 30 seconds
+                    // cuts a large video off mid-upload and the retries then block the rest of the chat, so allow the time
+                    // a 100 MB upload needs on a slow connection (about 1.3 Mbit/s).
+                    timeout = 600_000uL,
                     // retryLimit must be non-zero for the SDK to retry API calls in case of error (including 429 Too Many Requests error).
                     retryLimit = 3u,
                     // Use default values for the rest

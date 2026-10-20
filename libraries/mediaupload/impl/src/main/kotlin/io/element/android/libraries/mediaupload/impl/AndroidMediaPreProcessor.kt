@@ -259,12 +259,14 @@ class AndroidMediaPreProcessor(
             return processVideoWithoutCompression(uri, mimeType)
         }
         Timber.d("Processing video ${uri.path.orEmpty().hash()}")
-        var resultFile = compressVideo(uri, preset, maxUploadSizeBytes, budgetScale = 1.0)
+        // No preset chosen means original quality was requested and we only compress to fit the limit: use the whole budget.
+        val fillBudget = videoCompressionPreset == null
+        var resultFile = compressVideo(uri, preset, maxUploadSizeBytes, budgetScale = 1.0, fillBudget = fillBudget)
         if (resultFile != null && maxUploadSizeBytes != null && resultFile.length() > maxUploadSizeBytes) {
             // The encoder overshot its bitrate target (VBR does that): try once more with a tighter budget.
             Timber.w("Compressed video is still over the upload limit, retrying with a smaller budget")
             resultFile.delete()
-            resultFile = compressVideo(uri, preset, maxUploadSizeBytes, budgetScale = 0.6)
+            resultFile = compressVideo(uri, preset, maxUploadSizeBytes, budgetScale = 0.6, fillBudget = fillBudget)
         }
 
         if (resultFile != null) {
@@ -287,8 +289,9 @@ class AndroidMediaPreProcessor(
         preset: VideoCompressionPreset,
         maxUploadSizeBytes: Long?,
         budgetScale: Double,
+        fillBudget: Boolean,
     ): File? = runCatchingExceptions {
-        videoCompressor.compress(uri, preset, maxUploadSizeBytes, budgetScale)
+        videoCompressor.compress(uri, preset, maxUploadSizeBytes, budgetScale, fillBudget)
             .onEach {
                 if (it is VideoTranscodingEvent.Progress) {
                     Timber.d("Video compression progress: ${it.value}%")

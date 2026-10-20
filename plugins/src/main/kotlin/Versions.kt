@@ -57,7 +57,7 @@ object Versions {
     const val VERSION_CODE = (2000 + versionYear) * 10_000 + versionMonth * 100 + versionReleaseNumber
     // UrbanChat shows its own release number (the one on GitHub), not Element's calendar version. The version code
     // above is unchanged, so updates keep working. Bump this for each release.
-    const val VERSION_NAME = "1.0.13"
+    const val VERSION_NAME = "1.0.14"
 
     /**
      * Compile SDK version. Must be updated when a new Android version is released.

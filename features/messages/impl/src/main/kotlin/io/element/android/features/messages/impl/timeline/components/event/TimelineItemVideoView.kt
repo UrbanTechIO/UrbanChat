@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import io.element.android.libraries.core.extensions.runCatchingExceptions
 import io.element.android.compound.tokens.generated.CompoundIcons
+import io.element.android.features.messages.impl.timeline.components.DownloadProgressOverlay
 import io.element.android.features.messages.impl.timeline.media.LocalFloatingVideoPlayerController
 import io.element.android.features.messages.impl.timeline.media.LocalMediaDownloadContext
 import io.element.android.features.messages.impl.timeline.media.MediaDownloadState
@@ -58,6 +59,7 @@ import io.element.android.libraries.designsystem.preview.ElementPreview
 import io.element.android.libraries.designsystem.preview.PreviewsDayNight
 import io.element.android.libraries.designsystem.theme.components.Text
 import io.element.android.compound.theme.ElementTheme
+import io.element.android.libraries.matrix.api.media.MediaDownloadProgress
 import io.element.android.libraries.matrix.ui.media.MAX_THUMBNAIL_HEIGHT
 import io.element.android.libraries.matrix.ui.media.MAX_THUMBNAIL_WIDTH
 import io.element.android.libraries.matrix.ui.media.MediaRequestData
@@ -222,15 +224,6 @@ fun TimelineItemVideoView(
                             modifier = Modifier.semantics { hideFromAccessibility() }
                         )
                     }
-                } else if (downloadState is MediaDownloadState.Downloading) {
-                    // Not yet downloaded/failed: the video is still fully watchable via normal
-                    // streaming (effectiveOnContentClick already falls back to that), so just show
-                    // the ordinary play icon there too — no "download" affordance to tap anymore.
-                    DownloadingIndicator(
-                        startTimeMs = downloadState.startTimeMs,
-                        totalBytes = content.fileSize,
-                        realBytesDownloaded = mediaDownloadContext.coordinator.bytesDownloadedFor(content.mediaSource),
-                    )
                 } else {
                     Box(
                         modifier = Modifier.roundedBackground(),
@@ -244,6 +237,14 @@ fun TimelineItemVideoView(
                         )
                     }
                 }
+            }
+            if (downloadToGalleryEnabled && downloadState is MediaDownloadState.Downloading && !hideMediaContent && !isContentBeingValidated) {
+                DownloadProgressOverlay(
+                    progress = MediaDownloadProgress.get(content.mediaSource),
+                    fallbackTotalBytes = content.fileSize,
+                    onCancelClick = { mediaDownloadContext.coordinator.cancelDownload(content.mediaSource) },
+                    modifier = Modifier.align(Alignment.TopEnd),
+                )
             }
         }
     }
@@ -275,59 +276,4 @@ internal fun TimelineItemVideoViewHideMediaContentPreview() = ElementPreview {
         onLongClick = {},
         contentValidationState = NoopContentValidationState(),
     )
-}
-
-/**
- * Circular spinner plus a "~X MB / Y MB" readout. [realBytesDownloaded], when present, is polled
- * directly off the SDK's own temp-download file on disk — see
- * [io.element.android.features.messages.impl.timeline.media.MediaDownloadCoordinator]'s doc for
- * why that's a best-effort read of internal behaviour, not a public API. Only while that hasn't
- * reported anything yet (e.g. the first fraction of a second) does this fall back to a
- * time-elapsed guess, so the number on screen is real whenever it can be.
- */
-@Composable
-private fun DownloadingIndicator(
-    startTimeMs: Long,
-    totalBytes: Long?,
-    realBytesDownloaded: Long?,
-    modifier: Modifier = Modifier,
-) {
-    val assumedBytesPerSecond = 2 * 1024 * 1024L // Conservative simulated rate; fallback only, see doc above.
-    var nowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(startTimeMs, realBytesDownloaded) {
-        // No need to keep ticking once real progress is available: that already recomposes this
-        // on its own whenever the coordinator's poll updates it.
-        if (realBytesDownloaded != null) return@LaunchedEffect
-        while (true) {
-            nowMs = System.currentTimeMillis()
-            delay(300)
-        }
-    }
-    Box(
-        modifier = modifier
-            .size(56.dp)
-            .roundedBackground(),
-        contentAlignment = Alignment.Center,
-    ) {
-        CircularProgressIndicator(
-            modifier = Modifier.size(40.dp),
-            color = Color.White,
-            strokeWidth = 3.dp,
-        )
-        if (totalBytes != null && totalBytes > 0) {
-            val totalMb = totalBytes / (1024f * 1024f)
-            val downloadedMb = if (realBytesDownloaded != null) {
-                (realBytesDownloaded / (1024f * 1024f)).coerceAtMost(totalMb)
-            } else {
-                val elapsedSeconds = (nowMs - startTimeMs) / 1000f
-                (elapsedSeconds * assumedBytesPerSecond / (1024f * 1024f)).coerceIn(0f, totalMb * 0.95f)
-            }
-            Text(
-                text = "${if (realBytesDownloaded == null) "~" else ""}${downloadedMb.roundToInt()}/${totalMb.roundToInt()} MB",
-                style = ElementTheme.typography.fontBodyXsMedium,
-                color = Color.White,
-                modifier = Modifier.semantics { hideFromAccessibility() },
-            )
-        }
-    }
 }

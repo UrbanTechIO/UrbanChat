@@ -68,6 +68,8 @@ sealed interface TimelineEvent {
     /**
      * Cancel the upload of a media message that is still being sent (removes the local echo and stops the send).
      */
+    /** Tap on the red failure mark: ask the send queue to try the message again. */
+    data class RetrySend(val event: TimelineItem.Event) : TimelineItemEvent
     data class CancelUpload(val eventOrTransactionId: EventOrTransactionId) : TimelineItemEvent
 
     data class ValidateMedia(

@@ -88,6 +88,7 @@ class MainActivity : NodeActivity() {
                 ) {
                     if (migrationState.migrationAction.isSuccess()) {
                         MainNodeHost()
+                        io.element.android.x.update.AppUpdateDialog()
                     } else {
                         appBindings.migrationEntryPoint().Render(
                             state = migrationState,

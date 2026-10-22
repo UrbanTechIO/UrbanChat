@@ -262,6 +262,10 @@ class TimelinePresenter(
                         focusedEventId = event.focusedEvent,
                     )
                 }
+                is TimelineEvent.RetrySend -> sessionCoroutineScope.launch {
+                    event.event.sendhandle?.retry()
+                        ?.onFailure { Timber.e(it, "Could not retry sending the message") }
+                }
                 is TimelineEvent.CancelUpload -> sessionCoroutineScope.launch {
                     timelineController.invokeOnCurrentTimeline {
                         redactEvent(eventOrTransactionId = event.eventOrTransactionId, reason = null)

@@ -29,9 +29,13 @@ import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.layer.CompositingStrategy
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.LayoutDirection
@@ -150,7 +154,44 @@ fun MessageEventBubble(
                 // Calculate the outline of the background and cache it
                 val outline = bubbleShape.createOutline(size, layoutDirection, this)
 
+                // Liquid Glass: the content layer recorded below is cached across redraws, and next to the
+                // backdrop it sometimes stayed empty until the item was scrolled away and back. Clip with a path
+                // and draw directly instead, so the content is drawn fresh each time.
+                val directPath = if (liquidBackdrop != null && !transparent) {
+                    val base = Path().apply {
+                        when (outline) {
+                            is Outline.Rectangle -> addRect(outline.rect)
+                            is Outline.Rounded -> addRoundRect(outline.roundRect)
+                            is Outline.Generic -> addPath(outline.path)
+                        }
+                    }
+                    if (cutTopStart) {
+                        val hole = Path().apply {
+                            addOval(
+                                androidx.compose.ui.geometry.Rect(
+                                    center = Offset(if (layoutDirection == LayoutDirection.Rtl) size.width else 0f, yOffsetPx),
+                                    radius = radiusPx,
+                                )
+                            )
+                        }
+                        Path.combine(PathOperation.Difference, base, hole)
+                    } else {
+                        base
+                    }
+                } else {
+                    null
+                }
+
                 onDrawWithContent {
+                    if (directPath != null) {
+                        val contentScope = this
+                        clipPath(directPath) {
+                            contentScope.drawContent()
+                        }
+                        if (isBubbleFrosted) drawOutline(outline, frostedBorderColor, style = Stroke(width = 1.dp.toPx()))
+                        updatedBorderColor?.let { drawOutline(outline, it, style = Stroke(width = 1.dp.toPx())) }
+                        return@onDrawWithContent
+                    }
                     // Draw the contents in a layer to be able to clip them with the same outline
                     // For some reason, doing this clipping outside a layer messes up with the touch events
                     drawInLayer(

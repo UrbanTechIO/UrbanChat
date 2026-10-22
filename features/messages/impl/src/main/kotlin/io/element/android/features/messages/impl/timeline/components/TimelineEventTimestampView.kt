@@ -16,8 +16,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,14 +57,16 @@ fun TimelineEventTimestampView(
     val isMessageRedacted = event.content.isRedacted()
     val tint = if (hasError || hasEncryptionCritical && !isMessageRedacted) ElementTheme.colors.textCriticalPrimary else ElementTheme.colors.textSecondary
 
+    var showFailureMenu by remember { mutableStateOf(false) }
     val shield = event.messageShield
     val isVerifiedUserSendFailure = event.localSendState is LocalEventSendState.Failed.VerifiedUser
     val onClickLabel = when {
         shield != null -> stringResource(CommonStrings.a11y_view_details)
         hasError && isVerifiedUserSendFailure -> stringResource(CommonStrings.action_open_context_menu)
+        hasError -> stringResource(CommonStrings.action_retry)
         else -> null
     }
-    val clickableModifier = remember(shield, hasError) {
+    val clickableModifier = remember(shield, hasError, event) {
         when {
             shield != null -> {
                 Modifier.clickable(
@@ -70,10 +77,13 @@ fun TimelineEventTimestampView(
             }
             hasError -> Modifier
                 .clickable(
-                    enabled = isVerifiedUserSendFailure,
                     onClickLabel = onClickLabel,
                 ) {
-                    eventSink(TimelineEvent.ComputeVerifiedUserSendFailure(event))
+                    if (isVerifiedUserSendFailure) {
+                        eventSink(TimelineEvent.ComputeVerifiedUserSendFailure(event))
+                    } else {
+                        showFailureMenu = true
+                    }
                 }
             else -> Modifier
         }
@@ -83,6 +93,29 @@ fun TimelineEventTimestampView(
         PaddingValues(start = TimelineEventTimestampViewDefaults.spacing)
     } else {
         PaddingValues(end = TimelineEventTimestampViewDefaults.spacing)
+    }
+
+    if (showFailureMenu) {
+        AlertDialog(
+            onDismissRequest = { showFailureMenu = false },
+            title = { Text(stringResource(CommonStrings.common_message_failed_to_send)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showFailureMenu = false
+                        eventSink(TimelineEvent.RetrySend(event))
+                    }
+                ) { Text(stringResource(CommonStrings.action_retry)) }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showFailureMenu = false
+                        eventSink(TimelineEvent.CancelUpload(event.eventOrTransactionId))
+                    }
+                ) { Text(stringResource(CommonStrings.action_remove), color = ElementTheme.colors.textCriticalPrimary) }
+            },
+        )
     }
 
     Row(

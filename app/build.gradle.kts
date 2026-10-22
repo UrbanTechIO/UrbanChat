@@ -295,6 +295,7 @@ dependencies {
     implementation(libs.androidx.startup)
     implementation(libs.androidx.preference)
     implementation(libs.coil)
+    implementation(libs.androidx.compose.material3)
 
     implementation(platform(libs.network.okhttp.bom))
     implementation(libs.network.okhttp.logging)

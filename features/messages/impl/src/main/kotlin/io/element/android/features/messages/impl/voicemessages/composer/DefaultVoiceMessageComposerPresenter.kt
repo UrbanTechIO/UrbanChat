@@ -50,11 +50,15 @@ import io.element.android.services.analytics.api.AnalyticsService
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicBoolean
 import timber.log.Timber
 import java.io.File
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+
+private const val SEND_SPINNER_MAX_MILLIS = 4_000L
 
 @AssistedInject
 class DefaultVoiceMessageComposerPresenter(
@@ -167,15 +171,32 @@ class DefaultVoiceMessageComposerPresenter(
             isSending = true
             player.pause()
             analyticsService.captureComposerEvent()
+            // The send only returns once the send queue has uploaded the message, so a stuck queue (for example a failed
+            // message earlier in the room) would keep the spinner forever. After a short while the message is in the
+            // timeline with its own progress, so the composer is released and the upload carries on in the background.
+            val released = AtomicBoolean(false)
+            val release = {
+                if (released.compareAndSet(false, true)) {
+                    isSending = false
+                    sessionCoroutineScope.deleteRecording()
+                }
+            }
+            sessionCoroutineScope.launch {
+                delay(SEND_SPINNER_MAX_MILLIS)
+                release()
+            }
             sessionCoroutineScope.launch {
                 val result = sendMessage(
                     file = finishedState.file,
                     mimeType = finishedState.mimeType,
                     waveform = finishedState.waveform,
                     inReplyToEventId = inReplyToEventId,
+                    deleteRecordingOnSuccess = false,
                 )
-                if (result.isFailure) {
+                if (result.isFailure && released.compareAndSet(false, true)) {
                     showSendFailureDialog = true
+                } else if (result.isSuccess) {
+                    release()
                 }
             }.invokeOnCompletion {
                 isSending = false
@@ -196,7 +217,7 @@ class DefaultVoiceMessageComposerPresenter(
                 }
                 VoiceMessageComposerEvent.DeleteVoiceMessage -> {
                     player.pause()
-                    localCoroutineScope.deleteRecording()
+                    sessionCoroutineScope.deleteRecording()
                 }
                 VoiceMessageComposerEvent.DismissPermissionsRationale -> {
                     permissionState.eventSink(PermissionsEvent.CloseDialog)
@@ -289,6 +310,7 @@ class DefaultVoiceMessageComposerPresenter(
         mimeType: String,
         waveform: List<Float>,
         inReplyToEventId: EventId? = null,
+        deleteRecordingOnSuccess: Boolean = true,
     ): Result<Unit> {
         val result = mediaSender.sendVoiceMessage(
             uri = file.toUri(),
@@ -302,7 +324,9 @@ class DefaultVoiceMessageComposerPresenter(
             return result
         }
 
-        voiceRecorder.deleteRecording()
+        if (deleteRecordingOnSuccess) {
+            voiceRecorder.deleteRecording()
+        }
 
         return result
     }

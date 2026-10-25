@@ -188,6 +188,9 @@ class RoomDetailsPresenter(
                 }
                 is RoomDetailsEvent.MarkAsRead -> scope.markAsRead()
                 is RoomDetailsEvent.MarkAsUnread -> scope.markAsUnread()
+                is RoomDetailsEvent.SendText -> scope.launch {
+                    room.liveTimeline.sendMessage(body = event.text, htmlBody = null, intentionalMentions = emptyList())
+                }
             }
         }
 

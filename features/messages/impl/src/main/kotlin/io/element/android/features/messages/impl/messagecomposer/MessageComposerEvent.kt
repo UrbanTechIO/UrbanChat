@@ -16,6 +16,9 @@ import io.element.android.libraries.textcomposer.model.Suggestion
 sealed interface MessageComposerEvent {
     data object ToggleFullScreenState : MessageComposerEvent
     data object SendMessage : MessageComposerEvent
+
+    /** Send the text that is in the composer later, at [atMillis] (epoch milliseconds), even if the app is closed by then. */
+    data class ScheduleMessage(val atMillis: Long) : MessageComposerEvent
     data class SendUri(val uri: Uri) : MessageComposerEvent
     data object CloseSpecialMode : MessageComposerEvent
     data class SetMode(val composerMode: MessageComposerMode) : MessageComposerEvent

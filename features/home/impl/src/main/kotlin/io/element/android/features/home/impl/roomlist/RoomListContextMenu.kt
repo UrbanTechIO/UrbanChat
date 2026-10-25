@@ -28,6 +28,10 @@ import io.element.android.libraries.designsystem.preview.ElementPreview
 import io.element.android.libraries.designsystem.preview.PreviewsDayNight
 import io.element.android.libraries.designsystem.theme.components.IconSource
 import io.element.android.libraries.designsystem.theme.components.ListItem
+import io.element.android.libraries.urbanextras.UrbanExtras
+import io.element.android.libraries.urbanextras.snooze.Snoozes
+import io.element.android.libraries.urbanextras.ui.UrbanRequest
+import io.element.android.libraries.urbanextras.ui.UrbanRequests
 import io.element.android.libraries.designsystem.theme.components.ListItemStyle
 import io.element.android.libraries.designsystem.theme.components.ModalBottomSheet
 import io.element.android.libraries.designsystem.theme.components.Text
@@ -73,6 +77,15 @@ fun RoomListContextMenu(
                 eventSink(RoomListEvent.HideContextMenu)
                 eventSink(RoomListEvent.SetRoomIsLocked(contextMenu.roomId, isLocked))
             },
+            onSnoozeClick = { snoozedNow ->
+                eventSink(RoomListEvent.HideContextMenu)
+                if (snoozedNow) {
+                    eventSink(RoomListEvent.EndSnooze(contextMenu.roomId))
+                } else {
+                    UrbanRequests.post(UrbanRequest.Snooze { until -> eventSink(RoomListEvent.SnoozeRoom(contextMenu.roomId, until)) })
+                }
+            },
+            isSnoozed = Snoozes.get(UrbanExtras.context).untilMillis(contextMenu.roomId.value) != null,
             onReportRoomClick = {
                 eventSink(RoomListEvent.HideContextMenu)
                 onReportRoomClick(contextMenu.roomId)
@@ -89,6 +102,8 @@ private fun RoomListModalBottomSheetContent(
     onLeaveRoomClick: () -> Unit,
     onFavoriteChange: (isFavorite: Boolean) -> Unit,
     onLockedChange: (isLocked: Boolean) -> Unit,
+    onSnoozeClick: (snoozedNow: Boolean) -> Unit,
+    isSnoozed: Boolean,
     onRoomMarkReadClick: () -> Unit,
     onRoomMarkUnreadClick: () -> Unit,
     onReportRoomClick: () -> Unit,
@@ -187,6 +202,18 @@ private fun RoomListModalBottomSheetContent(
             modifier = Modifier.clickable { onLockedChange(!contextMenu.isLocked) },
             leadingContent = ListItemContent.Icon(
                 iconSource = IconSource.Vector(lockIcon)
+            ),
+        )
+        ListItem(
+            content = {
+                Text(
+                    text = if (isSnoozed) "End snooze" else "Snooze notifications",
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+            },
+            modifier = Modifier.clickable { onSnoozeClick(isSnoozed) },
+            leadingContent = ListItemContent.Icon(
+                iconSource = IconSource.Vector(CompoundIcons.NotificationsOff())
             ),
         )
         if (canReportRoom) {

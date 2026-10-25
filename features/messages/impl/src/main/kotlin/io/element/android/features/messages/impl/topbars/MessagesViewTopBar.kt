@@ -85,6 +85,7 @@ internal fun MessagesViewTopBar(
     modifier: Modifier = Modifier,
     isFrostedGlass: Boolean = false,
     liquidBackdrop: Backdrop? = null,
+    hasDisappearingMessages: Boolean = false,
     menuActions: @Composable RowScope.() -> Unit,
 ) {
     TopAppBar(
@@ -149,6 +150,16 @@ internal fun MessagesViewTopBar(
                         )
                     }
                     else -> Unit
+                }
+
+                if (hasDisappearingMessages) {
+                    // UrbanChat: disappearing messages are on in this chat.
+                    Icon(
+                        modifier = iconModifier,
+                        imageVector = CompoundIcons.Time(),
+                        tint = ElementTheme.colors.iconSecondary,
+                        contentDescription = "Disappearing messages are on",
+                    )
                 }
 
                 when (sharedHistoryIcon) {

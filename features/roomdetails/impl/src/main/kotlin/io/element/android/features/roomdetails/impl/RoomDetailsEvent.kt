@@ -17,4 +17,5 @@ sealed interface RoomDetailsEvent {
     data class SetIsDirect(val isDirect: Boolean) : RoomDetailsEvent
     data object MarkAsRead : RoomDetailsEvent
     data object MarkAsUnread : RoomDetailsEvent
+    data class SendText(val text: String) : RoomDetailsEvent
 }

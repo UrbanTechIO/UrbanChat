@@ -47,6 +47,7 @@ dependencies {
     implementation(projects.libraries.designsystem)
     implementation(projects.libraries.di)
     implementation(projects.libraries.androidutils)
+    implementation(projects.libraries.urbanextras)
     implementation(projects.libraries.network)
     implementation(projects.libraries.matrix.api)
     implementation(projects.libraries.matrixui)

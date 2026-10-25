@@ -38,6 +38,8 @@ class ElementXApplication : Application(), DependencyInjectionGraphOwner, Config
             initializeComponent(CacheCleanerInitializer::class.java)
         }
 
+        io.element.android.libraries.urbanextras.UrbanExtras.init(this)
+
         logApplicationInfo(this)
 
         // Disable the strict offset check for anchored draggable components, as it can cause issues with bottom sheets.

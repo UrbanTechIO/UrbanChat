@@ -118,6 +118,13 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import me.saket.telephoto.zoomable.OverzoomEffect
 import me.saket.telephoto.zoomable.ZoomSpec
+import io.element.android.libraries.urbanextras.ui.StickerLiftContainer
+import io.element.android.libraries.urbanextras.viewonce.ViewOnce
+import io.element.android.libraries.urbanextras.ui.ViewOnceCountdown
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
 import me.saket.telephoto.zoomable.rememberZoomableState
 
 val topAppBarHeight = 112.dp
@@ -139,6 +146,18 @@ fun MediaViewerView(
     val currentData = state.listData.getOrNull(state.currentIndex)
     val defaultBottomPaddingInPixels = if (LocalInspectionMode.current && !hasCompactHeightWindowSize()) 303 else 0
 
+    val stickerScope = rememberCoroutineScope()
+    // View-once pictures cannot be screenshotted or screen-recorded while they are open.
+    val isViewOnce = ViewOnce.isViewOnce((currentData as? MediaViewerPageData.MediaViewerData)?.mediaInfo?.filename)
+    val viewerContext = LocalContext.current
+    DisposableEffect(isViewOnce) {
+        var ctx: android.content.Context? = viewerContext
+        while (ctx is android.content.ContextWrapper && ctx !is android.app.Activity) ctx = ctx.baseContext
+        val window = (ctx as? android.app.Activity)?.window
+        if (isViewOnce) window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+        onDispose { if (isViewOnce) window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE) }
+    }
+    val stickerContext = LocalContext.current
     BackHandler { onBackClick() }
     Scaffold(
         modifier,
@@ -289,6 +308,7 @@ fun MediaViewerView(
                             },
                             audioFocus = audioFocus,
                             isUserSelected = (state.listData[page] as? MediaViewerPageData.MediaViewerData)?.eventId == state.initiallySelectedEventId,
+                            onStickerMessage = { message -> stickerScope.launch { snackbarHostState.showSnackbar(message) } },
                         )
                         // Bottom bar
                         AnimatedVisibility(
@@ -382,6 +402,7 @@ private fun MediaViewerPage(
     onDismissError: () -> Unit,
     onShowOverlayChange: (Boolean) -> Unit,
     audioFocus: AudioFocus?,
+    onStickerMessage: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val currentShowOverlay by rememberUpdatedState(showOverlay)
@@ -415,6 +436,17 @@ private fun MediaViewerPage(
             ) {
                 AsyncIndicator.Loading(
                     text = stringResource(CommonStrings.content_scanner_scanning),
+                )
+            }
+
+            if (ViewOnce.isViewOnce(data.mediaInfo.filename) && data.mediaInfo.mimeType.startsWith("image/")) {
+                // View once: the picture closes itself after a few seconds.
+                ViewOnceCountdown(
+                    seconds = 10,
+                    onFinished = onDismiss,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = containerPadding.calculateTopPadding() + 8.dp),
                 )
             }
 
@@ -460,6 +492,13 @@ private fun MediaViewerPage(
                         )
                     }
                 } else if (mediaValidationState.isValid() && thumbnailValidationState.isValid()) {
+                    val liftMimeType = data.mediaInfo.mimeType
+                    StickerLiftContainer(
+                        uri = downloadedMedia.dataOrNull()?.uri,
+                        // Photos only (not animated ones), and only while the picture is not zoomed in.
+                        enabled = liftMimeType.startsWith("image/") && liftMimeType != "image/gif" && (zoomableState.zoomFraction ?: 0f) < 0.02f,
+                        onMessage = onStickerMessage,
+                    ) {
                     LocalMediaView(
                         modifier = Modifier.fillMaxSize(),
                         isDisplayed = isDisplayed,
@@ -478,6 +517,7 @@ private fun MediaViewerPage(
                         audioFocus = audioFocus,
                         forPreview = false,
                     )
+                    }
                     if (showThumbnail) {
                         ThumbnailView(
                             mediaInfo = data.mediaInfo,
@@ -617,6 +657,7 @@ private fun MediaViewerTopBar(
         ),
         navigationIcon = { BackButton(onClick = onBackClick) },
         actions = {
+            if (ViewOnce.isViewOnce(data.mediaInfo.filename)) return@TopAppBar
             if (canShowEdit && data.mediaInfo.mimeType.isEditableImageMimeType()) {
                 IconButton(
                     onClick = onEditClick,

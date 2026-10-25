@@ -66,6 +66,9 @@ import io.element.android.libraries.matrix.ui.media.MediaRequestData
 import io.element.android.libraries.matrix.ui.media.contentvalidation.ContentValidationState
 import io.element.android.libraries.matrix.ui.media.contentvalidation.NoopContentValidationState
 import io.element.android.libraries.matrix.ui.media.contentvalidation.collectOverallState
+import io.element.android.libraries.urbanextras.UrbanExtras
+import io.element.android.libraries.urbanextras.ui.ViewOnceCover
+import io.element.android.libraries.urbanextras.viewonce.ViewOnce
 import io.element.android.libraries.ui.strings.CommonStrings
 import io.element.android.libraries.ui.utils.a11y.isTalkbackActive
 import kotlinx.coroutines.delay
@@ -82,6 +85,23 @@ fun TimelineItemVideoView(
     contentValidationState: ContentValidationState,
     modifier: Modifier = Modifier,
 ) {
+    if (ViewOnce.isViewOnce(content.filename)) {
+        val viewOnceKey = content.mediaSource.safeUrl
+        var viewOnceOpened by remember(viewOnceKey) { mutableStateOf(ViewOnce.get(UrbanExtras.context).isOpened(viewOnceKey)) }
+        ViewOnceCover(
+            opened = viewOnceOpened,
+            isVideo = true,
+            isMine = isMine,
+            onOpen = {
+                ViewOnce.get(UrbanExtras.context).markOpened(viewOnceKey)
+                viewOnceOpened = true
+                onContentClick?.invoke()
+            },
+            onLongClick = onLongClick,
+            modifier = modifier,
+        )
+        return
+    }
     val isTalkbackActive = isTalkbackActive()
     val a11yLabel = stringResource(CommonStrings.common_video)
     val description = content.caption?.let { "$a11yLabel: $it" } ?: a11yLabel

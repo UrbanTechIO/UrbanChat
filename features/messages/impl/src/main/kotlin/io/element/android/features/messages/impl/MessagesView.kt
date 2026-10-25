@@ -41,6 +41,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -116,6 +118,15 @@ import io.element.android.libraries.designsystem.components.ExpandableBottomShee
 import io.element.android.libraries.designsystem.components.dialogs.ConfirmationDialog
 import io.element.android.libraries.designsystem.components.rememberExpandableBottomSheetLayoutState
 import io.element.android.libraries.designsystem.preview.ElementPreview
+import io.element.android.libraries.urbanextras.UrbanExtras
+import io.element.android.libraries.urbanextras.scheduled.ScheduledMessages
+import io.element.android.features.messages.impl.timeline.components.ScheduledMessageBubbles
+import io.element.android.libraries.urbanextras.disappearing.DisappearingMessages
+import io.element.android.libraries.urbanextras.look.ChatLooks
+import io.element.android.libraries.urbanextras.ui.MessageEffectsOverlay
+import io.element.android.libraries.urbanextras.ui.TranscribeSetupHost
+import io.element.android.libraries.urbanextras.ui.UrbanRequestHost
+import io.element.android.libraries.urbanextras.ui.presetBackgroundBrush
 import io.element.android.libraries.designsystem.preview.PreviewsDayNight
 import io.element.android.libraries.designsystem.text.toAnnotatedString
 import io.element.android.libraries.designsystem.text.toDp
@@ -147,6 +158,7 @@ import io.element.android.features.messages.impl.timeline.media.LocalFloatingVid
 import io.element.android.features.messages.impl.timeline.urlpreview.UrlPreviewContext
 import io.element.android.features.messages.impl.timeline.urlpreview.LocalUrlPreviewContext
 import io.element.android.libraries.designsystem.theme.LocalBubbleColors
+import io.element.android.libraries.designsystem.theme.messageFromMeBackground
 import io.element.android.libraries.designsystem.theme.LocalIsFrostedGlassEnabled
 import io.element.android.libraries.designsystem.theme.hexToColorOrNull
 import io.element.android.libraries.designsystem.theme.components.Icon
@@ -267,6 +279,11 @@ fun MessagesView(
     // Liquid Glass: the same two layers as above, for bending light instead of only blurring it.
     val liquidBackgroundBackdrop = rememberLayerBackdrop()
     val liquidTimelineBackdrop = rememberLayerBackdrop()
+    // UrbanChat per-chat look: tint, background and bubble see-through chosen for this chat only.
+    val urbanLooks by remember { ChatLooks.get(UrbanExtras.context).looks }.collectAsState()
+    val urbanLook = ChatLooks.effective(urbanLooks, state.roomId.value)
+    val disappearingRules by remember { DisappearingMessages.get(UrbanExtras.context).rules }.collectAsState()
+    val hasDisappearing = (disappearingRules[state.roomId.value]?.seconds ?: 0L) > 0L
     val extraBottomContentPadding = if (state.liquidGlassEnabled) {
         with(LocalDensity.current) { expandableState.sheetHeightPx.toDp() }
     } else {
@@ -321,6 +338,7 @@ fun MessagesView(
                             modifier = topBarModifier,
                             isFrostedGlass = state.frostedGlassEnabled,
                             liquidBackdrop = if (state.liquidGlassEnabled) liquidTimelineBackdrop else null,
+                            hasDisappearingMessages = hasDisappearing,
                             menuActions = {
                                 MessagesMenuActions(
                                     displayThreads = state.timelineState.timelineMode !is Timeline.Mode.Thread && state.threads.hasThreads,
@@ -334,7 +352,13 @@ fun MessagesView(
                     }
                 },
                 content = { padding ->
-                    val chatBackgroundColor = state.chatBackgroundColorHex?.hexToColorOrNull()
+                    val urbanPreset = urbanLook?.background?.takeIf { it != "photo" }
+                    val chatBackgroundImagePath = when {
+                        urbanLook?.background == "photo" -> urbanLook.photoPath
+                        urbanLook?.background != null -> null
+                        else -> state.chatBackgroundImagePath
+                    }
+                    val chatBackgroundColor = if (urbanLook?.background != null) null else state.chatBackgroundColorHex?.hexToColorOrNull()
                     // When frosted glass is on, the list must actually scroll behind the (now
                     // translucent) top bar for Haze to have real content to blur, so only the
                     // bottom inset is applied here; the top bar's height is instead passed to the
@@ -348,9 +372,14 @@ fun MessagesView(
                     } else {
                         padding
                     }
+                    val urbanTint = urbanLook?.tintArgb?.let { androidx.compose.ui.graphics.Color(it) }
                     val bubbleColors = BubbleColors(
-                        outgoing = state.outgoingBubbleColorHex?.hexToColorOrNull(),
-                        incoming = state.incomingBubbleColorHex?.hexToColorOrNull(),
+                        outgoing = urbanTint ?: state.outgoingBubbleColorHex?.hexToColorOrNull(),
+                        incoming = urbanTint?.let { tint ->
+                            val hsv = FloatArray(3)
+                            android.graphics.Color.colorToHSV(tint.toArgb(), hsv)
+                            androidx.compose.ui.graphics.Color.hsv(hsv[0], (hsv[1] * 0.55f).coerceIn(0f, 1f), (hsv[2] * 0.42f).coerceIn(0f, 1f))
+                        } ?: state.incomingBubbleColorHex?.hexToColorOrNull(),
                     )
                     Box(
                         modifier = Modifier
@@ -367,7 +396,9 @@ fun MessagesView(
                             modifier = Modifier
                                 .matchParentSize()
                                 .let {
-                                    if (state.chatBackgroundImagePath == null && chatBackgroundColor != null) {
+                                    if (urbanPreset != null) {
+                                        it.background(presetBackgroundBrush(urbanPreset))
+                                    } else if (chatBackgroundImagePath == null && chatBackgroundColor != null) {
                                         it.background(chatBackgroundColor)
                                     } else {
                                         it
@@ -378,9 +409,9 @@ fun MessagesView(
                                 .let { if (state.frostedGlassEnabled) it.hazeSource(state = chatBackgroundHazeState) else it }
                                 .let { if (state.liquidGlassEnabled) it.layerBackdrop(liquidBackgroundBackdrop) else it }
                         ) {
-                            if (state.chatBackgroundImagePath != null) {
+                            if (chatBackgroundImagePath != null) {
                                 AsyncImage(
-                                    model = state.chatBackgroundImagePath,
+                                    model = chatBackgroundImagePath,
                                     contentDescription = null,
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier
@@ -392,7 +423,7 @@ fun MessagesView(
                         val frostedGlassBubbleState = FrostedGlassBubbleState(
                             hazeState = if (state.frostedGlassEnabled) chatBackgroundHazeState else null,
                             enabled = state.frostedGlassEnabled,
-                            opacity = state.bubbleBarOpacity,
+                            opacity = urbanLook?.bubbleOpacity ?: state.bubbleBarOpacity,
                         )
                         val mediaDownloadContext = MediaDownloadContext(
                             coordinator = state.mediaDownloadCoordinator,
@@ -471,6 +502,8 @@ fun MessagesView(
                             data = floatingVideo,
                             onDismiss = { floatingVideo = null },
                         )
+
+                        MessageEffectsOverlay()
 
                         SuggestionsPickerView(
                             modifier = Modifier
@@ -730,6 +763,10 @@ private fun MessagesViewContent(
             // date badge offset so the badge sits below whichever banners are currently showing.
             var topBannersHeightDp by remember { mutableStateOf(0.dp) }
 
+            val scheduledStore = remember { ScheduledMessages.get(UrbanExtras.context) }
+            val allScheduled by scheduledStore.messages.collectAsState()
+            val roomScheduled = remember(allScheduled, state.roomId) { allScheduled.filter { it.roomId == state.roomId.value }.sortedBy { it.sendAtMillis } }
+            var scheduledHeightDp by remember { mutableStateOf(0.dp) }
             TimelineView(
                 state = state.timelineState,
                 timelineProtectionState = state.timelineProtectionState,
@@ -748,7 +785,17 @@ private fun MessagesViewContent(
                 nestedScrollConnection = scrollBehavior.nestedScrollConnection,
                 floatingDateTopOffset = topBannersHeightDp,
                 extraTopContentPadding = extraTopContentPadding,
-                extraBottomContentPadding = extraBottomContentPadding,
+                extraBottomContentPadding = extraBottomContentPadding + scheduledHeightDp,
+            )
+
+            ScheduledMessageBubbles(
+                messages = roomScheduled,
+                bubbleColor = LocalBubbleColors.current.outgoing ?: ElementTheme.colors.messageFromMeBackground,
+                onCancel = { scheduledStore.cancel(it) },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(bottom = extraBottomContentPadding)
+                    .onSizeChanged { scheduledHeightDp = with(density) { it.height.toDp() } },
             )
 
             if (state.timelineState.timelineMode !is Timeline.Mode.Thread) {
@@ -837,10 +884,13 @@ private fun MessagesViewComposerBottomSheetContents(
                 if (verificationViolation != null) {
                     DisabledComposerView(modifier = Modifier.fillMaxWidth())
                 } else {
+                    UrbanRequestHost()
+                    TranscribeSetupHost()
                     MessageComposerView(
                         state = state.composerState,
                         voiceMessageState = state.voiceMessageComposerState,
                         modifier = Modifier.fillMaxWidth(),
+                        roomId = state.roomId.value,
                     )
                 }
             }

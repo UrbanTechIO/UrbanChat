@@ -56,6 +56,8 @@ import io.element.android.libraries.matrix.api.roomlist.RoomListFilter
 import io.element.android.libraries.matrix.api.user.UserPresence
 import io.element.android.libraries.matrix.ui.safety.rememberHideInvitesAvatar
 import io.element.android.libraries.preferences.api.store.SessionPreferencesStore
+import io.element.android.libraries.urbanextras.UrbanExtras
+import io.element.android.libraries.urbanextras.snooze.Snoozes
 import io.element.android.libraries.push.api.battery.BatteryOptimizationState
 import io.element.android.services.analytics.api.AnalyticsService
 import io.element.android.services.analytics.api.watchers.AnalyticsColdStartWatcher
@@ -157,6 +159,8 @@ class RoomListPresenter(
                 }
                 is RoomListEvent.SetRoomIsFavorite -> coroutineScope.setRoomIsFavorite(event.roomId, event.isFavorite)
                 is RoomListEvent.SetRoomIsLocked -> coroutineScope.setRoomIsLocked(event.roomId, event.isLocked)
+                is RoomListEvent.SnoozeRoom -> coroutineScope.snoozeRoom(event.roomId, event.untilMillis)
+                is RoomListEvent.EndSnooze -> coroutineScope.endSnooze(event.roomId)
                 is RoomListEvent.MarkAsRead -> coroutineScope.markAsRead(event.roomId)
                 is RoomListEvent.MarkAsUnread -> coroutineScope.markAsUnread(event.roomId)
                 is RoomListEvent.AcceptInvite -> {
@@ -381,6 +385,16 @@ class RoomListPresenter(
 
     private fun CoroutineScope.setRoomIsLocked(roomId: RoomId, isLocked: Boolean) = launch {
         sessionPreferencesStore.setRoomLocked(roomId, isLocked)
+    }
+
+    private fun CoroutineScope.snoozeRoom(roomId: RoomId, untilMillis: Long) = launch {
+        client.notificationSettingsService.muteRoom(roomId)
+        Snoozes.get(UrbanExtras.context).snooze(client.sessionId.value, roomId.value, untilMillis)
+    }
+
+    private fun CoroutineScope.endSnooze(roomId: RoomId) = launch {
+        client.notificationSettingsService.restoreDefaultRoomNotificationMode(roomId)
+        Snoozes.get(UrbanExtras.context).clear(roomId.value)
     }
 
     private fun CoroutineScope.markAsRead(roomId: RoomId) = launch {

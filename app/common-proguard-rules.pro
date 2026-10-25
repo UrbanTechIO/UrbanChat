@@ -75,5 +75,8 @@
 # Keep Metro classes
 -keep,allowoptimization,allowshrinking class dev.zacsweers.metro.** { *; }
 
+# ONNX Runtime (voice to text): its native code finds these Java classes by name
+-keep class ai.onnxruntime.** { *; }
+
 # Rustls Platform Verifier
 -keep, includedescriptorclasses class org.rustls.platformverifier.** { *; }

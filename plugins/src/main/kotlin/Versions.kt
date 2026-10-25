@@ -45,7 +45,7 @@ private const val versionMonth = 8
  * Release number in the month. Value must be in [0,99].
  * Do not update this value. it is updated by the release script.
  */
-private const val versionReleaseNumber = 16
+private const val versionReleaseNumber = 17
 
 object Versions {
     /**
@@ -57,7 +57,7 @@ object Versions {
     const val VERSION_CODE = (2000 + versionYear) * 10_000 + versionMonth * 100 + versionReleaseNumber
     // UrbanChat shows its own release number (the one on GitHub), not Element's calendar version. The version code
     // above is unchanged, so updates keep working. Bump this for each release.
-    const val VERSION_NAME = "1.0.16"
+    const val VERSION_NAME = "1.0.17"
 
     /**
      * Compile SDK version. Must be updated when a new Android version is released.

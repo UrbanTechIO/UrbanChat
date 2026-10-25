@@ -42,6 +42,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.mutableFloatStateOf
@@ -57,7 +61,6 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -152,6 +155,7 @@ fun TextComposer(
     resolveAtRoomMentionDisplay: () -> TextDisplay,
     modifier: Modifier = Modifier,
     showTextFormatting: Boolean = false,
+    onSendLongClick: (() -> Unit)? = null,
 ) {
     val markdown = when (state) {
         is TextEditorState.Markdown -> state.state.text.value()
@@ -291,6 +295,7 @@ fun TextComposer(
         composerMode.isEditing,
         voiceMessageState.endButtonKey(),
         canSendTextMessage,
+        onSendLongClick,
     ) {
         when {
             !canSendTextMessage ->
@@ -365,6 +370,7 @@ fun TextComposer(
                 endButtonClick = {
                     onSendMessage()
                 },
+                endButtonLongClick = onSendLongClick,
                 endButtonContent = @Composable {
                     SendButtonIcon(
                         canSendMessage = true,
@@ -376,7 +382,7 @@ fun TextComposer(
     }
 
     @Composable
-    fun rememberEndButtonParamsFormatting() = remember(composerMode.isEditing, canSendTextMessage) {
+    fun rememberEndButtonParamsFormatting() = remember(composerMode.isEditing, canSendTextMessage, onSendLongClick) {
         if (composerMode.isEditing) {
             EndButtonParams(
                 endButtonContentDescriptionResId = CommonStrings.action_send_edited_message,
@@ -400,6 +406,7 @@ fun TextComposer(
                         onSendMessage()
                     }
                 },
+                endButtonLongClick = onSendLongClick.takeIf { canSendTextMessage },
                 endButtonContent = @Composable {
                     SendButtonIcon(
                         canSendMessage = canSendTextMessage,
@@ -532,6 +539,7 @@ private data class EndButtonParams(
     val endButtonContentDescriptionResId: Int,
     val endButtonClick: () -> Unit,
     val endButtonContent: @Composable () -> Unit,
+    val endButtonLongClick: (() -> Unit)? = null,
 )
 
 @Composable
@@ -729,10 +737,37 @@ private fun StandardLayout(
                         } else {
                             Modifier
                         }
-                    ),
+                    )
+                    .then(longClickModifier(endButtonParams.endButtonLongClick)),
                 onClick = endButtonParams.endButtonClick,
                 content = endButtonParams.endButtonContent,
             )
+        }
+    }
+}
+
+/** Press and hold on the send button (used for "send later"). Does nothing when [onLongClick] is null. */
+@Composable
+private fun longClickModifier(onLongClick: (() -> Unit)?): Modifier {
+    if (onLongClick == null) return Modifier
+    val haptics = LocalHapticFeedback.current
+    val latest by rememberUpdatedState(onLongClick)
+    return Modifier.pointerInput(Unit) {
+        awaitEachGesture {
+            // Look at the touch first (Initial pass), before the button's own click handling sees it.
+            awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            val released = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+                waitForUpOrCancellation(pass = PointerEventPass.Initial)
+            }
+            if (released == null) {
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                latest()
+                // Keep the button from also treating the release as a normal tap.
+                do {
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    event.changes.forEach { it.consume() }
+                } while (event.changes.any { it.pressed })
+            }
         }
     }
 }
@@ -808,7 +843,8 @@ private fun TextFormattingLayout(
                     .clearAndSetSemantics {
                         contentDescription = endButtonContentDescription
                         onClick(null, null)
-                    },
+                    }
+                    .then(longClickModifier(endButtonParams.endButtonLongClick)),
                 onClick = endButtonParams.endButtonClick,
                 content = endButtonParams.endButtonContent,
             )

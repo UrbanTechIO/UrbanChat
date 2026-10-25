@@ -10,4 +10,12 @@
     <string name="a11y_state_collapsed">"Collapsed"</string>
     <string name="a11y_active">Active</string>
     <string name="a11y_inactive">Inactive</string>
+    <string name="urban_message_scheduled">Message scheduled</string>
+    <string name="urban_action_remind_me">Remind me</string>
+    <string name="urban_action_save">Save message</string>
+    <string name="urban_action_unsave">Remove from saved</string>
+    <string name="urban_action_transcribe">Transcribe</string>
+    <string name="urban_reminder_set">Reminder set</string>
+    <string name="urban_message_saved">Saved</string>
+    <string name="urban_message_unsaved">Removed from saved</string>
 </resources>

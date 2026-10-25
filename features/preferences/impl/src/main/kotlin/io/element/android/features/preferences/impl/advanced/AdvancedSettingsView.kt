@@ -50,6 +50,7 @@ import io.element.android.compound.tokens.generated.CompoundIcons
 import io.element.android.features.preferences.impl.R
 import io.element.android.libraries.architecture.coverage.ExcludeFromCoverage
 import io.element.android.libraries.designsystem.components.colorpicker.ColorPickerDialog
+import io.element.android.libraries.urbanextras.ui.GlobalBackgroundStyles
 import io.element.android.libraries.designsystem.components.dialogs.ListDialog
 import io.element.android.libraries.designsystem.components.dialogs.TextFieldDialog
 import io.element.android.libraries.designsystem.components.list.ListItemContent
@@ -408,6 +409,7 @@ private fun CollapsibleColoursSection(
                     selectedColorHex = state.chatBackgroundColorHex,
                     onColorSelected = { hex -> state.eventSink(AdvancedSettingsEvents.SetChatBackgroundColor(hex)) },
                 )
+                GlobalBackgroundStyles()
                 ChatBackgroundImagePreference(
                     imagePath = state.chatBackgroundImagePath,
                     onPickImage = { state.eventSink(AdvancedSettingsEvents.PickChatBackgroundImage) },

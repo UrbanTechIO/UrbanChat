@@ -35,6 +35,7 @@ Everything below is in UrbanChat and not in Element X. Features Element X alread
 * **Glass details**: in both glass themes the filter chips (Unreads, People, Rooms, Favorites), the voice message mini player and reply quotes, in the composer and in the chat, share the same translucent look.
 * **Chat background**: a solid colour or your own photo as wallpaper.
 * **Custom message colours** for outgoing and incoming bubbles.
+* **Ready-made background styles** (Aurora, Sunset, Ocean, Forest, Midnight, Rose) in the Colours section of Advanced settings, for every chat at once.
 
 ### Chat list and home screen
 
@@ -42,11 +43,17 @@ Everything below is in UrbanChat and not in Element X. Features Element X alread
 * **Calls tab** with a call log: outgoing, incoming, missed and declined calls and how long answered ones lasted. Tapping an entry opens that chat at the call.
 * **Voice message mini player** under the filter chips, with play/pause, progress and a close button. It matches the glass look when a glass theme is on.
 * **Online status**: a green or grey dot next to people in the chat list and in the chat header, and a switch to hide your own status.
+* **Snooze a chat**: press and hold a chat in the list and choose *Snooze notifications* (1 hour, 8 hours, until tomorrow, 1 week or a date and time you pick). The chat is silent until then and turns its notifications back on by itself.
 
 ### Privacy
 
 * **Locked chats**: lock any chat to hide it from the list. A locked chat opens only after your device unlock (fingerprint, PIN or pattern), and you can reveal the locked list by typing an access code into the search bar. Sharing into a locked chat also asks for the unlock.
 * **Disable link previews** switch.
+
+### Updates
+
+* **Updates inside the app**: UrbanChat checks the GitHub releases when it starts (at most every 6 hours) and shows a popup with the release notes. *Update* downloads the new version with a progress bar and installs it. You can skip a version.
+* **Check for update** button at the top of Settings, which says *Latest version* or shows the same popup.
 
 ### Messages and media
 
@@ -58,19 +65,37 @@ Everything below is in UrbanChat and not in Element X. Features Element X alread
 * **Large videos always send**: a video is re-encoded to fit the server's upload limit instead of failing, whatever its length.
 * **Sharing a video from another app follows your upload settings**, with a quality choice (original, 1080p, 720p, 360p) when optimisation is off and the quality is high.
 * **Original Size** switch: send videos untouched. A video over the server limit is still compressed so it can be sent.
+* **Progress for uploads and downloads**: a ring with the real megabytes sent or received, and a cross to cancel it. Long uploads have more time before they give up, so a big video on a slow connection can finish.
+* **Failed messages**: tap the red mark to *Retry* or *Remove* the message, which also lets the messages queued behind it go out.
+* **Message effects**: confetti, hearts, balloons, fireworks, snow, twinkling stars and falling emoji play when a message contains words such as *congratulations*, *happy birthday*, *love you*, *miss you*, *thank you*, *good night* or *happy new year* (also in Arabic), and for some emoji.
+* **Remind me**: press and hold a message, choose *Remind me* and a time. You get a notification that opens the chat at that message.
+
+### Send later
+
+* Type a message and **press and hold the send button** to pick a date and time with an iPhone-style wheel. The message waits at the bottom of the chat as a faded bubble with a circle that counts down to the send time, and goes out at that moment even if the app is closed (the phone must be on). Press and hold the bubble to cancel it. It never holds up other messages.
+
+### Chat look, disappearing and view-once messages
+
+* **Chat look** (chat details, *UrbanChat*): choose a tint, a ready-made background or your own photo, how see-through the bubbles are, and a notification sound for that chat. It applies only on your phone.
+* **Disappearing messages** (chat details): off, 5 minutes, 1 hour, 24 hours, 7 days, 90 days or your own hours and minutes. Everyone in the chat is told, and UrbanChat on their phones follows the same rule. A clock next to the chat name shows that it is on. Other Matrix apps do not follow the rule.
+* **View once** photos and videos: a *View once* switch next to HD when you send. Both sides see a plain *Photo* bubble. The other person taps it once to open the picture, which closes by itself after 10 seconds, cannot be screenshotted and cannot be opened again.
 
 ### Stickers
 
 * **Sticker tray** in the attach menu: add your own images from the gallery with the **+** tile, tap one to send it as a real Matrix sticker (`m.sticker`), long-press to remove it. The tray lives on your phone only.
 * **Stickers without a bubble**: stickers and caption-less PNG, WebP and GIF images, such as stickers from your keyboard, show on their own with no bubble, white box or blurred backdrop, like WhatsApp.
 * **Tap a sticker to open it full-screen.**
-* Known limits: sticker images are uploaded unencrypted for now, and there are no online sticker packs yet.
+* **Make a sticker from a photo**: open a photo full-screen, press and hold an object, and it lifts out of the picture. Let go and tap *Save as sticker*. The cut-out is done on the phone by Google's on-device model.
+* **Online sticker packs** added by link (a Matrix sticker-picker pack file or an index file). They show as tabs, each with its first sticker as the icon, and you can move or remove them with a long press. Packs are cached on the phone.
+* **Encrypted stickers**: your own stickers are encrypted on your phone before they are uploaded in encrypted chats.
+* There is no built-in list of sticker packs; you add packs by their link.
 
 ### Voice messages
 
 * Hold-to-record starts faster, with smoother animations for the swipe-up lock and for deleting a recording.
 * **Send straight from hands-free recording**, with no separate stop step.
 * Playback **keeps going when you leave the chat**.
+* **Voice to text**: press and hold a voice message and choose *Transcribe*. The text appears under the message. It runs on the phone with Whisper (Base about 77 MB or Small about 250 MB, better for Arabic), downloaded the first time, and you choose the languages you speak. Change it later in Settings, *Voice to text*.
 
 ### Calls
 
@@ -82,6 +107,9 @@ Everything below is in UrbanChat and not in Element X. Features Element X alread
 * The call controls no longer flicker, and the microphone keeps working when the screen turns off.
 * **Screen sharing from your phone**, which Element X doesn't have. One button holds both reactions and screen sharing; tapping it opens a sheet to pick one. The shared picture turns with the phone.
 * **Swap video feeds** in a one-to-one video call by double-tapping the small picture, WhatsApp style.
+* **Ringing indicator**: when you call someone, your screen shows *Ringing* until they answer.
+* **Zoom into a shared screen**: pinch to zoom, drag to move around and double-tap to zoom in or out.
+* **Call back** button on call cards from other people.
 
 ## Screenshots
 
@@ -90,6 +118,10 @@ Personal details are hidden in these screenshots.
 |<img src="./docs/screenshots/home-mini-player.png" width="220" />|<img src="./docs/screenshots/chat-liquid-glass.png" width="220" />|<img src="./docs/screenshots/chat-sticker.png" width="220" />|
 |-|-|-|
 |Liquid Glass header, glass chips and the voice message mini player|Liquid Glass chat with glass bubbles, reply quotes and message bar|Sticker without a bubble|
+
+|<img src="./docs/screenshots/chat-look-sunset.png" width="220" />|<img src="./docs/screenshots/chat-look-sheet.png" width="220" />|<img src="./docs/screenshots/remind-me.png" width="220" />|<img src="./docs/screenshots/disappearing-sheet.png" width="220" />|
+|-|-|-|-|
+|Chat look with a ready-made background and a scheduled message counting down|Chat look settings for one chat|Remind me about a message|Disappearing messages|
 
 |<img src="./docs/screenshots/settings-appearance.png" width="220" />|<img src="./docs/screenshots/settings-colours.png" width="220" />|<img src="./docs/screenshots/attach-menu.png" width="220" />|<img src="./docs/screenshots/sticker-tray.png" width="220" />|
 |-|-|-|-|

@@ -53,6 +53,9 @@ import io.element.android.libraries.matrix.ui.media.contentvalidation.LocalEvent
 import io.element.android.libraries.matrix.ui.media.contentvalidation.NoopContentValidationState
 import io.element.android.libraries.matrix.ui.media.contentvalidation.NoopEventContentValidationCache
 import io.element.android.libraries.matrix.ui.media.contentvalidation.collectOverallState
+import io.element.android.libraries.urbanextras.UrbanExtras
+import io.element.android.libraries.urbanextras.ui.ViewOnceCover
+import io.element.android.libraries.urbanextras.viewonce.ViewOnce
 import io.element.android.libraries.ui.strings.CommonStrings
 import io.element.android.libraries.ui.utils.a11y.isTalkbackActive
 
@@ -75,6 +78,23 @@ fun TimelineItemImageView(
     contentValidationState: ContentValidationState,
     modifier: Modifier = Modifier,
 ) {
+    if (ViewOnce.isViewOnce(content.filename)) {
+        val viewOnceKey = content.mediaSource.safeUrl
+        var viewOnceOpened by remember(viewOnceKey) { mutableStateOf(ViewOnce.get(UrbanExtras.context).isOpened(viewOnceKey)) }
+        ViewOnceCover(
+            opened = viewOnceOpened,
+            isVideo = false,
+            isMine = isMine,
+            onOpen = {
+                ViewOnce.get(UrbanExtras.context).markOpened(viewOnceKey)
+                viewOnceOpened = true
+                onContentClick?.invoke()
+            },
+            onLongClick = onLongClick,
+            modifier = modifier,
+        )
+        return
+    }
     val a11yLabel = stringResource(CommonStrings.common_image)
     val description = content.caption?.let { "$a11yLabel: $it" } ?: a11yLabel
 

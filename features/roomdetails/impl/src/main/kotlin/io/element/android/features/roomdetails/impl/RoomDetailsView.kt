@@ -61,6 +61,7 @@ import io.element.android.libraries.designsystem.components.button.BackButton
 import io.element.android.libraries.designsystem.components.button.MainActionButton
 import io.element.android.libraries.designsystem.components.list.ListItemContent
 import io.element.android.libraries.designsystem.components.preferences.PreferenceCategory
+import io.element.android.libraries.urbanextras.ui.UrbanChatSettingsCategory
 import io.element.android.libraries.designsystem.components.preferences.PreferenceSwitch
 import io.element.android.libraries.designsystem.modifiers.niceClickable
 import io.element.android.libraries.designsystem.preview.ElementPreview
@@ -239,6 +240,10 @@ fun RoomDetailsView(
                     )
                 }
             }
+            UrbanChatSettingsCategory(
+                roomId = state.roomId.value,
+                onSendText = { state.eventSink(RoomDetailsEvent.SendText(it)) },
+            )
             // Room content
             PreferenceCategory {
                 MediaGalleryItem(

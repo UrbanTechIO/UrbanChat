@@ -90,7 +90,6 @@ class AndroidLocalMediaActions(
     }
 
     override suspend fun saveOnDisk(localMedia: LocalMedia): Result<Unit> = withContext(coroutineDispatchers.io) {
-        require(localMedia.uri.scheme == ContentResolver.SCHEME_FILE)
         runCatchingExceptions {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 saveOnDiskUsingMediaStore(localMedia)
@@ -105,12 +104,15 @@ class AndroidLocalMediaActions(
     }
 
     override suspend fun share(localMedia: LocalMedia): Result<Unit> = withContext(coroutineDispatchers.io) {
-        require(localMedia.uri.scheme == ContentResolver.SCHEME_FILE)
         runCatchingExceptions {
             // Make a copy of the shared file in the cache directory, otherwise the original file will be gone once this screen is dismissed
             // and will prevent sharing the media to another room inside the app.
-            val copiedFile = localMedia.uri.toFile()
-                .copyTo(File(context.cacheDir, "temp/media/" + (localMedia.uri.lastPathSegment ?: "shared_file")), true)
+            // Media already saved to the Gallery arrives as a content:// uri; toFile() has already copied it into the cache then.
+            val copiedFile = if (localMedia.uri.scheme == ContentResolver.SCHEME_FILE) {
+                localMedia.toFile().copyTo(File(context.cacheDir, "temp/media/" + (localMedia.uri.lastPathSegment ?: "shared_file")), true)
+            } else {
+                localMedia.toFile()
+            }
             val shareableUri = copiedFile.toShareableUri()
             val shareMediaIntent = Intent(Intent.ACTION_SEND)
                 .setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -143,7 +145,6 @@ class AndroidLocalMediaActions(
     }
 
     override suspend fun open(localMedia: LocalMedia): Result<Unit> = withContext(coroutineDispatchers.io) {
-        require(localMedia.uri.scheme == ContentResolver.SCHEME_FILE)
         runCatchingExceptions {
             when (localMedia.info.mimeType) {
                 MimeTypes.Apk -> {
@@ -175,9 +176,10 @@ class AndroidLocalMediaActions(
     }
 
     private suspend fun openFile(localMedia: LocalMedia) {
+        val shareableUri = withContext(coroutineDispatchers.io) { localMedia.toShareableUri() }
         val openMediaIntent = Intent(Intent.ACTION_VIEW)
             .setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            .setDataAndType(localMedia.toShareableUri(), localMedia.info.mimeType)
+            .setDataAndType(shareableUri, localMedia.info.mimeType)
         withContext(coroutineDispatchers.main) {
             activityContext?.startActivity(openMediaIntent)
         }
@@ -242,9 +244,16 @@ class AndroidLocalMediaActions(
     }
 
     /**
-     * Tries to extract a file from the uri.
+     * Returns the media as a file. A file:// uri is used as is; any other uri (for example the content:// uri of media that was
+     * already saved to the Gallery) is copied into the cache first, so it can be shared through the FileProvider.
      */
     private fun LocalMedia.toFile(): File {
-        return uri.toFile()
+        if (uri.scheme == ContentResolver.SCHEME_FILE) return uri.toFile()
+        val dir = File(context.cacheDir, "temp/media").apply { mkdirs() }
+        val target = File(dir, info.filename.ifBlank { "shared_file" })
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            FileOutputStream(target).use { output -> input.copyTo(output) }
+        } ?: error("Unable to open the media")
+        return target
     }
 }

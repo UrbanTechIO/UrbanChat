@@ -28,6 +28,9 @@ import io.element.android.features.preferences.impl.userstatus.UserStatusView
 import io.element.android.libraries.architecture.coverage.ExcludeFromCoverage
 import io.element.android.libraries.designsystem.components.avatar.AvatarSize
 import io.element.android.libraries.core.update.AppUpdateTrigger
+import io.element.android.libraries.urbanextras.UrbanExtras
+import io.element.android.libraries.urbanextras.transcribe.Transcriber
+import io.element.android.libraries.urbanextras.ui.TranscribeSetupHost
 import io.element.android.libraries.designsystem.components.list.ListItemContent
 import io.element.android.libraries.designsystem.components.preferences.PreferencePage
 import io.element.android.libraries.designsystem.preview.ElementPreviewDark
@@ -71,6 +74,7 @@ fun PreferencesRootView(
     modifier: Modifier = Modifier,
 ) {
     val snackbarHostState = rememberSnackbarHostState(snackbarMessage = state.snackbarMessage)
+    TranscribeSetupHost()
 
     // Include pref from other modules
     PreferencePage(
@@ -269,6 +273,11 @@ private fun ColumnScope.GeneralSection(
     onSignOutClick: () -> Unit,
     onDeactivateClick: () -> Unit,
 ) {
+    ListItem(
+        content = { Text("Voice to text") },
+        leadingContent = ListItemContent.Icon(IconSource.Vector(CompoundIcons.MicOn())),
+        onClick = { Transcriber.get(UrbanExtras.context).openSettings() },
+    )
     ListItem(
         content = { Text("Check for update") },
         leadingContent = ListItemContent.Icon(IconSource.Vector(CompoundIcons.Download())),

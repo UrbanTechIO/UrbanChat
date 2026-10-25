@@ -34,6 +34,7 @@ import io.element.android.libraries.push.api.notifications.NotificationBitmapLoa
 import io.element.android.libraries.push.impl.R
 import io.element.android.libraries.push.impl.notifications.RoomEventGroupInfo
 import io.element.android.libraries.push.impl.notifications.channels.NotificationChannels
+import io.element.android.libraries.urbanextras.look.ChatLooks
 import io.element.android.libraries.push.impl.notifications.debug.annotateForDebug
 import io.element.android.libraries.push.impl.notifications.factories.action.AcceptInvitationActionFactory
 import io.element.android.libraries.push.impl.notifications.factories.action.MarkAsReadActionFactory
@@ -123,6 +124,26 @@ class DefaultNotificationCreator(
     private val acceptInvitationActionFactory: AcceptInvitationActionFactory,
     private val rejectInvitationActionFactory: RejectInvitationActionFactory,
 ) : NotificationCreator {
+    private fun urbanRoomChannel(roomId: String, soundUri: String): String {
+        val channelId = "URBAN_ROOM_${roomId.hashCode()}_${soundUri.hashCode()}"
+        val manager = androidx.core.app.NotificationManagerCompat.from(context)
+        if (manager.getNotificationChannelCompat(channelId) == null) {
+            val channel = androidx.core.app.NotificationChannelCompat.Builder(channelId, androidx.core.app.NotificationManagerCompat.IMPORTANCE_DEFAULT)
+                .setName("Chat sound")
+                .setVibrationEnabled(true)
+                .setSound(
+                    android.net.Uri.parse(soundUri),
+                    android.media.AudioAttributes.Builder()
+                        .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION)
+                        .build(),
+                )
+                .build()
+            manager.createNotificationChannel(channel)
+        }
+        return channelId
+    }
+
     /**
      * Create a notification for a Room.
      */
@@ -149,8 +170,12 @@ class DefaultNotificationCreator(
             )
         }
         val containsMissedCall = events.any { it.type == EventType.RTC_NOTIFICATION }
+        val customSound = ChatLooks.get(context).lookOf(roomInfo.roomId.value).soundUri
         val channelId = if (containsMissedCall) {
             notificationChannels.getChannelForIncomingCall(false)
+        } else if (roomInfo.shouldBing && customSound != null) {
+            // UrbanChat: this chat has its own notification sound, which Android only allows through a channel of its own.
+            urbanRoomChannel(roomInfo.roomId.value, customSound)
         } else {
             notificationChannels.getChannelIdForMessage(
                 sessionId = roomInfo.sessionId,

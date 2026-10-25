@@ -44,6 +44,7 @@ dependencies {
     implementation(projects.libraries.architecture)
     implementation(projects.libraries.audio.api)
     implementation(projects.libraries.core)
+    implementation(projects.libraries.urbanextras)
     implementation(projects.libraries.dateformatter.api)
     implementation(projects.libraries.di)
     implementation(projects.libraries.designsystem)

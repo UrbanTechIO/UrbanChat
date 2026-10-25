@@ -56,7 +56,8 @@ internal fun TimelineItemCallNotifyView(
     isLastOutgoingMessage: Boolean,
     onLongClick: (TimelineItem.Event) -> Unit,
     onReadReceiptsClick: (TimelineItem.Event) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onCallBackClick: ((isAudioCall: Boolean) -> Unit)? = null,
 ) {
     Column(modifier = modifier) {
         Row(
@@ -98,6 +99,12 @@ internal fun TimelineItemCallNotifyView(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            // UrbanChat: a call from someone else can be returned with one tap.
+            if (onCallBackClick != null && !event.isMine) {
+                androidx.compose.material3.TextButton(onClick = { onCallBackClick(content.callIntent == CallIntent.AUDIO) }) {
+                    Text(text = "Call back", color = ElementTheme.colors.textActionAccent)
+                }
+            }
         }
 
         TimelineItemReadReceiptView(

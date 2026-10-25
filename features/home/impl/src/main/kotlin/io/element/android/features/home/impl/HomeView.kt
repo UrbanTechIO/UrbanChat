@@ -84,6 +84,7 @@ import io.element.android.features.home.impl.spaces.HomeSpacesView
 import io.element.android.libraries.androidutils.throttler.FirstThrottler
 import io.element.android.libraries.designsystem.colors.gradientSubtleColors
 import io.element.android.libraries.designsystem.preview.ElementPreview
+import io.element.android.libraries.urbanextras.ui.UrbanRequestHost
 import io.element.android.libraries.designsystem.preview.PreviewsDayNight
 import io.element.android.libraries.designsystem.theme.darken
 import io.element.android.libraries.designsystem.theme.components.FloatingActionButton
@@ -127,6 +128,7 @@ fun HomeView(
         }
     }
     Box(modifier) {
+        UrbanRequestHost()
         if (state.contextMenu is RoomListState.ContextMenu.Shown) {
             RoomListContextMenu(
                 contextMenu = state.contextMenu,

@@ -35,6 +35,7 @@ dependencies {
     implementation(projects.features.poll.api)
     implementation(projects.features.roomcall.api)
     implementation(projects.libraries.androidutils)
+    implementation(projects.libraries.urbanextras)
     implementation(projects.libraries.core)
     implementation(projects.libraries.architecture)
     implementation(projects.libraries.matrix.api)

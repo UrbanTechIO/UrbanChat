@@ -52,6 +52,11 @@ class StickerController(
             .orEmpty()
     }
 
+    /** Re-reads the sticker folder, for stickers saved elsewhere (for example lifted out of a photo). */
+    fun refresh() {
+        _stickers.value = loadStickers()
+    }
+
     /** Copies the picked images into the tray. Returns how many were added. */
     suspend fun add(uris: List<Uri>): Int = withContext(Dispatchers.IO) {
         directory.mkdirs()

@@ -15,6 +15,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -73,6 +75,7 @@ import io.element.android.libraries.designsystem.theme.components.TopAppBar
 import io.element.android.libraries.designsystem.theme.floatingDateBadgeBackground
 import io.element.android.libraries.mediaviewer.api.local.LocalMediaRenderer
 import io.element.android.libraries.textcomposer.TextComposer
+import io.element.android.libraries.urbanextras.ui.ViewOnceChip
 import io.element.android.libraries.textcomposer.model.MessageComposerMode
 import io.element.android.libraries.textcomposer.model.VoiceMessageState
 import io.element.android.libraries.ui.strings.CommonStrings
@@ -383,40 +386,41 @@ private fun AttachmentPreviewContent(
  */
 @Composable
 private fun HdToggleChip(state: MediaOptimizationSelectorState, isVideo: Boolean) {
-    if (state.displayMediaSelectorViews != true) return
-    val isHd = if (isVideo) {
-        if (state.isVideoOriginalQuality == null) return
-        state.isVideoOriginalQuality
-    } else {
-        if (state.isImageOptimizationEnabled == null) return
-        state.isImageOptimizationEnabled == false
-    }
+    val showHd = state.displayMediaSelectorViews == true &&
+        (if (isVideo) state.isVideoOriginalQuality != null else state.isImageOptimizationEnabled != null)
+    val isHd = showHd && if (isVideo) state.isVideoOriginalQuality == true else state.isImageOptimizationEnabled == false
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.End,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier
-                .clip(RoundedCornerShape(20.dp))
-                .background(if (isHd) ElementTheme.colors.bgActionPrimaryRest else ElementTheme.colors.bgSubtleSecondary)
-                .clickable {
-                    if (isVideo) {
-                        // "Original quality" bypasses the whole compression pipeline (no size
-                        // estimation/upload-limit check applies), matching the image HD toggle.
-                        state.eventSink(MediaOptimizationSelectorEvent.SetVideoOriginalQuality(!isHd))
-                    } else {
-                        state.eventSink(MediaOptimizationSelectorEvent.SelectImageOptimization(isHd))
+        // UrbanChat: "View once" sits next to HD.
+        ViewOnceChip()
+        if (showHd) {
+            Spacer(modifier = Modifier.width(8.dp))
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(if (isHd) ElementTheme.colors.bgActionPrimaryRest else ElementTheme.colors.bgSubtleSecondary)
+                    .clickable {
+                        if (isVideo) {
+                            // "Original quality" bypasses the whole compression pipeline (no size
+                            // estimation/upload-limit check applies), matching the image HD toggle.
+                            state.eventSink(MediaOptimizationSelectorEvent.SetVideoOriginalQuality(!isHd))
+                        } else {
+                            state.eventSink(MediaOptimizationSelectorEvent.SelectImageOptimization(isHd))
+                        }
                     }
-                }
-                .padding(horizontal = 14.dp, vertical = 8.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.screen_media_upload_preview_hd_toggle),
-                style = ElementTheme.typography.fontBodySmMedium,
-                color = if (isHd) ElementTheme.colors.textOnSolidPrimary else ElementTheme.colors.textPrimary,
-            )
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.screen_media_upload_preview_hd_toggle),
+                    style = ElementTheme.typography.fontBodySmMedium,
+                    color = if (isHd) ElementTheme.colors.textOnSolidPrimary else ElementTheme.colors.textPrimary,
+                )
+            }
         }
     }
 }

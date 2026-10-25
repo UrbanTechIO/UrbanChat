@@ -52,6 +52,7 @@ import io.element.android.libraries.designsystem.theme.components.Icon
 import io.element.android.libraries.designsystem.theme.components.IconButton
 import io.element.android.libraries.designsystem.theme.components.Text
 import io.element.android.libraries.matrix.ui.media.contentvalidation.ContentValidationValue
+import io.element.android.libraries.urbanextras.ui.TranscriptText
 import io.element.android.libraries.ui.strings.CommonStrings
 import io.element.android.libraries.ui.utils.a11y.isTalkbackActive
 import io.element.android.libraries.voiceplayer.api.VoiceMessageEvent
@@ -81,8 +82,18 @@ fun TimelineItemVoiceView(
             VoiceMessageState.ButtonType.Disabled -> CommonStrings.error_unknown
         }
     )
+    Column(
+        modifier = modifier.onSizeChanged {
+            onContentLayoutChange(
+                ContentAvoidingLayoutData(
+                    contentWidth = it.width,
+                    contentHeight = it.height,
+                )
+            )
+        },
+    ) {
     Row(
-        modifier = modifier
+        modifier = Modifier
             .clearAndSetSemantics {
                 contentDescription = a11y
                 if (state.buttonType == VoiceMessageState.ButtonType.Disabled) {
@@ -94,14 +105,7 @@ fun TimelineItemVoiceView(
                     }
                 }
             }
-            .onSizeChanged {
-                onContentLayoutChange(
-                    ContentAvoidingLayoutData(
-                        contentWidth = it.width,
-                        contentHeight = it.height,
-                    )
-                )
-            },
+            ,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (!isTalkbackActive()) {
@@ -145,6 +149,8 @@ fun TimelineItemVoiceView(
             seekEnabled = !isTalkbackActive(),
             onSeek = { state.eventSink(VoiceMessageEvent.Seek(it)) },
         )
+    }
+    TranscriptText(eventKey = content.eventId?.value)
     }
 }
 

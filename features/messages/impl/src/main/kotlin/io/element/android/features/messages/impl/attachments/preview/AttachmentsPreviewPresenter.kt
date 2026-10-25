@@ -47,6 +47,8 @@ import io.element.android.libraries.mediaupload.api.MediaOptimizationConfig
 import io.element.android.libraries.mediaupload.api.MediaOptimizationConfigProvider
 import io.element.android.libraries.mediaupload.api.MediaSenderFactory
 import io.element.android.libraries.mediaupload.api.MediaUploadInfo
+import io.element.android.libraries.urbanextras.viewonce.ViewOnce
+import io.element.android.libraries.urbanextras.viewonce.ViewOnceDraft
 import io.element.android.libraries.mediaupload.api.allFiles
 import io.element.android.libraries.preferences.api.store.VideoCompressionPreset
 import io.element.android.libraries.textcomposer.model.TextEditorState
@@ -604,12 +606,27 @@ class AttachmentsPreviewPresenter(
         sendActionState.value = SendActionState.Idle
     }
 
+    /** Gives a photo or video the marked file name that makes UrbanChat show it as "view once" on the other side. */
+    private fun markViewOnce(info: MediaUploadInfo): MediaUploadInfo {
+        if (info !is MediaUploadInfo.Image && info !is MediaUploadInfo.Video) return info
+        val renamed = java.io.File(info.file.parentFile, ViewOnce.mark(info.file.name))
+        if (renamed != info.file && !info.file.renameTo(renamed)) return info
+        return when (info) {
+            is MediaUploadInfo.Image -> info.copy(file = renamed)
+            is MediaUploadInfo.Video -> info.copy(file = renamed)
+            else -> info
+        }
+    }
+
     private suspend fun sendMedia(
         mediaUploadInfos: List<MediaUploadInfo>,
         caption: String?,
         sendActionState: MutableState<SendActionState>,
         inReplyToEventId: EventId?,
     ) = runCatchingExceptions {
+        val viewOnce = ViewOnceDraft.enabled.value
+        ViewOnceDraft.enabled.value = false
+        val mediaUploadInfos = if (viewOnce) mediaUploadInfos.map(::markViewOnce) else mediaUploadInfos
         if (mediaUploadInfos.size == 1) {
             sendActionState.value = SendActionState.Sending.Uploading(mediaUploadInfos)
             mediaSender.sendPreProcessedMedia(

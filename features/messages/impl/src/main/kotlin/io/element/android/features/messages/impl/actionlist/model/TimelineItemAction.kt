@@ -36,4 +36,6 @@ enum class TimelineItemAction(
     EndPoll(CommonStrings.action_end_poll, CompoundDrawables.ic_compound_polls_end),
     Pin(CommonStrings.action_pin, CompoundDrawables.ic_compound_pin),
     Unpin(CommonStrings.action_unpin, CompoundDrawables.ic_compound_unpin),
+    RemindMe(CommonStrings.urban_action_remind_me, CompoundDrawables.ic_compound_time),
+    Transcribe(CommonStrings.urban_action_transcribe, CompoundDrawables.ic_compound_text_formatting),
 }

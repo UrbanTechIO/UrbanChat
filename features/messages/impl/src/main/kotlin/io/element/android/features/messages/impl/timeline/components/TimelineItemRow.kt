@@ -122,6 +122,7 @@ internal fun TimelineItemRow(
                                     isLastOutgoingMessage = isLastOutgoingMessage,
                                     onLongClick = onLongClick,
                                     onReadReceiptsClick = onReadReceiptClick,
+                                    onCallBackClick = onJoinCallClick,
                                 )
                         }
                     }

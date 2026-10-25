@@ -48,6 +48,10 @@ import io.element.android.libraries.core.mimetype.MimeTypes
 import io.element.android.libraries.core.mimetype.MimeTypes.isMimeTypeVideo
 import io.element.android.libraries.designsystem.utils.snackbar.SnackbarDispatcher
 import io.element.android.libraries.designsystem.utils.snackbar.SnackbarMessage
+import io.element.android.libraries.di.annotations.ApplicationContext
+import io.element.android.libraries.urbanextras.scheduled.ScheduledMessages
+import io.element.android.libraries.ui.strings.CommonStrings
+import android.content.Context
 import io.element.android.libraries.di.annotations.SessionCoroutineScope
 import io.element.android.libraries.featureflag.api.FeatureFlagService
 import io.element.android.libraries.featureflag.api.FeatureFlags
@@ -119,6 +123,7 @@ class MessageComposerPresenter(
     @Assisted private val timelineController: TimelineController,
     @Assisted private val threadRoot: ThreadId?,
     @SessionCoroutineScope private val sessionCoroutineScope: CoroutineScope,
+    @ApplicationContext private val context: Context,
     private val room: JoinedRoom,
     private val mediaPickerProvider: PickerProvider,
     private val sessionPreferencesStore: SessionPreferencesStore,
@@ -281,6 +286,21 @@ class MessageComposerPresenter(
                         richTextEditorState = richTextEditorState,
                         slashCommandAction = slashCommandAction,
                     )
+                }
+                is MessageComposerEvent.ScheduleMessage -> sessionCoroutineScope.launch {
+                    val message = currentComposerMessage(markdownTextEditorState, richTextEditorState, withMentions = true)
+                    if (message.markdown.isBlank()) return@launch
+                    val replyTo = (messageComposerContext.composerMode as? MessageComposerMode.Reply)?.eventId
+                    ScheduledMessages.get(context).schedule(
+                        sessionId = room.sessionId.value,
+                        roomId = room.roomId.value,
+                        body = message.markdown,
+                        htmlBody = message.html,
+                        replyToEventId = replyTo?.value,
+                        atMillis = event.atMillis,
+                    )
+                    resetComposer(markdownTextEditorState, richTextEditorState, fromEdit = false)
+                    snackbarDispatcher.post(SnackbarMessage(CommonStrings.urban_message_scheduled))
                 }
                 is MessageComposerEvent.SendUri -> {
                     val inReplyToEventId = (messageComposerContext.composerMode as? MessageComposerMode.Reply)?.eventId

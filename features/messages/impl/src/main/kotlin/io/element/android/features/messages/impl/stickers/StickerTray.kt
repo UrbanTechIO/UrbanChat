@@ -90,7 +90,10 @@ fun StickerTray(
     var showAddPack by remember { mutableStateOf(false) }
     var packAddress by remember { mutableStateOf("") }
 
-    LaunchedEffect(Unit) { controller.packStore.refresh() }
+    LaunchedEffect(Unit) {
+        controller.refresh()
+        controller.packStore.refresh()
+    }
 
     // The tabs in the user's order. New sources go at the end; sources that are gone are dropped.
     val packsByKey = packs.associateBy { StickerPackStore.packKey(it) }

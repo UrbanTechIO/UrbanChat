@@ -50,7 +50,12 @@ import io.element.android.libraries.core.coroutine.CoroutineDispatchers
 import io.element.android.libraries.di.annotations.SessionCoroutineScope
 import io.element.android.libraries.featureflag.api.FeatureFlagService
 import io.element.android.libraries.featureflag.api.FeatureFlags
+import io.element.android.features.messages.impl.timeline.model.event.TimelineItemTextContent
 import io.element.android.libraries.matrix.api.core.EventId
+import io.element.android.libraries.urbanextras.UrbanExtras
+import io.element.android.libraries.urbanextras.disappearing.DisappearingCodec
+import io.element.android.libraries.urbanextras.disappearing.DisappearingMessages
+import io.element.android.libraries.urbanextras.ui.MessageEffects
 import io.element.android.libraries.matrix.api.core.UniqueId
 import io.element.android.libraries.matrix.api.core.asEventId
 import io.element.android.libraries.matrix.api.room.JoinedRoom
@@ -124,6 +129,43 @@ class TimelinePresenter(
         )
     )
     private var timelineItems by mutableStateOf<ImmutableList<TimelineItem>>(persistentListOf())
+
+    private val redactedExpired = HashSet<String>()
+    private val urbanOpenedAt = System.currentTimeMillis() - 1_000
+
+    /**
+     * UrbanChat disappearing messages: learn the chat's rule from announcements in the timeline, hide the messages that have expired,
+     * and remove our own expired messages for everyone.
+     */
+    private fun applyDisappearing(items: List<TimelineItem>, scope: CoroutineScope): List<TimelineItem> {
+        val store = DisappearingMessages.get(UrbanExtras.context)
+        val roomId = room.roomId.value
+        items.forEach { item ->
+            if (item is TimelineItem.Event) {
+                val body = (item.content as? TimelineItemTextContent)?.body
+                if (body != null) {
+                    DisappearingCodec.decode(body)?.let { store.applyAnnouncement(roomId, it, item.sentTimeMillis) }
+                    val effectKey = item.eventId?.value
+                    if (effectKey != null && item.sentTimeMillis > urbanOpenedAt) {
+                        MessageEffects.effectFor(effectKey, DisappearingCodec.strip(body))?.let(MessageEffects::play)
+                    }
+                }
+            }
+        }
+        if (store.rule(roomId) == null) return items
+        val now = System.currentTimeMillis()
+        return items.filter { item ->
+            if (item !is TimelineItem.Event) return@filter true
+            val expired = item.sentTimeMillis > 0 && store.isExpired(roomId, item.sentTimeMillis, now)
+            val eventId = item.eventId
+            if (expired && item.isMine && eventId != null && redactedExpired.add(eventId.value)) {
+                scope.launch {
+                    timelineController.invokeOnCurrentTimeline { redactEvent(item.eventOrTransactionId, reason = null) }
+                }
+            }
+            !expired
+        }
+    }
 
     private val focusRequestState: MutableState<FocusRequestState> = mutableStateOf(FocusRequestState.None)
 
@@ -281,8 +323,9 @@ class TimelinePresenter(
         LaunchedEffect(Unit) {
             timelineItemsFactory.timelineItems
                 .onEach { newTimelineItems ->
-                    timelineItemIndexer.process(newTimelineItems)
-                    timelineItems = newTimelineItems.toImmutableList()
+                    val visibleItems = applyDisappearing(newTimelineItems, this)
+                    timelineItemIndexer.process(visibleItems)
+                    timelineItems = visibleItems.toImmutableList()
 
                     analyticsService.run {
                         finishLongRunningTransaction(DisplayFirstTimelineItems)
@@ -314,6 +357,18 @@ class TimelinePresenter(
 
         LaunchedEffect(timelineItems.size) {
             computeNewItemState(timelineItems, prevMostRecentItemId, newEventState)
+        }
+
+        // Disappearing messages: every so often, drop the messages that have expired in the meantime.
+        LaunchedEffect(Unit) {
+            while (true) {
+                delay(20_000)
+                val visible = applyDisappearing(timelineItems, this)
+                if (visible.size != timelineItems.size) {
+                    timelineItemIndexer.process(visible)
+                    timelineItems = visible.toImmutableList()
+                }
+            }
         }
 
         // Chain-play consecutive voice messages: when one finishes, automatically start the next

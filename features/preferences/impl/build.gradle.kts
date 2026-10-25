@@ -50,6 +50,7 @@ dependencies {
     implementation(projects.libraries.androidutils)
     implementation(projects.appconfig)
     implementation(projects.libraries.core)
+    implementation(projects.libraries.urbanextras)
     implementation(projects.libraries.architecture)
     implementation(projects.libraries.cachestore.api)
     implementation(projects.libraries.matrix.api)

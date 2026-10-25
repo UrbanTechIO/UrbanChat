@@ -51,7 +51,10 @@ import io.element.android.features.messages.impl.timeline.model.TimelineItem
 import io.element.android.features.messages.impl.timeline.model.TimelineItemThreadInfo
 import io.element.android.features.messages.impl.timeline.model.event.TimelineItemPollContent
 import io.element.android.features.messages.impl.timeline.model.event.TimelineItemStateContent
+import io.element.android.features.messages.impl.timeline.model.event.TimelineItemImageContent
 import io.element.android.features.messages.impl.timeline.model.event.TimelineItemTextBasedContent
+import io.element.android.features.messages.impl.timeline.model.event.TimelineItemVideoContent
+import io.element.android.features.messages.impl.timeline.model.event.TimelineItemVoiceContent
 import io.element.android.features.messages.impl.timeline.model.event.captionOrNull
 import io.element.android.features.messages.impl.timeline.protection.TimelineProtectionState
 import io.element.android.features.messages.impl.voicemessages.composer.DefaultVoiceMessageComposerPresenter
@@ -93,6 +96,11 @@ import io.element.android.libraries.matrix.ui.model.dmUserStatus
 import io.element.android.libraries.matrix.ui.model.getAvatarData
 import io.element.android.libraries.matrix.ui.room.getDirectRoomMember
 import io.element.android.libraries.textcomposer.model.MessageComposerMode
+import io.element.android.libraries.urbanextras.UrbanExtras
+import io.element.android.libraries.urbanextras.reminder.Reminders
+import io.element.android.libraries.urbanextras.transcribe.Transcriber
+import io.element.android.libraries.urbanextras.ui.UrbanRequest
+import io.element.android.libraries.urbanextras.ui.UrbanRequests
 import io.element.android.libraries.ui.strings.CommonStrings
 import io.element.android.services.analytics.api.AnalyticsService
 import kotlinx.collections.immutable.persistentListOf
@@ -484,6 +492,39 @@ class MessagesPresenter(
             TimelineItemAction.Pin -> handlePinAction(targetEvent)
             TimelineItemAction.Unpin -> handleUnpinAction(targetEvent)
             TimelineItemAction.ViewInTimeline -> Unit
+            TimelineItemAction.RemindMe -> handleRemindMe(targetEvent)
+            TimelineItemAction.Transcribe -> handleTranscribe(targetEvent)
+        }
+    }
+
+    private fun urbanSnippet(event: TimelineItem.Event): String = when (val content = event.content) {
+        is TimelineItemTextBasedContent -> content.plainText
+        is TimelineItemVoiceContent -> "Voice message"
+        is TimelineItemImageContent -> content.caption ?: "Photo"
+        is TimelineItemVideoContent -> content.caption ?: "Video"
+        else -> "Message"
+    }
+
+    private fun handleRemindMe(targetEvent: TimelineItem.Event) {
+        val eventId = targetEvent.eventId ?: return
+        val snippet = urbanSnippet(targetEvent)
+        UrbanRequests.post(
+            UrbanRequest.RemindMe { atMillis ->
+                Reminders.get(UrbanExtras.context).add(room.sessionId.value, room.roomId.value, eventId.value, snippet, atMillis)
+                snackbarDispatcher.post(SnackbarMessage(CommonStrings.urban_reminder_set))
+            }
+        )
+    }
+
+    private suspend fun handleTranscribe(targetEvent: TimelineItem.Event) {
+        val content = targetEvent.content as? TimelineItemVoiceContent ?: return
+        val eventId = targetEvent.eventId ?: return
+        Transcriber.get(UrbanExtras.context).transcribe(eventId.value) {
+            client.matrixMediaLoader.downloadMediaFile(
+                source = content.mediaSource,
+                mimeType = content.mimeType,
+                filename = content.filename,
+            ).map { it.path() }
         }
     }
 

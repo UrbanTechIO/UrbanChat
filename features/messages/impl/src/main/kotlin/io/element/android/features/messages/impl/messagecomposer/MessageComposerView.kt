@@ -13,7 +13,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import io.element.android.libraries.urbanextras.ui.DateTimePickerSheet
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.tooling.preview.PreviewParameter
@@ -36,8 +43,11 @@ internal fun MessageComposerView(
     state: MessageComposerState,
     voiceMessageState: VoiceMessageComposerState,
     modifier: Modifier = Modifier,
+    roomId: String? = null,
 ) {
     val view = LocalView.current
+    var showSendLater by remember { mutableStateOf(false) }
+    val context = LocalContext.current
     fun sendMessage() {
         state.eventSink(MessageComposerEvent.SendMessage)
     }
@@ -95,6 +105,19 @@ internal fun MessageComposerView(
         voiceMessageState.eventSink(VoiceMessageComposerEvent.PlayerEvent(event))
     }
 
+    if (showSendLater) {
+        DateTimePickerSheet(
+            title = "Send later",
+            confirmLabel = "Schedule",
+            onConfirm = { atMillis ->
+                showSendLater = false
+                state.eventSink(MessageComposerEvent.ScheduleMessage(atMillis))
+            },
+            onDismiss = { showSendLater = false },
+        )
+    }
+
+    Column {
     TextComposer(
         modifier = modifier,
         state = state.textEditorState,
@@ -116,7 +139,9 @@ internal fun MessageComposerView(
         onError = ::onError,
         onTyping = ::onTyping,
         onSelectRichContent = ::sendUri,
+        onSendLongClick = { showSendLater = true },
     )
+    }
 
     AsyncActionView(
         async = state.slashCommandAction,

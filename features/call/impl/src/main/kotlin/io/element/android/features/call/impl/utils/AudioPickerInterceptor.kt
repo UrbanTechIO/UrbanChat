@@ -143,7 +143,7 @@ class AudioPickerInterceptor(
                     'button[data-audio-kind]::after{content:"";position:absolute;left:50%;top:50%;width:24px;height:24px;' +
                       'transform:translate(-50%,-50%);background-color:currentColor;pointer-events:none;' +
                       '-webkit-mask:var(--audio-icon) center/contain no-repeat;mask:var(--audio-icon) center/contain no-repeat;}' +
-                    'button[data-audio-kind="earpiece"]{--audio-icon:' + icon(PHONE) + ';}' +
+                    'button[data-audio-kind="earpiece"]{--audio-icon:' + icon(PHONE) + ';background:#eceef2 !important;color:#1b1d22 !important;}' +
                     'button[data-audio-kind="speaker"]{--audio-icon:' + icon(SPEAKER) + ';background:#eceef2 !important;color:#1b1d22 !important;}' +
                     'button[data-audio-kind="headset"]{--audio-icon:' + icon(HEADSET) + ';background:#eceef2 !important;color:#1b1d22 !important;}';
                   document.head.appendChild(style);

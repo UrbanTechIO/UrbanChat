@@ -232,6 +232,7 @@ class CallScreenPresenter(
             userAgent = userAgent,
             isCallActive = isWidgetLoaded,
             answeredAtMillis = answeredAtMillis,
+            isAudioCall = callData.isAudioCall,
             eventSink = ::handleEvent,
         )
     }

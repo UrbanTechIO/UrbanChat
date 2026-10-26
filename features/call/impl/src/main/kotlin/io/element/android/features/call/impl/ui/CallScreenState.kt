@@ -16,5 +16,6 @@ data class CallScreenState(
     val userAgent: String,
     val isCallActive: Boolean,
     val answeredAtMillis: Long?,
+    val isAudioCall: Boolean = true,
     val eventSink: (CallScreenEvent) -> Unit,
 )

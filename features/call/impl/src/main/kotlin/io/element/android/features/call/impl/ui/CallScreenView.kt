@@ -182,6 +182,7 @@ internal fun CallScreenView(
                     webView = webView,
                     coroutineScope = coroutineScope,
                     onInvalidAudioDeviceAdded = { invalidAudioDeviceReason = it },
+                    preferLoudspeaker = !state.isAudioCall,
                 )
                 state.eventSink(CallScreenEvent.SetupMessageChannels(interceptor))
                 val pipController = WebViewPipController(webView)

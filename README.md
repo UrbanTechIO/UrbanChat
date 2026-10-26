@@ -101,7 +101,8 @@ Everything below is in UrbanChat and not in Element X. Features Element X alread
 
 * **Call timer** under the caller's name once the call is answered.
 * **Full-width audio output picker** (Phone, Speaker, Bluetooth, headset) that applies reliably, and an output button that shows the real output.
-* Calls start on the **loudspeaker**, and a **proximity sensor** moves the sound to the earpiece when you hold the phone to your ear and back when you move it away. It never overrides a Bluetooth or wired choice.
+* Voice calls and the ringing start in the **earpiece**; **video calls start on the loudspeaker**. Bluetooth or wired headphones always come first.
+* When you pick the loudspeaker yourself, a **proximity sensor** moves the sound to the earpiece when you hold the phone to your ear and back when you move it away. It never overrides a Bluetooth or wired choice.
 * A speaker choice made while the call is still ringing is kept after it is answered.
 * **Bluetooth audio on Android 11 and older**, which Element X blocks.
 * The call controls no longer flicker, and the microphone keeps working when the screen turns off.

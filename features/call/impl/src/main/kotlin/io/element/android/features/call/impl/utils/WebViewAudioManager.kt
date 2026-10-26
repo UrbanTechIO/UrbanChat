@@ -41,11 +41,11 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.Duration.Companion.seconds
 
-private const val PROXIMITY_DEBOUNCE_MS = 500L
+private const val PROXIMITY_DEBOUNCE_MS = 200L
 
 // See the comment on the call proximity listener: absorbs a reversal shortly after a real switch
 // instead of letting it immediately flip back.
-private const val POST_SWITCH_LOCKOUT_MS = 500L
+private const val POST_SWITCH_LOCKOUT_MS = 400L
 
 /**
  * This class manages the audio devices for a WebView.
@@ -59,6 +59,8 @@ class WebViewAudioManager(
     private val webView: WebView,
     private val coroutineScope: CoroutineScope,
     private val onInvalidAudioDeviceAdded: (InvalidAudioDeviceReason) -> Unit,
+    /** Video calls start on the loudspeaker; voice calls start in the earpiece. A connected headset always comes first. */
+    private val preferLoudspeaker: Boolean = false,
 ) {
     private val json by lazy {
         Json {
@@ -103,11 +105,25 @@ class WebViewAudioManager(
 
     private var reassertJob: Job? = null
 
+    /**
+     * True while the person has explicitly chosen the loudspeaker. Only then does the proximity sensor move the sound to the
+     * earpiece while the phone is held to the ear (and back to the loudspeaker when it is moved away). With the earpiece (the
+     * default), a headset or anything else chosen, the sound stays where it is.
+     */
+    @Volatile
+    private var speakerPickedByUser = false
+
+    private fun noteUserPick(deviceId: String) {
+        val type = listAudioDevices().find { it.id.toString() == deviceId }?.type ?: return
+        speakerPickedByUser = type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
+    }
+
     /** Called when the user picks [deviceId] anywhere (native picker or Element Call's menu). */
     fun onUserPickedDevice(deviceId: String) {
         coroutineScope.launch(Dispatchers.Main) {
             // Element Call's menus also have radio buttons for microphones and cameras, ignore those.
             if (listAudioDevices().any { it.id.toString() == deviceId }) {
+                noteUserPick(deviceId)
                 userChosenDeviceId = deviceId
                 ecRequestedDeviceId = deviceId
             }
@@ -180,6 +196,7 @@ class WebViewAudioManager(
 
     /** Selects a device from the native audio picker, the same way a selection in the web UI does. */
     fun selectDeviceFromNativeUi(deviceId: String) {
+        noteUserPick(deviceId)
         previousSelectedDevice = listAudioDevices().find { it.id.toString() == deviceId }
         userChosenDeviceId = deviceId
         ecRequestedDeviceId = deviceId
@@ -252,13 +269,11 @@ class WebViewAudioManager(
         // Wired audio devices
         add(AudioDeviceInfo.TYPE_WIRED_HEADSET)
         add(AudioDeviceInfo.TYPE_WIRED_HEADPHONES)
-        // The built-in speaker of the device: the expected default when nothing else is connected,
-        // both while ringing/dialling and once answered. The proximity sensor (see
-        // [proximityListener]) is what switches this down to the earpiece once the phone is
-        // actually held to the ear, matching a normal phone call.
-        add(AudioDeviceInfo.TYPE_BUILTIN_SPEAKER)
-        // The built-in earpiece of the device
+        // The built-in earpiece: where a voice call starts when no headset is connected, both while
+        // ringing/dialling and once answered.
         add(AudioDeviceInfo.TYPE_BUILTIN_EARPIECE)
+        // The built-in loudspeaker: only used when the person chooses it (and by default for video calls).
+        add(AudioDeviceInfo.TYPE_BUILTIN_SPEAKER)
     }
 
     private fun rankOf(type: Int): Int = wantedDeviceTypes.indexOf(type).let { if (it == -1) Int.MAX_VALUE else it }
@@ -305,6 +320,7 @@ class WebViewAudioManager(
             val distance = event.values.firstOrNull() ?: return
             val maxRange = proximitySensor?.maximumRange ?: 5f
             val near = distance < maxRange
+            Timber.d("Audio: proximity sensor reports $distance (max $maxRange), near=$near")
             if (near == isNearEar) return
             proximitySwitchJob?.cancel()
             // Same debounce-with-lockout as the voice-message proximity router: cheap sensors have
@@ -331,6 +347,8 @@ class WebViewAudioManager(
     }
 
     private fun applyProximityRouting(near: Boolean) {
+        // The earpiece (default), a headset or any other choice stays put: only an explicit loudspeaker choice follows the ear.
+        if (!speakerPickedByUser) return
         val currentType = listAudioDevices().find { it.id.toString() == ecRequestedDeviceId }?.type
         if (currentType != null && currentType != AudioDeviceInfo.TYPE_BUILTIN_EARPIECE && currentType != AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) {
             // Currently on Bluetooth/wired/USB: proximity never overrides that.
@@ -357,7 +375,7 @@ class WebViewAudioManager(
         isProximityListening = true
         isNearEar = false
         lastProximitySwitchAtMs = 0L
-        sensorManager?.registerListener(proximityListener, sensor, SensorManager.SENSOR_DELAY_NORMAL)
+        sensorManager?.registerListener(proximityListener, sensor, SensorManager.SENSOR_DELAY_UI)
     }
 
     private fun stopProximityRouting() {
@@ -548,7 +566,7 @@ class WebViewAudioManager(
                     val alreadyChosenDevice = (userChosenDeviceId ?: ecRequestedDeviceId)?.let { requestedId ->
                         listAudioDevices().find { it.id.toString() == requestedId }
                     }
-                    val deviceToUse = alreadyChosenDevice ?: listAudioDevices().firstOrNull()
+                    val deviceToUse = alreadyChosenDevice ?: defaultDevice()
                     deviceToUse?.let { device ->
                         Timber.d("Audio: using device at playback start: ${device.type} (kept user's choice: ${alreadyChosenDevice != null})")
                         ecRequestedDeviceId = device.id.toString()
@@ -587,6 +605,14 @@ class WebViewAudioManager(
         webView.evaluateJavascript("controls.onAudioPlaybackStarted = () => { androidNativeBridge.onTrackReady(); };", null)
         Timber.d("Adding callback in controls.onAudioDeviceSelect")
         webView.evaluateJavascript("controls.onAudioDeviceSelect = (id) => { androidNativeBridge.setAudioDevice(id); };", null)
+    }
+
+    /** Where a call starts: a connected headset first, then the earpiece (voice calls) or the loudspeaker (video calls). */
+    private fun defaultDevice(): AudioDeviceInfo? {
+        val devices = listAudioDevices()
+        devices.firstOrNull { !isBuiltIn(it.type) }?.let { return it }
+        val wanted = if (preferLoudspeaker) AudioDeviceInfo.TYPE_BUILTIN_SPEAKER else AudioDeviceInfo.TYPE_BUILTIN_EARPIECE
+        return devices.firstOrNull { it.type == wanted } ?: devices.firstOrNull()
     }
 
     /**
@@ -713,6 +739,10 @@ class WebViewAudioManager(
                 isSpeakerphoneOn = false
                 isBluetoothScoOn = false
             }
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            Timber.d("Audio: route now ${communicationDevice?.let { deviceName(it.type, it.productName.toString()) }} mode=$mode speakerphone=$isSpeakerphoneOn")
         }
 
         coroutineScope.launch {

@@ -77,6 +77,8 @@ import io.element.android.libraries.matrix.ui.messages.reply.map
 import io.element.android.libraries.mediapickers.api.PickerProvider
 import io.element.android.libraries.mediaupload.api.MediaOptimizationConfigProvider
 import io.element.android.libraries.mediaupload.api.MediaSenderFactory
+import io.element.android.libraries.mediaupload.api.MediaUploadInfo
+import io.element.android.libraries.urbanextras.camera.VideoNote
 import io.element.android.libraries.mediaviewer.api.local.LocalMediaFactory
 import io.element.android.libraries.permissions.api.PermissionsEvent
 import io.element.android.libraries.permissions.api.PermissionsPresenter
@@ -316,6 +318,12 @@ class MessageComposerPresenter(
                         inReplyToEventId = inReplyToEventId,
                     )
 
+                    resetComposerModeAfterAttaching()
+                }
+                is MessageComposerEvent.CameraCaptured -> handlePickedMedia(event.uri, if (event.isVideo) MimeTypes.Mp4 else MimeTypes.Jpeg)
+                is MessageComposerEvent.SendVideoNote -> {
+                    val inReplyToEventId = (messageComposerContext.composerMode as? MessageComposerMode.Reply)?.eventId
+                    sessionCoroutineScope.launch { sendVideoNote(event.uri, inReplyToEventId) }
                     resetComposerModeAfterAttaching()
                 }
                 is MessageComposerEvent.SetMode -> {
@@ -730,6 +738,31 @@ class MessageComposerPresenter(
                 snackbarDispatcher.post(snackbarMessage)
             }
         }
+
+    /** Sends a recorded clip as a video whose file name carries the video note tag, so UrbanChat shows it as a circle. */
+    private suspend fun sendVideoNote(uri: Uri, inReplyToEventId: EventId?) = runCatchingExceptions {
+        val config = mediaOptimizationConfigProvider.get().copy(videoCompressionPreset = null)
+        val info = mediaSender.preProcessMedia(uri = uri, mimeType = MimeTypes.Mp4, mediaOptimizationConfig = config).getOrThrow()
+        val marked = if (info is MediaUploadInfo.Video) {
+            val renamed = java.io.File(info.file.parentFile, VideoNote.mark(info.file.name))
+            if (renamed == info.file || info.file.renameTo(renamed)) info.copy(file = renamed) else info
+        } else {
+            info
+        }
+        mediaSender.sendPreProcessedMedia(
+            mediaUploadInfo = marked,
+            caption = null,
+            formattedCaption = null,
+            inReplyToEventId = inReplyToEventId,
+        ).getOrThrow()
+    }.onFailure { cause ->
+        Timber.e(cause, "Failed to send the video note")
+        if (cause is CancellationException) {
+            throw cause
+        } else {
+            snackbarDispatcher.post(SnackbarMessage(sendAttachmentError(cause)))
+        }
+    }
 
     private fun CoroutineScope.updateDraft(
         draft: ComposerDraft?,

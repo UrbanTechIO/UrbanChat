@@ -12,12 +12,14 @@ import android.net.Uri
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.height
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import io.element.android.libraries.urbanextras.ui.DateTimePickerSheet
@@ -32,7 +34,10 @@ import io.element.android.features.messages.api.timeline.voicemessages.composer.
 import io.element.android.libraries.designsystem.components.async.AsyncActionView
 import io.element.android.libraries.designsystem.preview.ElementPreview
 import io.element.android.libraries.designsystem.preview.PreviewsDayNight
+import io.element.android.libraries.textcomposer.CameraButtonCallbacks
 import io.element.android.libraries.textcomposer.TextComposer
+import io.element.android.libraries.urbanextras.camera.UrbanCameraContract
+import io.element.android.libraries.urbanextras.camera.VideoNoteController
 import io.element.android.libraries.textcomposer.model.Suggestion
 import io.element.android.libraries.textcomposer.model.VoiceMessagePlayerEvent
 import io.element.android.libraries.textcomposer.model.VoiceMessageRecorderEvent
@@ -117,6 +122,23 @@ internal fun MessageComposerView(
         )
     }
 
+    val cameraLauncher = rememberLauncherForActivityResult(UrbanCameraContract()) { result ->
+        if (result != null) state.eventSink(MessageComposerEvent.CameraCaptured(result.uri, result.isVideo))
+    }
+    val latestCameraLauncher by rememberUpdatedState(cameraLauncher)
+    val cameraButton = remember {
+        CameraButtonCallbacks(
+            onTap = { latestCameraLauncher.launch(Unit) },
+            onNoteStart = { VideoNoteController.start() },
+            onNoteDrag = { x, y -> VideoNoteController.drag(x, y) },
+            onNoteLock = { VideoNoteController.lock() },
+            onNoteCancel = { VideoNoteController.finish(false) },
+            onNoteReleaseUnlocked = { VideoNoteController.finish(true) },
+            onNoteRelease = {},
+            onPositioned = { VideoNoteController.buttonCenter = it.x to it.y },
+        )
+    }
+
     Column {
     TextComposer(
         modifier = modifier,
@@ -140,6 +162,7 @@ internal fun MessageComposerView(
         onTyping = ::onTyping,
         onSelectRichContent = ::sendUri,
         onSendLongClick = { showSendLater = true },
+        cameraButton = cameraButton,
     )
     }
 

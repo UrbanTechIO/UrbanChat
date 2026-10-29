@@ -87,6 +87,7 @@ import io.element.android.features.messages.impl.timeline.model.bubble.BubbleSta
 import io.element.android.features.messages.impl.timeline.model.event.TimelineItemAttachmentsContent
 import io.element.android.features.messages.impl.timeline.model.event.TimelineItemGalleryContent
 import io.element.android.features.messages.impl.timeline.components.event.isStickerLike
+import io.element.android.libraries.urbanextras.camera.VideoNote
 import io.element.android.features.messages.impl.timeline.model.event.TimelineItemImageContent
 import io.element.android.features.messages.impl.timeline.model.event.TimelineItemLocationContent
 import io.element.android.features.messages.impl.timeline.model.event.TimelineItemPollContent
@@ -539,7 +540,8 @@ private fun TimelineItemEventRowContent(
             borderColor = borderColor,
             transparent = !needsInvalidContentCustomisations && (
                 event.content is TimelineItemStickerContent ||
-                    (event.content as? TimelineItemImageContent)?.isStickerLike() == true
+                    (event.content as? TimelineItemImageContent)?.isStickerLike() == true ||
+                    (event.content as? TimelineItemVideoContent)?.let { it.showCaption.not() && VideoNote.isVideoNote(it.filename) } == true
                 ),
         ) {
             MessageEventBubbleContent(

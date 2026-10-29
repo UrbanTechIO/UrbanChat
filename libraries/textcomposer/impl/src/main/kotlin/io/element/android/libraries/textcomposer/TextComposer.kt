@@ -63,6 +63,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
@@ -131,6 +133,22 @@ import uniffi.wysiwyg_composer.MenuAction
 import kotlin.time.Duration.Companion.seconds
 
 /**
+ * The camera button inside the text field: a tap opens the camera, press and hold records a round video note (drag left to
+ * cancel, up to lock hands-free).
+ */
+class CameraButtonCallbacks(
+    val onTap: () -> Unit,
+    val onNoteStart: () -> Unit,
+    val onNoteDrag: (dragXPx: Float, dragYPx: Float) -> Unit,
+    val onNoteLock: () -> Unit,
+    val onNoteCancel: () -> Unit,
+    val onNoteReleaseUnlocked: () -> Unit,
+    val onNoteRelease: () -> Unit,
+    /** Where the button is on the screen (its centre, in window pixels). */
+    val onPositioned: (androidx.compose.ui.geometry.Offset) -> Unit = {},
+)
+
+/**
  * https://www.figma.com/design/G1xy0HDZKJf5TCRFmKb5d5/Compound-Android-Components?node-id=2012-39036
  */
 @Composable
@@ -156,6 +174,7 @@ fun TextComposer(
     modifier: Modifier = Modifier,
     showTextFormatting: Boolean = false,
     onSendLongClick: (() -> Unit)? = null,
+    cameraButton: CameraButtonCallbacks? = null,
 ) {
     val markdown = when (state) {
         is TextEditorState.Markdown -> state.state.text.value()
@@ -185,11 +204,14 @@ fun TextComposer(
     } else {
         stringResource(id = R.string.rich_text_editor_composer_placeholder)
     }
+    val showCameraButton = cameraButton != null && composerMode !is MessageComposerMode.Attachment &&
+        composerMode !is MessageComposerMode.EditCaption && !composerMode.isEditing &&
+        voiceMessageState is VoiceMessageState.Idle
     val textInput: @Composable () -> Unit = when (state) {
         is TextEditorState.Rich -> {
             val coroutineScope = rememberCoroutineScope()
             val view = LocalView.current
-            remember(state.richTextEditorState, composerMode, onResetComposerMode, onError) {
+            remember(state.richTextEditorState, composerMode, onResetComposerMode, onError, cameraButton, showCameraButton) {
                 @Composable {
                     TextInputBox(
                         modifier = Modifier
@@ -208,6 +230,7 @@ fun TextComposer(
                         composerMode = composerMode,
                         onResetComposerMode = onResetComposerMode,
                         isTextEmpty = state.richTextEditorState.messageHtml.isEmpty(),
+                        cameraButton = cameraButton.takeIf { showCameraButton },
                     ) {
                         RichTextEditor(
                             state = state.richTextEditorState,
@@ -234,6 +257,7 @@ fun TextComposer(
                     composerMode = composerMode,
                     onResetComposerMode = onResetComposerMode,
                     isTextEmpty = state.state.text.value().isEmpty(),
+                    cameraButton = cameraButton.takeIf { showCameraButton },
                 ) {
                     MarkdownTextInput(
                         state = state.state,
@@ -595,8 +619,8 @@ private fun StandardLayout(
                     // To avoid loosing keyboard focus, the IconButton has to be defined here and has to be always enabled.
                     IconButton(
                         modifier = Modifier
-                            .padding(top = 5.dp, bottom = 5.dp, start = 3.dp, end = endPadding)
-                            .size(48.dp),
+                            .padding(top = 9.dp, bottom = 9.dp, start = 2.dp, end = endPadding)
+                            .size(40.dp),
                         onClick = {
                             if (voiceMessageState is VoiceMessageState.Idle) {
                                 onAddAttachment()
@@ -635,7 +659,7 @@ private fun StandardLayout(
             }
             Box(
                 modifier = Modifier
-                    .padding(bottom = 8.dp, top = 8.dp)
+                    .padding(bottom = 10.dp, top = 10.dp)
                     .weight(1f)
                     .graphicsLayer {
                         translationY = -48.dp.toPx() * deleteProgress
@@ -677,8 +701,8 @@ private fun StandardLayout(
             )
             IconButton(
                 modifier = Modifier
-                    .padding(bottom = 5.dp, top = 5.dp, end = 6.dp, start = 6.dp)
-                    .size(48.dp)
+                    .padding(bottom = 9.dp, top = 9.dp, end = 4.dp, start = 2.dp)
+                    .size(40.dp)
                     .clearAndSetSemantics {
                         contentDescription = endButtonContentDescription
                         onClick(null, null)
@@ -858,6 +882,7 @@ private fun TextInputBox(
     onResetComposerMode: () -> Unit,
     isTextEmpty: Boolean,
     modifier: Modifier = Modifier,
+    cameraButton: CameraButtonCallbacks? = null,
     textInput: @Composable () -> Unit,
 ) {
     val isFrostedGlass = LocalIsFrostedGlassEnabled.current
@@ -874,9 +899,10 @@ private fun TextInputBox(
             .clip(roundedCorners)
             .border(0.5.dp, borderColor, roundedCorners)
             .background(color = bgColor)
-            .requiredHeightIn(min = 42.dp)
+            .requiredHeightIn(min = 38.dp)
             .fillMaxSize()
             .then(modifier),
+        verticalArrangement = Arrangement.Center,
     ) {
         if (composerMode is MessageComposerMode.Special) {
             ComposerModeView(
@@ -885,16 +911,33 @@ private fun TextInputBox(
             )
         } else {
             // Top padding for the message composer box
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(2.dp))
         }
 
         Box(
             modifier = Modifier
-                .padding(top = 1.dp, bottom = 4.dp, start = 12.dp, end = 12.dp)
+                .padding(top = 1.dp, bottom = 2.dp, start = 12.dp, end = if (cameraButton != null) 0.dp else 12.dp)
                 .then(Modifier.testTag(TestTags.textEditor)),
             contentAlignment = Alignment.CenterStart,
         ) {
-            textInput()
+            if (cameraButton != null) {
+                // The same layout whether the field is empty or not, so typing never rebuilds the text field (which dropped its focus).
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(modifier = Modifier.weight(1f)) { textInput() }
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = isTextEmpty,
+                        enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInHorizontally { it } +
+                            androidx.compose.animation.expandHorizontally(),
+                        exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.slideOutHorizontally { it } +
+                            androidx.compose.animation.shrinkHorizontally(),
+                    ) {
+                        CameraGestureButton(cameraButton)
+                    }
+                    Spacer(Modifier.width(2.dp))
+                }
+            } else {
+                textInput()
+            }
             if (isTextEmpty && composerMode.showCaptionCompatibilityWarning()) {
                 var showBottomSheet by remember { mutableStateOf(false) }
                 Icon(
@@ -940,6 +983,7 @@ private const val DELETE_ANIMATION_MS = 260
  * after a cancel) so the caller can reset any transient UI state.
  */
 private suspend fun PointerInputScope.detectVoiceMessageRecordGesture(
+    onTap: (() -> Unit)? = null,
     onStart: () -> Unit,
     onDrag: (dragXPx: Float, dragYPx: Float) -> Unit,
     onLock: () -> Unit,
@@ -971,6 +1015,7 @@ private suspend fun PointerInputScope.detectVoiceMessageRecordGesture(
             }
         }
         if (releasedBeforeHoldConfirmed != null) {
+            onTap?.invoke()
             onRelease()
             return@awaitEachGesture
         }
@@ -1003,6 +1048,39 @@ private suspend fun PointerInputScope.detectVoiceMessageRecordGesture(
             change.consume()
         }
         onRelease()
+    }
+}
+
+@Composable
+private fun CameraGestureButton(callbacks: CameraButtonCallbacks) {
+    val latest by rememberUpdatedState(callbacks)
+    val view = LocalView.current
+    Box(
+        modifier = Modifier
+            .size(width = 40.dp, height = 34.dp)
+            .onGloballyPositioned { latest.onPositioned(it.boundsInWindow().center) }
+            .pointerInput(Unit) {
+                detectVoiceMessageRecordGesture(
+                    onTap = { latest.onTap() },
+                    onStart = {
+                        view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                        latest.onNoteStart()
+                    },
+                    onDrag = { x, y -> latest.onNoteDrag(x, y) },
+                    onLock = { latest.onNoteLock() },
+                    onCancel = { latest.onNoteCancel() },
+                    onReleaseUnlocked = { latest.onNoteReleaseUnlocked() },
+                    onRelease = { latest.onNoteRelease() },
+                )
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            modifier = Modifier.size(24.dp),
+            imageVector = CompoundIcons.TakePhoto(),
+            contentDescription = null,
+            tint = ElementTheme.colors.iconSecondary,
+        )
     }
 }
 

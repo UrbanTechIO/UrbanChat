@@ -68,6 +68,7 @@ import io.element.android.libraries.matrix.ui.media.contentvalidation.NoopConten
 import io.element.android.libraries.matrix.ui.media.contentvalidation.collectOverallState
 import io.element.android.libraries.urbanextras.UrbanExtras
 import io.element.android.libraries.urbanextras.ui.ViewOnceCover
+import io.element.android.libraries.urbanextras.camera.VideoNote
 import io.element.android.libraries.urbanextras.viewonce.ViewOnce
 import io.element.android.libraries.ui.strings.CommonStrings
 import io.element.android.libraries.ui.utils.a11y.isTalkbackActive
@@ -100,6 +101,10 @@ fun TimelineItemVideoView(
             onLongClick = onLongClick,
             modifier = modifier,
         )
+        return
+    }
+    if (VideoNote.isVideoNote(content.filename)) {
+        VideoNoteBubble(content = content, onContentClick = onContentClick, onLongClick = onLongClick, modifier = modifier)
         return
     }
     val isTalkbackActive = isTalkbackActive()

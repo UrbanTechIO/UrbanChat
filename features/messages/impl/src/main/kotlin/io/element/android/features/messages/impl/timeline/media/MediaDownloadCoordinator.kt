@@ -99,6 +99,12 @@ interface MediaDownloadCoordinator {
         fileExtension: String,
         isSent: Boolean,
     )
+
+    /**
+     * A small playable copy of [mediaSource] kept in the app cache, for video notes that loop inside the chat. Null if it
+     * cannot be fetched (yet), for instance while our own note is still uploading.
+     */
+    suspend fun cachedVideoFile(mediaSource: MediaSource, mimeType: String, filename: String): File? = null
 }
 
 @ContributesBinding(RoomScope::class)
@@ -178,6 +184,16 @@ class DefaultMediaDownloadCoordinator(
                 startDownload(mediaSource, mimeType, filename, fileExtension, isSent)
             }
         }
+    }
+
+    override suspend fun cachedVideoFile(mediaSource: MediaSource, mimeType: String, filename: String): File? {
+        val target = File(File(cacheDirectory, "videonotes").also { it.mkdirs() }, "${mediaSource.safeUrl.hashCode().toUInt()}.mp4")
+        if (target.exists() && target.length() > 0) return target
+        return runCatchingExceptions {
+            mediaLoader.downloadMediaFile(source = mediaSource, mimeType = mimeType, filename = filename).getOrThrow().use { mediaFile ->
+                mediaFile.toFile().copyTo(target, overwrite = true)
+            }
+        }.onFailure { Timber.d(it, "Video note not available yet") }.getOrNull()
     }
 
     private fun startDownload(

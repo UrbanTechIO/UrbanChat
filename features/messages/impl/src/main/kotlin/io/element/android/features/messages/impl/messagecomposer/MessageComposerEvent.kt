@@ -20,6 +20,12 @@ sealed interface MessageComposerEvent {
     /** Send the text that is in the composer later, at [atMillis] (epoch milliseconds), even if the app is closed by then. */
     data class ScheduleMessage(val atMillis: Long) : MessageComposerEvent
     data class SendUri(val uri: Uri) : MessageComposerEvent
+
+    /** A photo or video taken with the UrbanChat camera; it goes to the attachment preview like any other picked media. */
+    data class CameraCaptured(val uri: Uri, val isVideo: Boolean) : MessageComposerEvent
+
+    /** A finished round video note, sent straight away. */
+    data class SendVideoNote(val uri: Uri) : MessageComposerEvent
     data object CloseSpecialMode : MessageComposerEvent
     data class SetMode(val composerMode: MessageComposerMode) : MessageComposerEvent
     data object AddAttachment : MessageComposerEvent

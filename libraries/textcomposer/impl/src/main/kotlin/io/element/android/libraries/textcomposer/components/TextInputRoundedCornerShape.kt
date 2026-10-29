@@ -20,7 +20,7 @@ internal fun textInputRoundedCornerShape(
     composerMode: MessageComposerMode,
 ): RoundedCornerShape {
     val roundCornerSmall = 20.dp
-    val roundCornerLarge = 21.dp
+    val roundCornerLarge = 24.dp
 
     val roundedCornerSize = if (composerMode is MessageComposerMode.Special) {
         roundCornerSmall

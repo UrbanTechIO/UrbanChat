@@ -90,6 +90,13 @@ Everything below is in UrbanChat and not in Element X. Features Element X alread
 * **Encrypted stickers**: your own stickers are encrypted on your phone before they are uploaded in encrypted chats.
 * There is no built-in list of sticker packs; you add packs by their link.
 
+### Camera and video notes
+
+* **Camera button inside the message field**, next to the microphone. It slides away while you type.
+* **Tap it** to open the UrbanChat camera, with Photo and Video as separate modes, a camera switch and a flash button. The picture or clip goes to the preview screen before it is sent.
+* **Press and hold it** to record a round **video note** (up to 60 seconds): the button grows, a circular camera view appears, slide left to cancel or up to lock the recording hands-free, release to send.
+* A video note shows in the chat as a **circle without a bubble** that loops silently. Tap it to play it with sound, tap again to go back to the silent loop. Other Matrix apps show it as a normal video.
+
 ### Voice messages
 
 * Hold-to-record starts faster, with smoother animations for the swipe-up lock and for deleting a recording.

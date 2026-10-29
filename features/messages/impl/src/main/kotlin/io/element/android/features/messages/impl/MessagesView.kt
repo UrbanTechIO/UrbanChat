@@ -154,6 +154,7 @@ import io.element.android.features.messages.impl.timeline.media.LocalMediaDownlo
 import io.element.android.features.messages.impl.timeline.media.FloatingVideoData
 import io.element.android.features.messages.impl.timeline.media.FloatingVideoPlayerController
 import io.element.android.features.messages.impl.timeline.media.FloatingVideoPlayerOverlay
+import io.element.android.libraries.urbanextras.camera.VideoNoteOverlay
 import io.element.android.features.messages.impl.timeline.media.LocalFloatingVideoPlayerController
 import io.element.android.features.messages.impl.timeline.urlpreview.UrlPreviewContext
 import io.element.android.features.messages.impl.timeline.urlpreview.LocalUrlPreviewContext
@@ -504,6 +505,10 @@ fun MessagesView(
                         )
 
                         MessageEffectsOverlay()
+
+                        VideoNoteOverlay(
+                            onNote = { uri -> state.composerState.eventSink(MessageComposerEvent.SendVideoNote(uri)) },
+                        )
 
                         SuggestionsPickerView(
                             modifier = Modifier

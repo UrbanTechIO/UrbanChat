@@ -9,6 +9,7 @@
 package io.element.android.features.preferences.impl.root
 
 import io.element.android.features.logout.api.direct.DirectLogoutState
+import io.element.android.features.preferences.impl.advanced.AdvancedSettingsState
 import io.element.android.features.preferences.impl.userstatus.UserStatusState
 import io.element.android.libraries.designsystem.utils.snackbar.SnackbarMessage
 import io.element.android.libraries.matrix.api.user.MatrixUser
@@ -31,6 +32,7 @@ data class PreferencesRootState(
     val nbOfBlockedUsers: Int,
     val showLabsItem: Boolean,
     val directLogoutState: DirectLogoutState,
+    val advancedSettings: AdvancedSettingsState,
     val snackbarMessage: SnackbarMessage?,
     val eventSink: (PreferencesRootEvent) -> Unit,
 ) {

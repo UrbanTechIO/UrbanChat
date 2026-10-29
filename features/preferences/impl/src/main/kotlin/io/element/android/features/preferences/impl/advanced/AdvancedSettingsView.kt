@@ -17,6 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -115,208 +116,239 @@ fun AdvancedSettingsView(
             )
         }
     ) {
-        PreferenceDropdown(
-            title = stringResource(id = CommonStrings.common_appearance),
-            selectedOption = state.theme,
-            options = state.availableThemeOptions,
-            onSelectOption = { themeOption ->
-                state.eventSink(AdvancedSettingsEvents.SetTheme(themeOption))
-            }
-        )
-        if (state.theme == ThemeOption.Frosted || state.theme == ThemeOption.LiquidGlass) {
-            FrostedGlassOpacitySliders(
-                headerBarOpacity = state.headerBarOpacity,
-                composerBarOpacity = state.composerBarOpacity,
-                bubbleBarOpacity = state.bubbleBarOpacity,
-                onHeaderBarOpacityChange = { state.eventSink(AdvancedSettingsEvents.SetHeaderBarOpacity(it)) },
-                onComposerBarOpacityChange = { state.eventSink(AdvancedSettingsEvents.SetComposerBarOpacity(it)) },
-                onBubbleBarOpacityChange = { state.eventSink(AdvancedSettingsEvents.SetBubbleBarOpacity(it)) },
-            )
+        AdvancedLookSection(state)
+        AdvancedAccountSection(state)
+        AdvancedChatsSection(state)
+        AdvancedAppSection(state, onOpenAppSettingsClick)
+        AdvancedPrivacySection(state)
+    }
+}
+
+/** Theme, transparency and colours. */
+@Composable
+internal fun ColumnScope.AdvancedLookSection(state: AdvancedSettingsState) {
+    PreferenceDropdown(
+        title = stringResource(id = CommonStrings.common_appearance),
+        selectedOption = state.theme,
+        options = state.availableThemeOptions,
+        onSelectOption = { themeOption ->
+            state.eventSink(AdvancedSettingsEvents.SetTheme(themeOption))
         }
-        ListItem(
-            content = {
-                Text(text = stringResource(id = CommonStrings.action_view_source))
-            },
-            supportingContent = {
-                Text(text = stringResource(id = R.string.screen_advanced_settings_view_source_description))
-            },
-            trailingContent = ListItemContent.Switch(
-                checked = state.isDeveloperModeEnabled,
-            ),
-            onClick = { state.eventSink(AdvancedSettingsEvents.SetDeveloperModeEnabled(!state.isDeveloperModeEnabled)) }
+    )
+    if (state.theme == ThemeOption.Frosted || state.theme == ThemeOption.LiquidGlass) {
+        FrostedGlassOpacitySliders(
+            headerBarOpacity = state.headerBarOpacity,
+            composerBarOpacity = state.composerBarOpacity,
+            bubbleBarOpacity = state.bubbleBarOpacity,
+            onHeaderBarOpacityChange = { state.eventSink(AdvancedSettingsEvents.SetHeaderBarOpacity(it)) },
+            onComposerBarOpacityChange = { state.eventSink(AdvancedSettingsEvents.SetComposerBarOpacity(it)) },
+            onBubbleBarOpacityChange = { state.eventSink(AdvancedSettingsEvents.SetBubbleBarOpacity(it)) },
         )
-        ListItem(
-            content = {
-                Text(text = stringResource(id = R.string.screen_advanced_settings_share_presence))
-            },
-            supportingContent = {
-                Text(text = stringResource(id = R.string.screen_advanced_settings_share_presence_description))
-            },
-            trailingContent = ListItemContent.Switch(
-                checked = state.isSharePresenceEnabled,
-            ),
-            onClick = { state.eventSink(AdvancedSettingsEvents.SetSharePresenceEnabled(!state.isSharePresenceEnabled)) }
-        )
-        ListItem(
-            content = {
-                Text(text = stringResource(id = R.string.screen_advanced_settings_organize_chats))
-            },
-            supportingContent = {
-                Text(text = stringResource(id = R.string.screen_advanced_settings_organize_chats_description))
-            },
-            trailingContent = ListItemContent.Switch(
-                checked = state.isOrganizeChatListsEnabled,
-            ),
-            onClick = { state.eventSink(AdvancedSettingsEvents.SetOrganizeChatListsEnabled(!state.isOrganizeChatListsEnabled)) }
-        )
-        ListItem(
-            content = {
-                Text(text = stringResource(id = R.string.screen_advanced_settings_show_online_status))
-            },
-            supportingContent = {
-                Text(text = stringResource(id = R.string.screen_advanced_settings_show_online_status_description))
-            },
-            trailingContent = ListItemContent.Switch(
-                checked = state.isShowOnlineStatusEnabled,
-            ),
-            onClick = { state.eventSink(AdvancedSettingsEvents.SetShowOnlineStatusEnabled(!state.isShowOnlineStatusEnabled)) }
-        )
-        ListItem(
-            content = {
-                Text(text = stringResource(id = R.string.screen_advanced_settings_original_video_size))
-            },
-            supportingContent = {
-                Text(text = stringResource(id = R.string.screen_advanced_settings_original_video_size_description))
-            },
-            trailingContent = ListItemContent.Switch(
-                checked = state.isKeepOriginalVideoSizeEnabled,
-            ),
-            onClick = { state.eventSink(AdvancedSettingsEvents.SetKeepOriginalVideoSizeEnabled(!state.isKeepOriginalVideoSizeEnabled)) }
-        )
-        val compressImages = state.mediaOptimizationState?.shouldCompressImages
+    }
+    CollapsibleColoursSection(state, initiallyExpanded = true)
+}
 
-        when (state.mediaOptimizationState) {
-            null -> Unit
-            is MediaOptimizationState.AllMedia -> {
-                ListItem(
-                    content = {
-                        Text(text = stringResource(id = R.string.screen_advanced_settings_media_compression_title))
-                    },
-                    supportingContent = {
-                        Text(text = stringResource(id = R.string.screen_advanced_settings_media_compression_description))
-                    },
-                    trailingContent = ListItemContent.Switch(
-                        checked = compressImages ?: false,
-                    ),
-                    onClick = {
-                        val newValue = !(compressImages ?: false)
-                        analyticsService.captureInteraction(
-                            if (newValue) {
-                                Interaction.Name.MobileSettingsOptimizeMediaUploadsEnabled
-                            } else {
-                                Interaction.Name.MobileSettingsOptimizeMediaUploadsDisabled
-                            }
-                        )
-                        state.eventSink(AdvancedSettingsEvents.SetCompressMedia(newValue))
-                    }
-                )
-            }
-            is MediaOptimizationState.Split -> {
-                ListItem(
-                    content = {
-                        Text(text = stringResource(id = R.string.screen_advanced_settings_optimise_image_upload_quality_title))
-                    },
-                    supportingContent = {
-                        Text(text = stringResource(id = R.string.screen_advanced_settings_optimise_image_upload_quality_description))
-                    },
-                    trailingContent = ListItemContent.Switch(
-                        checked = compressImages ?: false,
-                    ),
-                    onClick = {
-                        val newValue = !(compressImages ?: false)
-                        analyticsService.captureInteraction(
-                            if (newValue) {
-                                Interaction.Name.MobileSettingsOptimizeMediaUploadsEnabled
-                            } else {
-                                Interaction.Name.MobileSettingsOptimizeMediaUploadsDisabled
-                            }
-                        )
-                        state.eventSink(AdvancedSettingsEvents.SetCompressMedia(newValue))
-                    }
-                )
+/** Presence and online status. */
+@Composable
+internal fun ColumnScope.AdvancedAccountSection(state: AdvancedSettingsState) {
+    ListItem(
+        content = {
+            Text(text = stringResource(id = R.string.screen_advanced_settings_share_presence))
+        },
+        supportingContent = {
+            Text(text = stringResource(id = R.string.screen_advanced_settings_share_presence_description))
+        },
+        trailingContent = ListItemContent.Switch(
+            checked = state.isSharePresenceEnabled,
+        ),
+        onClick = { state.eventSink(AdvancedSettingsEvents.SetSharePresenceEnabled(!state.isSharePresenceEnabled)) }
+    )
+    ListItem(
+        content = {
+            Text(text = stringResource(id = R.string.screen_advanced_settings_show_online_status))
+        },
+        supportingContent = {
+            Text(text = stringResource(id = R.string.screen_advanced_settings_show_online_status_description))
+        },
+        trailingContent = ListItemContent.Switch(
+            checked = state.isShowOnlineStatusEnabled,
+        ),
+        onClick = { state.eventSink(AdvancedSettingsEvents.SetShowOnlineStatusEnabled(!state.isShowOnlineStatusEnabled)) }
+    )
+}
 
-                var displaySelectorDialog by remember { mutableStateOf(false) }
+/** Chat list, media quality and downloads. */
+@Composable
+internal fun ColumnScope.AdvancedChatsSection(state: AdvancedSettingsState) {
+    val analyticsService = LocalAnalyticsService.current
+    ListItem(
+        content = {
+            Text(text = stringResource(id = R.string.screen_advanced_settings_organize_chats))
+        },
+        supportingContent = {
+            Text(text = stringResource(id = R.string.screen_advanced_settings_organize_chats_description))
+        },
+        trailingContent = ListItemContent.Switch(
+            checked = state.isOrganizeChatListsEnabled,
+        ),
+        onClick = { state.eventSink(AdvancedSettingsEvents.SetOrganizeChatListsEnabled(!state.isOrganizeChatListsEnabled)) }
+    )
+    ListItem(
+        content = {
+            Text(text = stringResource(id = R.string.screen_advanced_settings_original_video_size))
+        },
+        supportingContent = {
+            Text(text = stringResource(id = R.string.screen_advanced_settings_original_video_size_description))
+        },
+        trailingContent = ListItemContent.Switch(
+            checked = state.isKeepOriginalVideoSizeEnabled,
+        ),
+        onClick = { state.eventSink(AdvancedSettingsEvents.SetKeepOriginalVideoSizeEnabled(!state.isKeepOriginalVideoSizeEnabled)) }
+    )
+    val compressImages = state.mediaOptimizationState?.shouldCompressImages
 
-                ListItem(
-                    content = {
-                        Text(text = stringResource(id = R.string.screen_advanced_settings_optimise_video_upload_quality_title))
-                    },
-                    supportingContent = {
-                        val description = stringResource(id = R.string.screen_advanced_settings_optimise_video_upload_quality_description)
-                        val quality = when (state.mediaOptimizationState.videoPreset) {
-                            VideoCompressionPreset.LOW -> stringResource(id = R.string.screen_advanced_settings_optimise_video_upload_quality_low)
-                            VideoCompressionPreset.STANDARD -> stringResource(id = R.string.screen_advanced_settings_optimise_video_upload_quality_standard)
-                            VideoCompressionPreset.HIGH -> stringResource(id = R.string.screen_advanced_settings_optimise_video_upload_quality_high)
-                        }
-                        val descriptionWithValue = remember(quality) {
-                            String.format(description, quality)
-                        }
-                        Text(text = descriptionWithValue)
-                    },
-                    onClick = { displaySelectorDialog = true },
-                )
-
-                if (displaySelectorDialog) {
-                    VideoQualitySelectorDialog(
-                        selectedPreset = state.mediaOptimizationState.videoPreset,
-                        onSubmit = { preset ->
-                            state.eventSink(AdvancedSettingsEvents.SetVideoUploadQuality(preset))
-                            displaySelectorDialog = false
-                        },
-                        onDismiss = { displaySelectorDialog = false },
-                    )
-                }
-            }
-        }
-        ListItem(
-            content = {
-                Text(text = stringResource(id = R.string.screen_advanced_settings_download_to_gallery_title))
-            },
-            supportingContent = {
-                Text(text = stringResource(id = R.string.screen_advanced_settings_download_to_gallery_description))
-            },
-            trailingContent = ListItemContent.Switch(
-                checked = state.downloadToGalleryEnabled,
-            ),
-            onClick = { state.eventSink(AdvancedSettingsEvents.SetDownloadToGalleryEnabled(!state.downloadToGalleryEnabled)) }
-        )
-        ListItem(
-            content = {
-                Text(text = stringResource(id = R.string.screen_advanced_settings_disable_link_previews_title))
-            },
-            supportingContent = {
-                Text(text = stringResource(id = R.string.screen_advanced_settings_disable_link_previews_description))
-            },
-            trailingContent = ListItemContent.Switch(
-                checked = !state.urlPreviewEnabled,
-            ),
-            onClick = { state.eventSink(AdvancedSettingsEvents.SetUrlPreviewEnabled(!state.urlPreviewEnabled)) }
-        )
-
-        ModerationAndSafety(state)
-        if (state.liveLocationMinimumDistanceUpdate != null) {
-            LiveLocationUpdatesSection(
-                value = state.liveLocationMinimumDistanceUpdate,
-                onSaveValue = { value ->
-                    state.eventSink(AdvancedSettingsEvents.SetLiveLocationMinimumDistanceUpdate(value))
+    when (state.mediaOptimizationState) {
+        null -> Unit
+        is MediaOptimizationState.AllMedia -> {
+            ListItem(
+                content = {
+                    Text(text = stringResource(id = R.string.screen_advanced_settings_media_compression_title))
                 },
-                onOpenAppPermissionsClick = onOpenAppSettingsClick,
+                supportingContent = {
+                    Text(text = stringResource(id = R.string.screen_advanced_settings_media_compression_description))
+                },
+                trailingContent = ListItemContent.Switch(
+                    checked = compressImages ?: false,
+                ),
+                onClick = {
+                    val newValue = !(compressImages ?: false)
+                    analyticsService.captureInteraction(
+                        if (newValue) {
+                            Interaction.Name.MobileSettingsOptimizeMediaUploadsEnabled
+                        } else {
+                            Interaction.Name.MobileSettingsOptimizeMediaUploadsDisabled
+                        }
+                    )
+                    state.eventSink(AdvancedSettingsEvents.SetCompressMedia(newValue))
+                }
             )
         }
-        CollapsibleColoursSection(state)
-        LockedChatsAccessCodePreference(
-            accessCode = state.lockedChatsAccessCode,
-            onAccessCodeSet = { code -> state.eventSink(AdvancedSettingsEvents.SetLockedChatsAccessCode(code)) },
+        is MediaOptimizationState.Split -> {
+            ListItem(
+                content = {
+                    Text(text = stringResource(id = R.string.screen_advanced_settings_optimise_image_upload_quality_title))
+                },
+                supportingContent = {
+                    Text(text = stringResource(id = R.string.screen_advanced_settings_optimise_image_upload_quality_description))
+                },
+                trailingContent = ListItemContent.Switch(
+                    checked = compressImages ?: false,
+                ),
+                onClick = {
+                    val newValue = !(compressImages ?: false)
+                    analyticsService.captureInteraction(
+                        if (newValue) {
+                            Interaction.Name.MobileSettingsOptimizeMediaUploadsEnabled
+                        } else {
+                            Interaction.Name.MobileSettingsOptimizeMediaUploadsDisabled
+                        }
+                    )
+                    state.eventSink(AdvancedSettingsEvents.SetCompressMedia(newValue))
+                }
+            )
+
+            var displaySelectorDialog by remember { mutableStateOf(false) }
+
+            ListItem(
+                content = {
+                    Text(text = stringResource(id = R.string.screen_advanced_settings_optimise_video_upload_quality_title))
+                },
+                supportingContent = {
+                    val description = stringResource(id = R.string.screen_advanced_settings_optimise_video_upload_quality_description)
+                    val quality = when (state.mediaOptimizationState.videoPreset) {
+                        VideoCompressionPreset.LOW -> stringResource(id = R.string.screen_advanced_settings_optimise_video_upload_quality_low)
+                        VideoCompressionPreset.STANDARD -> stringResource(id = R.string.screen_advanced_settings_optimise_video_upload_quality_standard)
+                        VideoCompressionPreset.HIGH -> stringResource(id = R.string.screen_advanced_settings_optimise_video_upload_quality_high)
+                    }
+                    val descriptionWithValue = remember(quality) {
+                        String.format(description, quality)
+                    }
+                    Text(text = descriptionWithValue)
+                },
+                onClick = { displaySelectorDialog = true },
+            )
+
+            if (displaySelectorDialog) {
+                VideoQualitySelectorDialog(
+                    selectedPreset = state.mediaOptimizationState.videoPreset,
+                    onSubmit = { preset ->
+                        state.eventSink(AdvancedSettingsEvents.SetVideoUploadQuality(preset))
+                        displaySelectorDialog = false
+                    },
+                    onDismiss = { displaySelectorDialog = false },
+                )
+            }
+        }
+    }
+    ListItem(
+        content = {
+            Text(text = stringResource(id = R.string.screen_advanced_settings_download_to_gallery_title))
+        },
+        supportingContent = {
+            Text(text = stringResource(id = R.string.screen_advanced_settings_download_to_gallery_description))
+        },
+        trailingContent = ListItemContent.Switch(
+            checked = state.downloadToGalleryEnabled,
+        ),
+        onClick = { state.eventSink(AdvancedSettingsEvents.SetDownloadToGalleryEnabled(!state.downloadToGalleryEnabled)) }
+    )
+    ListItem(
+        content = {
+            Text(text = stringResource(id = R.string.screen_advanced_settings_disable_link_previews_title))
+        },
+        supportingContent = {
+            Text(text = stringResource(id = R.string.screen_advanced_settings_disable_link_previews_description))
+        },
+        trailingContent = ListItemContent.Switch(
+            checked = !state.urlPreviewEnabled,
+        ),
+        onClick = { state.eventSink(AdvancedSettingsEvents.SetUrlPreviewEnabled(!state.urlPreviewEnabled)) }
+    )
+
+}
+
+/** Moderation, safety and the locked chats code. */
+@Composable
+internal fun ColumnScope.AdvancedPrivacySection(state: AdvancedSettingsState) {
+    ModerationAndSafety(state)
+    LockedChatsAccessCodePreference(
+        accessCode = state.lockedChatsAccessCode,
+        onAccessCodeSet = { code -> state.eventSink(AdvancedSettingsEvents.SetLockedChatsAccessCode(code)) },
+    )
+}
+
+/** View source and live location. */
+@Composable
+internal fun ColumnScope.AdvancedAppSection(state: AdvancedSettingsState, onOpenAppSettingsClick: () -> Unit) {
+    ListItem(
+        content = {
+            Text(text = stringResource(id = CommonStrings.action_view_source))
+        },
+        supportingContent = {
+            Text(text = stringResource(id = R.string.screen_advanced_settings_view_source_description))
+        },
+        trailingContent = ListItemContent.Switch(
+            checked = state.isDeveloperModeEnabled,
+        ),
+        onClick = { state.eventSink(AdvancedSettingsEvents.SetDeveloperModeEnabled(!state.isDeveloperModeEnabled)) }
+    )
+    if (state.liveLocationMinimumDistanceUpdate != null) {
+        LiveLocationUpdatesSection(
+            value = state.liveLocationMinimumDistanceUpdate,
+            onSaveValue = { value ->
+                state.eventSink(AdvancedSettingsEvents.SetLiveLocationMinimumDistanceUpdate(value))
+            },
+            onOpenAppPermissionsClick = onOpenAppSettingsClick,
         )
     }
 }
@@ -383,8 +415,9 @@ private fun OpacitySlider(
 private fun CollapsibleColoursSection(
     state: AdvancedSettingsState,
     modifier: Modifier = Modifier,
+    initiallyExpanded: Boolean = false,
 ) {
-    var expanded by rememberSaveable { mutableStateOf(false) }
+    var expanded by rememberSaveable { mutableStateOf(initiallyExpanded) }
     Column(modifier = modifier) {
         ListItem(
             content = { Text(stringResource(R.string.screen_advanced_settings_colours_section_title)) },

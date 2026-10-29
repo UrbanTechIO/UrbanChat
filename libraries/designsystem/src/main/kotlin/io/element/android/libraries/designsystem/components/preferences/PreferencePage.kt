@@ -41,6 +41,7 @@ fun PreferencePage(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
     snackbarHost: @Composable () -> Unit = {},
+    stickyHeader: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Scaffold(
@@ -56,13 +57,26 @@ fun PreferencePage(
         },
         snackbarHost = snackbarHost,
         content = { contentPadding ->
-            Column(
-                modifier = Modifier
-                    .verticalScroll(state = rememberScrollState())
-                    .padding(contentPadding + lazyColumnContentPadding)
-                    .consumeWindowInsets(contentPadding + lazyColumnContentPadding)
-            ) {
-                content()
+            if (stickyHeader != null) {
+                Column(
+                    modifier = Modifier
+                        .padding(contentPadding + lazyColumnContentPadding)
+                        .consumeWindowInsets(contentPadding + lazyColumnContentPadding)
+                ) {
+                    stickyHeader()
+                    Column(modifier = Modifier.weight(1f).verticalScroll(state = rememberScrollState())) {
+                        content()
+                    }
+                }
+            } else {
+                Column(
+                    modifier = Modifier
+                        .verticalScroll(state = rememberScrollState())
+                        .padding(contentPadding + lazyColumnContentPadding)
+                        .consumeWindowInsets(contentPadding + lazyColumnContentPadding)
+                ) {
+                    content()
+                }
             }
         }
     )

@@ -9,6 +9,24 @@
 package io.element.android.features.preferences.impl.root
 
 import androidx.compose.foundation.clickable
+import io.element.android.libraries.androidutils.system.openAppSettingsPage
+import io.element.android.features.preferences.impl.advanced.AdvancedPrivacySection
+import io.element.android.features.preferences.impl.advanced.AdvancedLookSection
+import io.element.android.features.preferences.impl.advanced.AdvancedChatsSection
+import io.element.android.features.preferences.impl.advanced.AdvancedAppSection
+import io.element.android.features.preferences.impl.advanced.AdvancedAccountSection
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.draw.clip
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -76,68 +94,119 @@ fun PreferencesRootView(
     val snackbarHostState = rememberSnackbarHostState(snackbarMessage = state.snackbarMessage)
     TranscribeSetupHost()
 
+    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+    val context = LocalContext.current
+
     // Include pref from other modules
     PreferencePage(
         modifier = modifier,
         onBackClick = onBackClick,
         title = stringResource(id = CommonStrings.common_settings),
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        stickyHeader = { SettingsTabStrip(selected = selectedTab, onSelect = { selectedTab = it }) },
     ) {
-        UserPreferences(
-            modifier = Modifier.clickable {
-                onOpenUserProfile(state.myUser)
-            },
-            matrixUser = state.myUser,
-        )
-        if (state.isMultiAccountEnabled) {
-            MultiAccountSection(
-                state = state,
-                onAddAccountClick = onAddAccountClick,
-            )
-        }
-        if (state.userStatusState != null) {
-            UserStatusSection(
-                userStatusState = state.userStatusState,
-                emojiPickerRenderer = emojiPickerRenderer,
-                showTopDivider = !state.isMultiAccountEnabled,
-            )
-        }
-        // 'Account' section
-        ManageAccountSection(
-            state = state,
-            onManageAccountClick = onManageAccountClick,
-            onLinkNewDeviceClick = onLinkNewDeviceClick,
-            onOpenBlockedUsers = onOpenBlockedUsers
-        )
-        // 'Manage my app' section
-        ManageAppSection(
-            state = state,
-            onOpenNotificationSettings = onOpenNotificationSettings,
-            onOpenLockScreenSettings = onOpenLockScreenSettings,
-            onSecureBackupClick = onSecureBackupClick,
-        )
-
-        // General section
-        GeneralSection(
-            state = state,
-            onOpenAbout = onOpenAbout,
-            onOpenAnalytics = onOpenAnalytics,
-            onOpenRageShake = onOpenRageShake,
-            onOpenAdvancedSettings = onOpenAdvancedSettings,
-            onOpenDeveloperSettings = onOpenDeveloperSettings,
-            onOpenLabs = onOpenLabs,
-            onSignOutClick = onSignOutClick,
-            onDeactivateClick = onDeactivateClick,
-        )
-        // Version
-        Footer(
-            version = state.version,
-            onClick = if (!state.showDeveloperSettings) {
-                { state.eventSink(PreferencesRootEvent.OnVersionInfoClick) }
-            } else {
-                null
+        when (selectedTab) {
+            0 -> {
+                UserPreferences(
+                    modifier = Modifier.clickable {
+                        onOpenUserProfile(state.myUser)
+                    },
+                    matrixUser = state.myUser,
+                )
+                if (state.isMultiAccountEnabled) {
+                    MultiAccountSection(
+                        state = state,
+                        onAddAccountClick = onAddAccountClick,
+                    )
+                }
+                if (state.userStatusState != null) {
+                    UserStatusSection(
+                        userStatusState = state.userStatusState,
+                        emojiPickerRenderer = emojiPickerRenderer,
+                        showTopDivider = !state.isMultiAccountEnabled,
+                    )
+                }
+                ManageAccountSection(
+                    state = state,
+                    onManageAccountClick = onManageAccountClick,
+                    onLinkNewDeviceClick = onLinkNewDeviceClick,
+                    onOpenBlockedUsers = onOpenBlockedUsers
+                )
+                AdvancedAccountSection(state.advancedSettings)
+                HorizontalDivider()
+                SignOutSection(
+                    state = state,
+                    onSignOutClick = onSignOutClick,
+                    onDeactivateClick = onDeactivateClick,
+                )
             }
-        )
+            1 -> AdvancedLookSection(state.advancedSettings)
+            2 -> {
+                AdvancedChatsSection(state.advancedSettings)
+                HorizontalDivider()
+                ListItem(
+                    content = { Text("Voice to text") },
+                    leadingContent = ListItemContent.Icon(IconSource.Vector(CompoundIcons.MicOn())),
+                    onClick = { Transcriber.get(UrbanExtras.context).openSettings() },
+                )
+            }
+            3 -> {
+                ManageAppSection(
+                    state = state,
+                    onOpenNotificationSettings = onOpenNotificationSettings,
+                    onOpenLockScreenSettings = onOpenLockScreenSettings,
+                    onSecureBackupClick = onSecureBackupClick,
+                )
+                AdvancedPrivacySection(state.advancedSettings)
+            }
+            else -> {
+                AppSection(
+                    state = state,
+                    onOpenAbout = onOpenAbout,
+                    onOpenAnalytics = onOpenAnalytics,
+                    onOpenRageShake = onOpenRageShake,
+                    onOpenDeveloperSettings = onOpenDeveloperSettings,
+                    onOpenLabs = onOpenLabs,
+                )
+                AdvancedAppSection(state.advancedSettings, onOpenAppSettingsClick = context::openAppSettingsPage)
+                Footer(
+                    version = state.version,
+                    onClick = if (!state.showDeveloperSettings) {
+                        { state.eventSink(PreferencesRootEvent.OnVersionInfoClick) }
+                    } else {
+                        null
+                    }
+                )
+            }
+        }
+    }
+}
+
+private val SETTINGS_TABS = listOf("Account", "Look", "Chats", "Privacy", "App")
+
+/** The row of tabs under the title. It scrolls sideways, so more tabs can be added later. */
+@Composable
+private fun SettingsTabStrip(selected: Int, onSelect: (Int) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        SETTINGS_TABS.forEachIndexed { index, title ->
+            val isSelected = index == selected
+            Text(
+                text = title,
+                style = ElementTheme.typography.fontBodyMdMedium,
+                color = if (isSelected) ElementTheme.colors.textBadgeAccent else ElementTheme.colors.textSecondary,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(if (isSelected) ElementTheme.colors.bgBadgeAccent else ElementTheme.colors.bgSubtleSecondary)
+                    .clickable { onSelect(index) }
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+        }
     }
 }
 
@@ -262,31 +331,18 @@ private fun ColumnScope.ManageAccountSection(
 }
 
 @Composable
-private fun ColumnScope.GeneralSection(
+private fun ColumnScope.AppSection(
     state: PreferencesRootState,
     onOpenAbout: () -> Unit,
     onOpenAnalytics: () -> Unit,
     onOpenRageShake: () -> Unit,
-    onOpenAdvancedSettings: () -> Unit,
     onOpenLabs: () -> Unit,
     onOpenDeveloperSettings: () -> Unit,
-    onSignOutClick: () -> Unit,
-    onDeactivateClick: () -> Unit,
 ) {
-    ListItem(
-        content = { Text("Voice to text") },
-        leadingContent = ListItemContent.Icon(IconSource.Vector(CompoundIcons.MicOn())),
-        onClick = { Transcriber.get(UrbanExtras.context).openSettings() },
-    )
     ListItem(
         content = { Text("Check for update") },
         leadingContent = ListItemContent.Icon(IconSource.Vector(CompoundIcons.Download())),
         onClick = { AppUpdateTrigger.requestCheck() },
-    )
-    ListItem(
-        content = { Text(stringResource(id = CommonStrings.common_advanced_settings)) },
-        leadingContent = ListItemContent.Icon(IconSource.Vector(CompoundIcons.Settings())),
-        onClick = onOpenAdvancedSettings,
     )
     if (state.showLabsItem) {
         ListItem(
@@ -314,7 +370,18 @@ private fun ColumnScope.GeneralSection(
             onClick = onOpenAnalytics,
         )
     }
-    HorizontalDivider()
+    // Put developer settings at the end, so nothing bad happens if the user clicks 8 times to enable the entry
+    if (state.showDeveloperSettings) {
+        DeveloperPreferencesView(onOpenDeveloperSettings)
+    }
+}
+
+@Composable
+private fun ColumnScope.SignOutSection(
+    state: PreferencesRootState,
+    onSignOutClick: () -> Unit,
+    onDeactivateClick: () -> Unit,
+) {
     ListItem(
         content = { Text(stringResource(id = CommonStrings.action_signout)) },
         leadingContent = ListItemContent.Icon(IconSource.Vector(CompoundIcons.Close())),
@@ -328,10 +395,6 @@ private fun ColumnScope.GeneralSection(
             style = ListItemStyle.Destructive,
             onClick = onDeactivateClick,
         )
-    }
-    // Put developer settings at the end, so nothing bad happens if the user clicks 8 times to enable the entry
-    if (state.showDeveloperSettings) {
-        DeveloperPreferencesView(onOpenDeveloperSettings)
     }
 }
 

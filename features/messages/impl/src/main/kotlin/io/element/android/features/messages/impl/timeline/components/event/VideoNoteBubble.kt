@@ -5,7 +5,6 @@
 package io.element.android.features.messages.impl.timeline.components.event
 
 import android.net.Uri
-import android.view.ViewGroup
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -34,9 +33,9 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import coil3.compose.AsyncImage
+import io.element.android.features.messages.impl.R
 import io.element.android.features.messages.impl.timeline.media.LocalMediaDownloadContext
 import io.element.android.features.messages.impl.timeline.model.event.TimelineItemVideoContent
 import io.element.android.libraries.matrix.ui.media.MAX_THUMBNAIL_HEIGHT
@@ -144,11 +143,9 @@ fun VideoNoteBubble(
         if (player != null) {
             AndroidView(
                 modifier = Modifier.size(NOTE_SIZE),
+                // A TextureView (not the default SurfaceView), which can be clipped to a circle and scrolled with the chat.
                 factory = { ctx ->
-                    PlayerView(ctx).apply {
-                        useController = false
-                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                        layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+                    (android.view.LayoutInflater.from(ctx).inflate(R.layout.urban_video_note_player, null) as PlayerView).apply {
                         this.player = player
                     }
                 },

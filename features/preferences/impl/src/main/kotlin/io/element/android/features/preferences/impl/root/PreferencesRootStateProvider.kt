@@ -10,6 +10,7 @@ package io.element.android.features.preferences.impl.root
 
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import io.element.android.features.logout.api.direct.DirectLogoutState
+import io.element.android.features.preferences.impl.advanced.aAdvancedSettingsState
 import io.element.android.features.logout.api.direct.aDirectLogoutState
 import io.element.android.features.preferences.impl.userstatus.UserStatusPickerState
 import io.element.android.features.preferences.impl.userstatus.UserStatusState
@@ -106,6 +107,7 @@ fun aPreferencesRootState(
     showLabsItem = showLabsItem,
     directLogoutState = directLogoutState,
     userStatusState = userStatusState,
+    advancedSettings = aAdvancedSettingsState(),
     snackbarMessage = snackbarMessage,
     eventSink = eventSink,
 )

@@ -50,6 +50,11 @@ Everything below is in UrbanChat and not in Element X. Features Element X alread
 * **Locked chats**: lock any chat to hide it from the list. A locked chat opens only after your device unlock (fingerprint, PIN or pattern), and you can reveal the locked list by typing an access code into the search bar. Sharing into a locked chat also asks for the unlock.
 * **Disable link previews** switch.
 
+### Settings in tabs
+
+* The Settings page is split into **tabs under the title**: *Account*, *Look*, *Chats*, *Privacy* and *App*. The tab bar stays in place while the page scrolls.
+* The old Advanced settings page is gone: its items moved into the tabs (appearance, colours and transparency in *Look*; chat list, media quality and downloads in *Chats*; moderation, safety and the locked chats code in *Privacy*; presence in *Account*; view source and live location in *App*).
+
 ### Updates
 
 * **Updates inside the app**: UrbanChat checks the GitHub releases when it starts (at most every 6 hours) and shows a popup with the release notes. *Update* downloads the new version with a progress bar and installs it. You can skip a version.

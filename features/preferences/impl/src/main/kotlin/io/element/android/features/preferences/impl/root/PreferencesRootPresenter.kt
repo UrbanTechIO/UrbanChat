@@ -21,6 +21,7 @@ import androidx.compose.runtime.setValue
 import dev.zacsweers.metro.Inject
 import io.element.android.features.enterprise.api.SessionEnterpriseService
 import io.element.android.features.logout.api.direct.DirectLogoutState
+import io.element.android.features.preferences.impl.advanced.AdvancedSettingsPresenter
 import io.element.android.features.preferences.impl.userstatus.UserStatusState
 import io.element.android.features.preferences.impl.utils.ShowDeveloperSettingsProvider
 import io.element.android.features.rageshake.api.RageshakeFeatureAvailability
@@ -59,6 +60,7 @@ class PreferencesRootPresenter(
     private val sessionStore: SessionStore,
     private val sessionEnterpriseService: SessionEnterpriseService,
     private val userStatusPresenter: Presenter<UserStatusState>,
+    private val advancedSettingsPresenter: AdvancedSettingsPresenter,
 ) : Presenter<PreferencesRootState> {
     @Composable
     override fun present(): PreferencesRootState {
@@ -120,6 +122,7 @@ class PreferencesRootPresenter(
         val showLabsItem = remember { featureFlagService.getAvailableFeatures(isInLabs = true).isNotEmpty() }
 
         val directLogoutState = directLogoutPresenter.present()
+        val advancedSettings = advancedSettingsPresenter.present()
 
         LaunchedEffect(Unit) {
             initAccountManagementUrl(accountManagementUrl)
@@ -155,6 +158,7 @@ class PreferencesRootPresenter(
             nbOfBlockedUsers = nbOfBlockedUsers,
             showLabsItem = showLabsItem,
             directLogoutState = directLogoutState,
+            advancedSettings = advancedSettings,
             snackbarMessage = snackbarMessage,
             eventSink = ::handleEvent,
         )

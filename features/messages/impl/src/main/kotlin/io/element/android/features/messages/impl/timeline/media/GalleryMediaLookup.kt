@@ -47,11 +47,28 @@ class GalleryMediaLookup(
         fileExtension: String,
         isSent: Boolean,
     ): Uri? = runCatchingExceptions {
+        val filename = mediaSource.safeUrl.deterministicGalleryFilename(fileExtension)
         findExistingGalleryUri(
             destination = mimeType.mediaSaveDestination(isSent),
-            filename = mediaSource.safeUrl.deterministicGalleryFilename(fileExtension),
+            filename = filename,
         )
     }.getOrNull()
+
+    override suspend fun resolveSentUri(
+        filename: String,
+        fileSize: Long?,
+        mimeType: String,
+        fileExtension: String,
+    ): Uri? = runCatchingExceptions {
+        val galleryFilename = sentMediaKey(filename, fileSize).deterministicGalleryFilename(fileExtension)
+        findExistingGalleryUri(mimeType.mediaSaveDestination(isSent = true), galleryFilename)
+    }.getOrNull()
+
+    /**
+     * What a sent media is saved under. Our own event's server address changed between saving and reopening in testing,
+     * so the name and size, which never change, are used instead.
+     */
+    fun sentMediaKey(filename: String, fileSize: Long?): String = "sent:$filename:${fileSize ?: 0}"
 
     fun saveToGallery(sourceFile: File, key: String, fileExtension: String, mimeType: String, isSent: Boolean): Uri {
         val destination = mimeType.mediaSaveDestination(isSent)

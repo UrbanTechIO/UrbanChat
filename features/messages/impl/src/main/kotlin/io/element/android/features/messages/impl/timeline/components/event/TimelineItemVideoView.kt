@@ -121,18 +121,27 @@ fun TimelineItemVideoView(
     // progress overlay, no gating, just the original click-to-open-viewer / stream-from-server
     // path. When it's on, this happens automatically — no button, no tap required.
     //
-    // Only for media received from others: anything *we* sent necessarily came from somewhere on
-    // this device already (gallery, camera, files), so re-downloading our own sent video from the
-    // server and saving a second copy would just create a duplicate in the Gallery.
-    if (downloadToGalleryEnabled && !isMine) {
+    // Received media is downloaded. Media we sent is never downloaded back: the copy kept when sending is saved into
+    // the Sent folder once the upload gives the event its server address, and plays from there.
+    if (downloadToGalleryEnabled) {
         LaunchedEffect(content.mediaSource) {
-            mediaDownloadContext.coordinator.ensureDownloaded(
-                mediaSource = content.mediaSource,
-                mimeType = content.mimeType,
-                filename = content.filename,
-                fileExtension = content.fileExtension,
-                isSent = isMine,
-            )
+            if (isMine) {
+                mediaDownloadContext.coordinator.ensureSentSaved(
+                    mediaSource = content.mediaSource,
+                    mimeType = content.mimeType,
+                    filename = content.filename,
+                    fileExtension = content.fileExtension,
+                    fileSize = content.fileSize,
+                )
+            } else {
+                mediaDownloadContext.coordinator.ensureDownloaded(
+                    mediaSource = content.mediaSource,
+                    mimeType = content.mimeType,
+                    filename = content.filename,
+                    fileExtension = content.fileExtension,
+                    isSent = false,
+                )
+            }
         }
     }
 

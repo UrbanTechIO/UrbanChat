@@ -237,6 +237,14 @@ class MediaViewerDataSource(
                 fileExtension = data.mediaInfo.fileExtension,
                 isSent = data.mediaInfo.senderId == currentUserId,
             )
+        }.getOrNull() ?: runCatchingExceptions {
+            // Our own media: found by name and size, as the server address of our own event is not stable.
+            localGalleryMediaResolver.resolveSentUri(
+                filename = data.mediaInfo.filename,
+                fileSize = data.mediaInfo.fileSize,
+                mimeType = data.mediaInfo.mimeType,
+                fileExtension = data.mediaInfo.fileExtension,
+            )
         }.getOrNull()
         if (localGalleryUri != null) {
             localMediaState.value = AsyncData.Success(

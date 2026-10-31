@@ -27,6 +27,7 @@ import io.element.android.libraries.mediaupload.api.MediaSender
 import io.element.android.libraries.mediaupload.api.MediaSenderFactory
 import io.element.android.libraries.mediaupload.api.MediaSenderRoomFactory
 import io.element.android.libraries.mediaupload.api.MediaUploadInfo
+import io.element.android.libraries.mediaupload.api.SentMediaStash
 import io.element.android.libraries.mediaupload.api.toGalleryItemInfo
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -39,6 +40,7 @@ class DefaultMediaSenderFactory(
     private val preProcessor: MediaPreProcessor,
     private val room: JoinedRoom,
     private val mediaOptimizationConfigProvider: MediaOptimizationConfigProvider,
+    private val sentMediaStash: SentMediaStash,
 ) : MediaSenderFactory {
     override fun create(
         timelineMode: Timeline.Mode,
@@ -48,6 +50,7 @@ class DefaultMediaSenderFactory(
             room = room,
             timelineMode = timelineMode,
             mediaOptimizationConfigProvider = mediaOptimizationConfigProvider,
+            sentMediaStash = sentMediaStash,
         )
     }
 }
@@ -56,6 +59,7 @@ class DefaultMediaSenderFactory(
 class DefaultMediaSenderRoomFactory(
     private val preProcessor: MediaPreProcessor,
     private val mediaOptimizationConfigProvider: MediaOptimizationConfigProvider,
+    private val sentMediaStash: SentMediaStash,
 ) : MediaSenderRoomFactory {
     override fun create(
         room: JoinedRoom,
@@ -65,6 +69,7 @@ class DefaultMediaSenderRoomFactory(
             room = room,
             timelineMode = Timeline.Mode.Live,
             mediaOptimizationConfigProvider = mediaOptimizationConfigProvider,
+            sentMediaStash = sentMediaStash,
         )
     }
 }
@@ -74,6 +79,7 @@ class DefaultMediaSender(
     private val room: JoinedRoom,
     private val timelineMode: Timeline.Mode,
     private val mediaOptimizationConfigProvider: MediaOptimizationConfigProvider,
+    private val sentMediaStash: SentMediaStash? = null,
 ) : MediaSender {
     private val ongoingUploadJobs = ConcurrentHashMap<Job.Key, MediaUploadHandler>()
     val hasOngoingMediaUploads get() = ongoingUploadJobs.isNotEmpty()
@@ -222,6 +228,8 @@ class DefaultMediaSender(
                 )
             }
             is MediaUploadInfo.Video -> {
+                // Our own video plays from this copy once it is in the Sent folder, instead of being downloaded again.
+                sentMediaStash?.stash(uploadInfo.file)
                 sendVideo(
                     file = uploadInfo.file,
                     thumbnailFile = uploadInfo.thumbnailFile,

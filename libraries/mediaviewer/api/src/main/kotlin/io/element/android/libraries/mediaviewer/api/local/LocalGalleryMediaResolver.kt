@@ -31,4 +31,15 @@ fun interface LocalGalleryMediaResolver {
         fileExtension: String,
         isSent: Boolean,
     ): Uri?
+
+    /**
+     * The copy kept for a media we sent ourselves, found by its file name and size. The server address of our own event
+     * can differ between the moment it was saved and later, so this does not depend on it.
+     */
+    suspend fun resolveSentUri(
+        filename: String,
+        fileSize: Long?,
+        mimeType: String,
+        fileExtension: String,
+    ): Uri? = null
 }

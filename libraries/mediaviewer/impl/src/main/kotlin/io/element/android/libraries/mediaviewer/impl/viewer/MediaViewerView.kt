@@ -450,21 +450,6 @@ private fun MediaViewerPage(
                 )
             }
 
-            if (showProgress) {
-                // Real bytes received so far (the ring just spins until the first ones arrive).
-                val progress = MediaDownloadProgress.get(data.mediaSource)
-                val label = progress?.totalBytes?.takeIf { it > 0 }?.let { total ->
-                    val totalMb = total / (1024f * 1024f)
-                    "${(progress.downloadedBytes / (1024f * 1024f)).coerceAtMost(totalMb).roundToInt()}/${totalMb.roundToInt()} MB"
-                }
-                DownloadProgressRing(
-                    fraction = progress?.fraction,
-                    label = label,
-                    size = 72.dp,
-                    modifier = Modifier.align(Alignment.Center),
-                )
-            }
-
             Box(contentAlignment = Alignment.Center) {
                 val zoomableState = rememberZoomableState(
                     zoomSpec = ZoomSpec(maxZoomFactor = 4f, overzoomEffect = OverzoomEffect.NoLimits)
@@ -524,6 +509,22 @@ private fun MediaViewerPage(
                             thumbnailSource = data.thumbnailSource,
                         )
                     }
+                }
+
+                // Drawn after the thumbnail, which would otherwise cover it and make the page look frozen. It shows the real
+                // bytes received so far while downloading, then just spins while the player prepares the downloaded video.
+                val preparingVideo = data.mediaInfo.mimeType.startsWith("video/") && downloadedMedia.isSuccess() && showThumbnail
+                if (showProgress || preparingVideo) {
+                    val progress = if (showProgress) MediaDownloadProgress.get(data.mediaSource) else null
+                    val label = progress?.totalBytes?.takeIf { it > 0 }?.let { total ->
+                        val totalMb = total / (1024f * 1024f)
+                        "${(progress.downloadedBytes / (1024f * 1024f)).coerceAtMost(totalMb).roundToInt()}/${totalMb.roundToInt()} MB"
+                    }
+                    DownloadProgressRing(
+                        fraction = progress?.fraction,
+                        label = label,
+                        size = 72.dp,
+                    )
                 }
 
                 if (showError) {

@@ -20,6 +20,7 @@ import io.element.android.libraries.matrix.api.media.MatrixMediaLoader
 import io.element.android.libraries.matrix.api.media.MediaDownloadProgress
 import io.element.android.libraries.matrix.api.media.MediaSource
 import io.element.android.libraries.matrix.api.media.toFile
+import io.element.android.libraries.mediaupload.api.SentMediaStash
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -101,6 +102,19 @@ interface MediaDownloadCoordinator {
     )
 
     /**
+     * For a media we sent ourselves: once the event has its server address, saves the copy kept at send time into the
+     * Sent folder of the Gallery and moves [stateFor] to [MediaDownloadState.Downloaded], so it plays from the device
+     * instead of being downloaded back. Does nothing when the item is not sent yet or no copy was kept (older items).
+     */
+    fun ensureSentSaved(
+        mediaSource: MediaSource,
+        mimeType: String,
+        filename: String,
+        fileExtension: String,
+        fileSize: Long?,
+    ) = Unit
+
+    /**
      * A small playable copy of [mediaSource] kept in the app cache, for video notes that loop inside the chat. Null if it
      * cannot be fetched (yet), for instance while our own note is still uploading.
      */
@@ -114,6 +128,7 @@ class DefaultMediaDownloadCoordinator(
     private val mediaLoader: MatrixMediaLoader,
     private val galleryMediaLookup: GalleryMediaLookup,
     @SessionCoroutineScope private val sessionCoroutineScope: CoroutineScope,
+    private val sentMediaStash: SentMediaStash,
 ) : MediaDownloadCoordinator {
     // Compose SnapshotStateMap: reads inside a @Composable are automatically observed, same as
     // any other Compose state, without needing a wrapping Flow/StateFlow here.
@@ -182,6 +197,45 @@ class DefaultMediaDownloadCoordinator(
                 states[key] = MediaDownloadState.Downloaded
             } else {
                 startDownload(mediaSource, mimeType, filename, fileExtension, isSent)
+            }
+        }
+    }
+
+    override fun ensureSentSaved(
+        mediaSource: MediaSource,
+        mimeType: String,
+        filename: String,
+        fileExtension: String,
+        fileSize: Long?,
+    ) {
+        val key = mediaSource.safeUrl
+        // Still uploading: the event has no server address yet.
+        if (!key.startsWith("mxc")) return
+        if (!checkedKeys.add(key)) return
+        sessionCoroutineScope.launch {
+            val destination = with(galleryMediaLookup) { mimeType.mediaSaveDestination(isSent = true) }
+            val sentKey = galleryMediaLookup.sentMediaKey(filename, fileSize)
+            val galleryFilename = with(galleryMediaLookup) { sentKey.deterministicGalleryFilename(fileExtension) }
+            val existingUri = runCatchingExceptions {
+                galleryMediaLookup.findExistingGalleryUri(destination, galleryFilename)
+            }.getOrNull()
+            if (existingUri != null) {
+                localUris[key] = existingUri
+                states[key] = MediaDownloadState.Downloaded
+                return@launch
+            }
+            val stashed = sentMediaStash.take(filename, fileSize)
+            if (stashed == null) {
+                Timber.d("No local copy kept for this sent media, it will be downloaded when opened")
+                return@launch
+            }
+            val savedUri = runCatchingExceptions {
+                galleryMediaLookup.saveToGallery(stashed, sentKey, fileExtension, mimeType, isSent = true)
+            }.onFailure { Timber.e(it, "Failed to save sent media to gallery") }.getOrNull()
+            if (savedUri != null) {
+                localUris[key] = savedUri
+                states[key] = MediaDownloadState.Downloaded
+                stashed.delete()
             }
         }
     }

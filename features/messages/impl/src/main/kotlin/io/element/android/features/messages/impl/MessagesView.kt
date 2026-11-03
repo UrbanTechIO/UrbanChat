@@ -88,6 +88,7 @@ import io.element.android.features.messages.impl.pinned.banner.PinnedMessagesBan
 import io.element.android.features.messages.impl.pinned.banner.PinnedMessagesBannerView
 import io.element.android.features.messages.impl.pinned.banner.PinnedMessagesBannerViewDefaults
 import io.element.android.features.messages.impl.stickers.StickerController
+import io.element.android.features.messages.impl.stickers.StickerSendingIndicator
 import io.element.android.features.messages.impl.stickers.StickerTray
 import io.element.android.features.messages.impl.timeline.FOCUS_ON_PINNED_EVENT_DEBOUNCE_DURATION_IN_MILLIS
 import io.element.android.features.messages.impl.timeline.TimelineEvent
@@ -106,7 +107,14 @@ import io.element.android.features.messages.impl.timeline.model.TimelineItem
 import io.element.android.features.messages.impl.timeline.model.TimelineItemGroupPosition
 import io.element.android.features.messages.impl.timeline.model.event.aTimelineItemStateEventContent
 import io.element.android.features.messages.impl.timeline.model.event.aTimelineItemTextContent
+import androidx.activity.compose.BackHandler
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.res.pluralStringResource
+import io.element.android.features.messages.impl.timeline.selection.MessageSelection
 import io.element.android.features.messages.impl.topbars.MessagesViewTopBar
+import io.element.android.features.messages.impl.topbars.SelectionTopBar
+import io.element.android.libraries.ui.strings.CommonPlurals
 import io.element.android.features.messages.impl.topbars.ThreadTopBar
 import io.element.android.features.messages.impl.voicemessages.composer.VoiceMessagePermissionRationaleDialog
 import io.element.android.features.messages.impl.voicemessages.composer.VoiceMessageSendingFailedDialog
@@ -285,6 +293,28 @@ fun MessagesView(
     val urbanLook = ChatLooks.effective(urbanLooks, state.roomId.value)
     val disappearingRules by remember { DisappearingMessages.get(UrbanExtras.context).rules }.collectAsState()
     val hasDisappearing = (disappearingRules[state.roomId.value]?.seconds ?: 0L) > 0L
+    // Several messages ticked for deletion (swipe a message to the left to start).
+    val selectedMessages by MessageSelection.selected.collectAsState()
+    var showDeleteSelected by remember { mutableStateOf(false) }
+    SideEffect { MessageSelection.canRedactOther = state.userEventPermissions.canRedactOther }
+    DisposableEffect(Unit) { onDispose { MessageSelection.clear() } }
+    BackHandler(enabled = selectedMessages.isNotEmpty()) { MessageSelection.clear() }
+    if (showDeleteSelected && selectedMessages.isNotEmpty()) {
+        ConfirmationDialog(
+            title = pluralStringResource(CommonPlurals.urban_delete_selected_title, selectedMessages.size, selectedMessages.size),
+            content = stringResource(CommonStrings.urban_delete_selected_content),
+            submitText = stringResource(CommonStrings.action_delete),
+            destructiveSubmit = true,
+            onSubmitClick = {
+                showDeleteSelected = false
+                selectedMessages.values.forEach { event ->
+                    state.eventSink(MessagesEvent.HandleAction(TimelineItemAction.Redact, event))
+                }
+                MessageSelection.clear()
+            },
+            onDismiss = { showDeleteSelected = false },
+        )
+    }
     val extraBottomContentPadding = if (state.liquidGlassEnabled) {
         with(LocalDensity.current) { expandableState.sheetHeightPx.toDp() }
     } else {
@@ -314,7 +344,14 @@ fun MessagesView(
                     } else {
                         Modifier
                     }
-                    if (state.timelineState.timelineMode is Timeline.Mode.Thread) {
+                    if (selectedMessages.isNotEmpty()) {
+                        SelectionTopBar(
+                            selectedCount = selectedMessages.size,
+                            onCloseClick = { MessageSelection.clear() },
+                            onDeleteClick = { showDeleteSelected = true },
+                            modifier = topBarModifier,
+                        )
+                    } else if (state.timelineState.timelineMode is Timeline.Mode.Thread) {
                         ThreadTopBar(
                             roomName = state.roomName,
                             roomAvatarData = state.roomAvatar,
@@ -833,6 +870,16 @@ private fun MessagesViewContent(
             }
 
             knockRequestsBannerView()
+        }
+
+        // Last, so it draws above the timeline.
+        if (stickerController != null) {
+            StickerSendingIndicator(
+                controller = stickerController,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = extraTopContentPadding + 80.dp),
+            )
         }
     }
 }

@@ -281,11 +281,9 @@ fun StickerTray(
                                 .clip(RoundedCornerShape(12.dp))
                                 .combinedClickable(
                                     onClick = {
-                                        coroutineScope.launch {
-                                            controller.send(file)
-                                                .onSuccess { onDismiss() }
-                                                .onFailure { message = "Could not send the sticker" }
-                                        }
+                                        // The upload goes on in the background, so close the tray at once.
+                                        controller.sendInBackground(file)
+                                        onDismiss()
                                     },
                                     onLongClick = { fileToRemove = file },
                                 ),

@@ -13,9 +13,15 @@ import android.util.Base64
 import android.net.Uri
 import io.element.android.libraries.matrix.api.MatrixClient
 import io.element.android.libraries.matrix.api.room.JoinedRoom
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -33,6 +39,8 @@ import javax.crypto.spec.SecretKeySpec
  *
  * In encrypted rooms the image is encrypted on the phone before it is uploaded, like any attachment.
  */
+private const val UPLOAD_CACHE_MILLIS = 30L * 24 * 60 * 60 * 1000
+
 class StickerController(
     private val context: Context,
     private val client: MatrixClient,
@@ -40,6 +48,20 @@ class StickerController(
 ) {
     /** Online sticker packs added by link; their stickers are public images referenced by their mxc address. */
     val packStore = StickerPackStore(context)
+
+    // Sends outlive the tray: the tray closes as soon as a sticker is tapped, and the upload goes on in the background.
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val _sending = MutableStateFlow(0)
+
+    /** How many stickers are being uploaded and sent right now. */
+    val sending: StateFlow<Int> = _sending
+    private val _failures = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /** Emits once for each sticker that could not be sent. */
+    val failures: SharedFlow<Unit> = _failures
+
+    // What each sticker file was uploaded as, so a sticker that was sent before is sent again without uploading it again.
+    private val uploads = context.getSharedPreferences("sticker_uploads", Context.MODE_PRIVATE)
 
     private val directory = File(context.filesDir, "stickers")
     private val _stickers = MutableStateFlow(loadStickers())
@@ -87,6 +109,30 @@ class StickerController(
         _stickers.value = loadStickers()
     }
 
+    /** Sends [file] without waiting for it: see [sending] and [failures]. */
+    fun sendInBackground(file: File) {
+        _sending.update { it + 1 }
+        scope.launch {
+            try {
+                send(file).onFailure { _failures.tryEmit(Unit) }
+            } finally {
+                _sending.update { it - 1 }
+            }
+        }
+    }
+
+    private fun uploadKey(file: File, encrypted: Boolean) = "${client.sessionId.value}|${file.name}|${file.length()}|${file.lastModified()}|$encrypted"
+
+    private fun cachedUpload(file: File, encrypted: Boolean): JSONObject? = runCatching {
+        val json = JSONObject(uploads.getString(uploadKey(file, encrypted), null) ?: return@runCatching null)
+        json.takeIf { System.currentTimeMillis() - it.getLong("at") < UPLOAD_CACHE_MILLIS }
+    }.getOrNull()
+
+    private fun rememberUpload(file: File, encrypted: Boolean, upload: JSONObject) {
+        upload.put("at", System.currentTimeMillis())
+        uploads.edit().putString(uploadKey(file, encrypted), upload.toString()).apply()
+    }
+
     suspend fun send(file: File): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             val mimeType = when (file.extension.lowercase()) {
@@ -107,7 +153,13 @@ class StickerController(
             val content = JSONObject()
                 .put("body", "Sticker")
                 .put("info", info)
-            if (room.roomInfoFlow.value.isEncrypted == true) {
+            val encrypted = room.roomInfoFlow.value.isEncrypted == true
+            val earlier = cachedUpload(file, encrypted)
+            if (earlier != null) {
+                // Sent before: point the new event at the copy that is already on the server.
+                earlier.optJSONObject("file")?.let { content.put("file", it) }
+                earlier.optString("url").takeIf { it.isNotEmpty() }?.let { content.put("url", it) }
+            } else if (encrypted) {
                 // Encrypted room: encrypt the image on the phone (AES-256-CTR) before uploading, so the server only ever
                 // stores ciphertext, and send the key inside the (already end-to-end encrypted) event.
                 val key = ByteArray(32).also { SecureRandom().nextBytes(it) }
@@ -122,25 +174,26 @@ class StickerController(
                 val hash = MessageDigest.getInstance("SHA-256").digest(encryptedBytes)
                 val mxcUrl = client.uploadMedia("application/octet-stream", encryptedBytes).getOrThrow()
                 val unpadded = Base64.NO_PADDING or Base64.NO_WRAP
-                content.put(
-                    "file",
-                    JSONObject()
-                        .put("url", mxcUrl)
-                        .put(
-                            "key",
-                            JSONObject()
-                                .put("kty", "oct")
-                                .put("key_ops", JSONArray().put("encrypt").put("decrypt"))
-                                .put("alg", "A256CTR")
-                                .put("k", Base64.encodeToString(key, unpadded or Base64.URL_SAFE))
-                                .put("ext", true)
-                        )
-                        .put("iv", Base64.encodeToString(iv, unpadded))
-                        .put("hashes", JSONObject().put("sha256", Base64.encodeToString(hash, unpadded)))
-                        .put("v", "v2")
-                )
+                val fileInfo = JSONObject()
+                    .put("url", mxcUrl)
+                    .put(
+                        "key",
+                        JSONObject()
+                            .put("kty", "oct")
+                            .put("key_ops", JSONArray().put("encrypt").put("decrypt"))
+                            .put("alg", "A256CTR")
+                            .put("k", Base64.encodeToString(key, unpadded or Base64.URL_SAFE))
+                            .put("ext", true)
+                    )
+                    .put("iv", Base64.encodeToString(iv, unpadded))
+                    .put("hashes", JSONObject().put("sha256", Base64.encodeToString(hash, unpadded)))
+                    .put("v", "v2")
+                content.put("file", fileInfo)
+                rememberUpload(file, encrypted = true, JSONObject().put("file", fileInfo))
             } else {
-                content.put("url", client.uploadMedia(mimeType, bytes).getOrThrow())
+                val mxcUrl = client.uploadMedia(mimeType, bytes).getOrThrow()
+                content.put("url", mxcUrl)
+                rememberUpload(file, encrypted = false, JSONObject().put("url", mxcUrl))
             }
             room.sendRaw("m.sticker", content.toString()).getOrThrow()
         }

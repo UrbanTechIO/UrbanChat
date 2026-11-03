@@ -34,6 +34,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.remember
@@ -112,6 +113,7 @@ import io.element.android.libraries.designsystem.preview.ElementPreview
 import io.element.android.libraries.designsystem.preview.PreviewWithExtraLargeHeight
 import io.element.android.libraries.designsystem.preview.PreviewsDayNight
 import io.element.android.libraries.designsystem.preview.USER_NAME_ALICE
+import io.element.android.features.messages.impl.timeline.selection.MessageSelection
 import io.element.android.libraries.designsystem.swipe.SwipeableActionsState
 import io.element.android.libraries.designsystem.swipe.rememberSwipeableActionsState
 import io.element.android.libraries.designsystem.text.toPx
@@ -241,15 +243,22 @@ fun TimelineItemEventRow(
             Spacer(modifier = Modifier.height(2.dp))
         }
         val canReply = timelineRoomInfo.userHasPermissionToSendMessage && event.canBeRepliedTo
-        if (canReply) {
-            val state: SwipeableActionsState = rememberSwipeableActionsState()
+        val selecting = MessageSelection.selected.collectAsState().value.isNotEmpty()
+        val canSelect = !selecting && MessageSelection.isSelectable(event)
+        if (canReply || canSelect) {
+            val state: SwipeableActionsState = rememberSwipeableActionsState(allowLeft = canSelect)
             val offset = state.offset.floatValue
             val swipeThresholdPx = 40.dp.toPx()
             val thresholdCrossed = abs(offset) > swipeThresholdPx
             SwipeSensitivity(3f) {
                 Box(Modifier.fillMaxWidth()) {
                     Row(modifier = Modifier.matchParentSize()) {
-                        ReplySwipeIndicator({ offset / 120 })
+                        if (canReply) {
+                            ReplySwipeIndicator({ offset / 120 })
+                        }
+                        if (canSelect) {
+                            SelectSwipeIndicator({ -offset / 120 })
+                        }
                     }
                     TimelineItemEventRowContent(
                         event = event,
@@ -272,7 +281,11 @@ fun TimelineItemEventRow(
                                 onDragStopped = {
                                     coroutineScope.launch {
                                         if (thresholdCrossed) {
-                                            onSwipeToReply()
+                                            if (offset > 0f) {
+                                                if (canReply) onSwipeToReply()
+                                            } else if (canSelect) {
+                                                MessageSelection.toggle(event)
+                                            }
                                         }
                                         state.resetOffset()
                                     }

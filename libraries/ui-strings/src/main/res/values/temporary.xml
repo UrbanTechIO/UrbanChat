@@ -10,6 +10,12 @@
     <string name="a11y_state_collapsed">"Collapsed"</string>
     <string name="a11y_active">Active</string>
     <string name="a11y_inactive">Inactive</string>
+    <string name="urban_action_select">Select</string>
+    <plurals name="urban_delete_selected_title">
+        <item quantity="one">Delete %1$d message?</item>
+        <item quantity="other">Delete %1$d messages?</item>
+    </plurals>
+    <string name="urban_delete_selected_content">This removes the selected messages for everyone in the chat.</string>
     <string name="urban_message_scheduled">Message scheduled</string>
     <string name="urban_action_remind_me">Remind me</string>
     <string name="urban_action_save">Save message</string>

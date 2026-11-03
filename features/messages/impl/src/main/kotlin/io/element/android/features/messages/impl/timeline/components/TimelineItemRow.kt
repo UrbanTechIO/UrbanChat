@@ -8,10 +8,20 @@
 
 package io.element.android.features.messages.impl.timeline.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import io.element.android.features.messages.impl.timeline.selection.MessageSelection
+import io.element.android.libraries.designsystem.theme.components.Checkbox
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.isTraversalGroup
@@ -80,7 +90,11 @@ internal fun TimelineItemRow(
         },
 ) {
     val isFocused = timelineItem.isEvent(focusedEventId)
+    val selection by MessageSelection.selected.collectAsState()
+    val selecting = selection.isNotEmpty()
     Box(modifier = modifier) {
+      // While messages are ticked the rows make room for a check box, and the tap overlay below takes over every tap.
+      Box(modifier = Modifier.padding(start = if (selecting) 44.dp else 0.dp)) {
         when (timelineItem) {
             is TimelineItem.Virtual -> {
                 TimelineItemVirtualRow(
@@ -207,6 +221,35 @@ internal fun TimelineItemRow(
                 )
             }
         }
+      }
+      if (selecting && timelineItem is TimelineItem.Event && MessageSelection.isSelectable(timelineItem)) {
+          val checked = selection.containsKey(timelineItem.id)
+          Box(
+              modifier = Modifier
+                  .matchParentSize()
+                  .clickable(
+                      interactionSource = remember { MutableInteractionSource() },
+                      indication = null,
+                  ) { MessageSelection.toggle(timelineItem) },
+          )
+          Checkbox(
+              checked = checked,
+              onCheckedChange = null,
+              modifier = Modifier
+                  .align(Alignment.CenterStart)
+                  .padding(start = 8.dp),
+          )
+      } else if (selecting) {
+          // Not selectable (for example someone else's message): swallow taps so they don't open anything.
+          Box(
+              modifier = Modifier
+                  .matchParentSize()
+                  .clickable(
+                      interactionSource = remember { MutableInteractionSource() },
+                      indication = null,
+                  ) {},
+          )
+      }
     }
 }
 

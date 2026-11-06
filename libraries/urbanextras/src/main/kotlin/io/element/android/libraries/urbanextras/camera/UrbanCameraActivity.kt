@@ -18,6 +18,8 @@ import android.graphics.Matrix
 import android.graphics.Paint
 import android.media.ExifInterface
 import android.os.Bundle
+import android.util.Rational
+import android.view.Surface
 import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -31,6 +33,8 @@ import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
+import androidx.camera.core.UseCaseGroup
+import androidx.camera.core.ViewPort
 import androidx.camera.core.ZoomState
 import androidx.camera.video.FallbackStrategy
 import androidx.camera.video.FileOutputOptions
@@ -234,18 +238,28 @@ private fun CameraScreen(onClose: () -> Unit, onResult: (File, Boolean) -> Unit)
             val provider = context.awaitCameraProvider()
             val preview = Preview.Builder().build().also { it.surfaceProvider = previewView.surfaceProvider }
             val selector = if (front) CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA
+            // The photo and the video are cut to exactly the area the preview shows (it fills the screen and crops the sides), so
+            // what is captured is what was seen, at every zoom.
+            val viewPort = ViewPort.Builder(
+                Rational(context.resources.displayMetrics.widthPixels, context.resources.displayMetrics.heightPixels),
+                previewView.display?.rotation ?: Surface.ROTATION_0,
+            ).setScaleType(ViewPort.FILL_CENTER).build()
+            fun sharedView(vararg useCases: androidx.camera.core.UseCase) = UseCaseGroup.Builder()
+                .setViewPort(viewPort)
+                .apply { useCases.forEach { addUseCase(it) } }
+                .build()
             provider.unbindAll()
             if (videoMode) {
                 val recorder = Recorder.Builder()
                     .setQualitySelector(QualitySelector.from(Quality.FHD, FallbackStrategy.lowerQualityOrHigherThan(Quality.HD)))
                     .build()
                 val capture = VideoCapture.withOutput(recorder)
-                camera = provider.bindToLifecycle(owner, selector, preview, capture)
+                camera = provider.bindToLifecycle(owner, selector, sharedView(preview, capture))
                 videoCapture = capture
                 imageCapture = null
             } else {
                 val capture = ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY).build()
-                camera = provider.bindToLifecycle(owner, selector, preview, capture)
+                camera = provider.bindToLifecycle(owner, selector, sharedView(preview, capture))
                 imageCapture = capture
                 videoCapture = null
             }

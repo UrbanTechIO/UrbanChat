@@ -24,6 +24,7 @@ import io.element.android.libraries.di.RoomScope
 import io.element.android.libraries.di.annotations.ApplicationContext
 import io.element.android.libraries.matrix.api.media.MediaSource
 import io.element.android.libraries.mediaviewer.api.local.LocalGalleryMediaResolver
+import io.element.android.libraries.mediaupload.api.SentMediaStash
 import java.io.File
 import java.io.FileOutputStream
 
@@ -40,6 +41,7 @@ internal const val APP_MEDIA_FOLDER_NAME = "UrbanChat"
 class GalleryMediaLookup(
     @ApplicationContext private val context: Context,
     private val buildMeta: BuildMeta,
+    private val sentMediaStash: SentMediaStash,
 ) : LocalGalleryMediaResolver {
     override suspend fun resolveLocalUri(
         mediaSource: MediaSource,
@@ -61,7 +63,10 @@ class GalleryMediaLookup(
         fileExtension: String,
     ): Uri? = runCatchingExceptions {
         val galleryFilename = sentMediaKey(filename, fileSize).deterministicGalleryFilename(fileExtension)
+        // Not in the Sent folder (for example an image shared from another app, which already has its own copy in the
+        // Gallery): use the copy kept from sending, if it is still there.
         findExistingGalleryUri(mimeType.mediaSaveDestination(isSent = true), galleryFilename)
+            ?: sentMediaStash.take(filename, fileSize)?.let { fileProviderUriFor(it) }
     }.getOrNull()
 
     /**

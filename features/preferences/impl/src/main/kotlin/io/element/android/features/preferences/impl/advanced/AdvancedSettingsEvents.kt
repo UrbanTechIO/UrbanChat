@@ -15,6 +15,8 @@ sealed interface AdvancedSettingsEvents {
     data class SetDeveloperModeEnabled(val enabled: Boolean) : AdvancedSettingsEvents
     data class SetSharePresenceEnabled(val enabled: Boolean) : AdvancedSettingsEvents
     data class SetShowOnlineStatusEnabled(val enabled: Boolean) : AdvancedSettingsEvents
+    data class SetSendReadReceiptsEnabled(val enabled: Boolean) : AdvancedSettingsEvents
+    data class SetRenderReadReceiptsEnabled(val enabled: Boolean) : AdvancedSettingsEvents
     data class SetOrganizeChatListsEnabled(val enabled: Boolean) : AdvancedSettingsEvents
     data class SetKeepOriginalVideoSizeEnabled(val enabled: Boolean) : AdvancedSettingsEvents
     data class SetCompressMedia(val compress: Boolean) : AdvancedSettingsEvents

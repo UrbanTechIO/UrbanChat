@@ -14,6 +14,7 @@ import androidx.compose.runtime.mutableStateOf
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
 import dev.zacsweers.metro.AssistedInject
+import io.element.android.features.forward.api.PendingForwards
 import io.element.android.libraries.architecture.AsyncAction
 import io.element.android.libraries.architecture.Presenter
 import io.element.android.libraries.architecture.runCatchingUpdatingState
@@ -34,6 +35,9 @@ class ForwardMessagesPresenter(
     private val sessionCoroutineScope: CoroutineScope,
 ) : Presenter<ForwardMessagesState> {
     private val eventId: EventId = EventId(eventId)
+
+    // Other selected messages that go along with [eventId], in the order they were sent.
+    private val extraEventIds: List<EventId> = PendingForwards.take()
 
     @AssistedFactory
     fun interface Factory {
@@ -65,11 +69,14 @@ class ForwardMessagesPresenter(
         roomIds: List<RoomId>,
     ) = launch {
         suspend {
-            timelineProvider.getActiveTimeline().forwardEvent(eventId, roomIds)
-                .onFailure {
-                    Timber.e(it, "Error while forwarding event")
-                }
-                .getOrThrow()
+            val timeline = timelineProvider.getActiveTimeline()
+            (listOf(eventId) + extraEventIds).forEach { id ->
+                timeline.forwardEvent(id, roomIds)
+                    .onFailure {
+                        Timber.e(it, "Error while forwarding event")
+                    }
+                    .getOrThrow()
+            }
             roomIds
         }.runCatchingUpdatingState(forwardingActionState)
     }

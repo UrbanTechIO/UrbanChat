@@ -12,6 +12,8 @@ import android.text.Spanned
 import android.text.SpannedString
 import android.text.style.URLSpan
 import androidx.annotation.VisibleForTesting
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.LocalContentColor
@@ -20,6 +22,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
@@ -48,6 +53,7 @@ fun TimelineItemTextView(
     onLinkLongClick: (Link) -> Unit,
     modifier: Modifier = Modifier,
     onContentLayoutChange: (ContentAvoidingLayoutData) -> Unit = {},
+    onLongClick: (() -> Unit)? = null,
 ) {
     // The View <-> Compose interop is not working well with Compose UI tests (it loops indefinitely), so we skip it in the UI test mode.
     if (LocalUiTestMode.current) return
@@ -73,11 +79,14 @@ fun TimelineItemTextView(
             (formattedBody as? Spanned)?.getSpans(0, formattedBody.length, URLSpan::class.java)?.firstOrNull()?.url
         }
         Column(modifier.semantics { contentDescription = content.plainText }) {
-            Box(Modifier) {
+            // A message with a link: the text view takes every touch, so a long press anywhere on it is caught here and opens the
+            // message menu (instead of copying the link, which is what a long press on the link itself used to do).
+            val menuOnLongPress = onLongClick != null && firstLinkUrl != null
+            Box(if (menuOnLongPress) Modifier.longPressAnywhere { onLongClick?.invoke() } else Modifier) {
                 EditorStyledText(
                     text = text,
                     onLinkClickedListener = onLinkClick,
-                    onLinkLongClickedListener = onLinkLongClick,
+                    onLinkLongClickedListener = if (menuOnLongPress) ({}) else onLinkLongClick,
                     style = ElementRichTextEditorStyle.textStyle(),
                     onTextLayout = ContentAvoidingLayout.measureLegacyLastTextLine(onContentLayoutChange = onContentLayoutChange),
                     releaseOnDetach = false,
@@ -134,4 +143,23 @@ internal fun TimelineItemTextViewWithLinkifiedUrlAndNestedParenthesisPreview() =
         onLinkClick = {},
         onLinkLongClick = {},
     )
+}
+
+/**
+ * Calls [onLongPress] when a finger stays down in place for the long press time, anywhere on this view and without
+ * consuming the touch, so taps on links and scrolling keep working as before.
+ */
+private fun Modifier.longPressAnywhere(onLongPress: () -> Unit): Modifier = pointerInput(onLongPress) {
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+        val ended = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+            while (true) {
+                val event = awaitPointerEvent(PointerEventPass.Initial)
+                val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                if (!change.pressed || (change.position - down.position).getDistance() > viewConfiguration.touchSlop) break
+            }
+            true
+        }
+        if (ended == null) onLongPress()
+    }
 }

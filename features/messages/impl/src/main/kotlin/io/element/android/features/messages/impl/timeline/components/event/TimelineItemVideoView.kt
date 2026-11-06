@@ -41,6 +41,8 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import io.element.android.libraries.core.extensions.runCatchingExceptions
+import io.element.android.libraries.urbanextras.autodownload.AutoDownloadKind
+import io.element.android.libraries.urbanextras.autodownload.AutoDownloadRules
 import io.element.android.compound.tokens.generated.CompoundIcons
 import io.element.android.features.messages.impl.timeline.components.DownloadProgressOverlay
 import io.element.android.features.messages.impl.timeline.media.LocalFloatingVideoPlayerController
@@ -133,7 +135,8 @@ fun TimelineItemVideoView(
                     fileExtension = content.fileExtension,
                     fileSize = content.fileSize,
                 )
-            } else {
+            } else if (AutoDownloadRules.allowedNow(AutoDownloadKind.Videos)) {
+                // Held back by the auto-download rule for videos (Wi-Fi only or never): it opens from the server instead.
                 mediaDownloadContext.coordinator.ensureDownloaded(
                     mediaSource = content.mediaSource,
                     mimeType = content.mimeType,

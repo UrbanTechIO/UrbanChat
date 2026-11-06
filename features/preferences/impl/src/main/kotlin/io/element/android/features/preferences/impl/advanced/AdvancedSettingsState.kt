@@ -20,6 +20,8 @@ data class AdvancedSettingsState(
     val isDeveloperModeEnabled: Boolean,
     val isSharePresenceEnabled: Boolean,
     val isShowOnlineStatusEnabled: Boolean,
+    val isSendReadReceiptsEnabled: Boolean,
+    val isRenderReadReceiptsEnabled: Boolean,
     val isOrganizeChatListsEnabled: Boolean,
     val isKeepOriginalVideoSizeEnabled: Boolean,
     val mediaOptimizationState: MediaOptimizationState?,

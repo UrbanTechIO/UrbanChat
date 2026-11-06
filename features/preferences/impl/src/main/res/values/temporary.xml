@@ -37,6 +37,10 @@
     <string name="screen_advanced_settings_original_video_size_description">"Send videos untouched, without lowering their quality or size. A video bigger than the server's upload limit is still compressed so it can be sent."</string>
     <string name="screen_advanced_settings_organize_chats">"Organise chats and groups"</string>
     <string name="screen_advanced_settings_organize_chats_description">"Split the chat list into Chats and Groups sections. Turn off to see everything in one list, with the latest activity on top."</string>
+    <string name="urban_settings_send_read_receipts">"Let others see when I read their messages"</string>
+    <string name="urban_settings_send_read_receipts_description">"Off: your reading is kept private, so your friends' ticks stay grey for your replies. You can still see theirs."</string>
+    <string name="urban_settings_render_read_receipts">"Show who has read my messages"</string>
+    <string name="urban_settings_render_read_receipts_description">"Off: the avatars of the people who read your messages are hidden, and the sent mark stays."</string>
     <string name="screen_advanced_settings_show_online_status">"Show my online status"</string>
     <string name="screen_advanced_settings_show_online_status_description">"Let others see when you're online. Turning this off makes you appear offline to everyone."</string>
     <string name="theme_liquid_glass">"Liquid Glass"</string>

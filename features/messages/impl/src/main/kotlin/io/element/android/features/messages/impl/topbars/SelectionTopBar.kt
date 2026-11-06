@@ -26,6 +26,8 @@ fun SelectionTopBar(
     selectedCount: Int,
     onCloseClick: () -> Unit,
     onDeleteClick: () -> Unit,
+    onForwardClick: () -> Unit,
+    onCopyClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     TopAppBar(
@@ -46,6 +48,18 @@ fun SelectionTopBar(
             )
         },
         actions = {
+            IconButton(onClick = onCopyClick) {
+                Icon(
+                    imageVector = CompoundIcons.Copy(),
+                    contentDescription = stringResource(CommonStrings.action_copy),
+                )
+            }
+            IconButton(onClick = onForwardClick) {
+                Icon(
+                    imageVector = CompoundIcons.Forward(),
+                    contentDescription = stringResource(CommonStrings.action_forward),
+                )
+            }
             IconButton(onClick = onDeleteClick) {
                 Icon(
                     imageVector = CompoundIcons.Delete(),

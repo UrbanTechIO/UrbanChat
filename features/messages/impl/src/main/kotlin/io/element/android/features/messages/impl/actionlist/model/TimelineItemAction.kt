@@ -38,4 +38,5 @@ enum class TimelineItemAction(
     Unpin(CommonStrings.action_unpin, CompoundDrawables.ic_compound_unpin),
     RemindMe(CommonStrings.urban_action_remind_me, CompoundDrawables.ic_compound_time),
     Transcribe(CommonStrings.urban_action_transcribe, CompoundDrawables.ic_compound_text_formatting),
+    Translate(CommonStrings.urban_action_translate, CompoundDrawables.ic_compound_text_formatting),
 }

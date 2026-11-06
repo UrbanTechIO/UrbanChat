@@ -20,6 +20,7 @@ class TimelineItemActionComparator : Comparator<TimelineItemAction> {
         TimelineItemAction.ReplyInThread,
         TimelineItemAction.Forward,
         TimelineItemAction.Transcribe,
+        TimelineItemAction.Translate,
         TimelineItemAction.RemindMe,
         TimelineItemAction.Edit,
         TimelineItemAction.EditPoll,

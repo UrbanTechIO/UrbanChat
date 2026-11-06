@@ -38,6 +38,9 @@ sealed interface UrbanRequest {
 
     /** Ask for how long to snooze a chat; [onPicked] mutes it and stores the end time. */
     data class Snooze(val onPicked: (Long) -> Unit) : UrbanRequest
+
+    /** Translate a message into the phone's language and show the result. */
+    data class Translate(val text: String) : UrbanRequest
 }
 
 object UrbanRequests {
@@ -67,6 +70,7 @@ fun UrbanRequestHost() {
             },
             onDismiss = UrbanRequests::clear,
         )
+        is UrbanRequest.Translate -> TranslateSheet(text = r.text, onDismiss = UrbanRequests::clear)
         is UrbanRequest.Snooze -> QuickTimeSheet(
             title = "Snooze this chat",
             presets = snoozePresets(),

@@ -67,6 +67,12 @@ class AdvancedSettingsPresenter(
         val isShowOnlineStatusEnabled by remember {
             sessionPreferencesStore.isShowOnlineStatusEnabled()
         }.collectAsState(initial = true)
+        val isSendReadReceiptsEnabled by remember {
+            sessionPreferencesStore.isSendPublicReadReceiptsEnabled()
+        }.collectAsState(initial = true)
+        val isRenderReadReceiptsEnabled by remember {
+            sessionPreferencesStore.isRenderReadReceiptsEnabled()
+        }.collectAsState(initial = true)
         val isBlackThemeAllowed by remember {
             featureFlagService.isFeatureEnabledFlow(FeatureFlags.AllowBlackTheme)
         }.collectAsState(initial = false)
@@ -211,6 +217,12 @@ class AdvancedSettingsPresenter(
                 is AdvancedSettingsEvents.SetOrganizeChatListsEnabled -> sessionCoroutineScope.launch {
                     sessionPreferencesStore.setOrganizeChatLists(event.enabled)
                 }
+                is AdvancedSettingsEvents.SetSendReadReceiptsEnabled -> sessionCoroutineScope.launch {
+                    sessionPreferencesStore.setSendPublicReadReceipts(event.enabled)
+                }
+                is AdvancedSettingsEvents.SetRenderReadReceiptsEnabled -> sessionCoroutineScope.launch {
+                    sessionPreferencesStore.setRenderReadReceipts(event.enabled)
+                }
                 is AdvancedSettingsEvents.SetShowOnlineStatusEnabled -> sessionCoroutineScope.launch {
                     sessionPreferencesStore.setShowOnlineStatus(event.enabled)
                 }
@@ -308,6 +320,8 @@ class AdvancedSettingsPresenter(
             isDeveloperModeEnabled = isDeveloperModeEnabled,
             isSharePresenceEnabled = isSharePresenceEnabled,
             isShowOnlineStatusEnabled = isShowOnlineStatusEnabled,
+            isSendReadReceiptsEnabled = isSendReadReceiptsEnabled,
+            isRenderReadReceiptsEnabled = isRenderReadReceiptsEnabled,
             isOrganizeChatListsEnabled = isOrganizeChatListsEnabled,
             isKeepOriginalVideoSizeEnabled = isKeepOriginalVideoSizeEnabled,
             mediaOptimizationState = mediaOptimizationState,

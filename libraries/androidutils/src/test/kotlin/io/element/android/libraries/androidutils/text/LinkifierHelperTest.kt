@@ -8,7 +8,6 @@
 
 package io.element.android.libraries.androidutils.text
 
-import android.telephony.TelephonyManager
 import android.text.style.URLSpan
 import androidx.core.text.buildSpannedString
 import androidx.core.text.getSpans
@@ -19,9 +18,7 @@ import io.element.android.tests.testutils.WarmUpRule
 import io.element.android.tests.testutils.robolectric.RobolectricTest
 import org.junit.Rule
 import org.junit.Test
-import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
-import org.robolectric.shadow.api.Shadow.newInstanceOf
 
 class LinkifierHelperTest : RobolectricTest() {
     @get:Rule
@@ -65,26 +62,12 @@ class LinkifierHelperTest : RobolectricTest() {
 
     @Test
     @Config(sdk = [30])
-    fun `linkification finds phone`() {
-        val text = "Test phone number +34950123456"
+    fun `linkification does not turn numbers into links`() {
+        // Android's phone number matcher is very lenient: order numbers, amounts and codes would become links.
+        val text = "Order 1234567890, call +34950123456 or 0151 2345678, code 4821"
         val result = LinkifyHelper.linkify(text)
         val urlSpans = result.toSpannable().getSpans<URLSpan>()
-        assertThat(urlSpans.size).isEqualTo(1)
-        assertThat(urlSpans.first().url).isEqualTo("tel:+34950123456")
-    }
-
-    @Test
-    @Config(sdk = [30])
-    fun `linkification finds phone in Germany`() {
-        // For some reason the linkification of phone numbers in Germany is very lenient and any number will fit here
-        val telephonyManager = shadowOf(newInstanceOf(TelephonyManager::class.java))
-        telephonyManager.setSimCountryIso("DE")
-
-        val text = "Test phone number 1234"
-        val result = LinkifyHelper.linkify(text)
-        val urlSpans = result.toSpannable().getSpans<URLSpan>()
-        assertThat(urlSpans.size).isEqualTo(1)
-        assertThat(urlSpans.first().url).isEqualTo("tel:1234")
+        assertThat(urlSpans).isEmpty()
     }
 
     @Test

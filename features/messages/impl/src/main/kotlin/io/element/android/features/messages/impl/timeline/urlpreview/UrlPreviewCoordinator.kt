@@ -14,6 +14,7 @@ import io.element.android.libraries.di.annotations.SessionCoroutineScope
 import io.element.android.libraries.matrix.api.urlpreview.UrlPreviewInfo
 import io.element.android.libraries.matrix.api.urlpreview.UrlPreviewProvider
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 sealed interface UrlPreviewLoadState {
@@ -41,20 +42,37 @@ class DefaultUrlPreviewCoordinator(
     @SessionCoroutineScope private val sessionCoroutineScope: CoroutineScope,
 ) : UrlPreviewCoordinator {
     private val states = mutableStateMapOf<String, UrlPreviewLoadState>()
+    private val failedAt = mutableMapOf<String, Long>()
 
     override fun stateFor(url: String): UrlPreviewLoadState? = states[url]
 
     override fun ensureFetched(url: String) {
-        if (states.containsKey(url)) return
+        val current = states[url]
+        if (current != null) {
+            // A link that failed (typically because the server was still fetching the page right after it was sent)
+            // is tried again when it comes back into view, instead of staying empty until the chat is reopened.
+            val failedLongAgo = System.currentTimeMillis() - (failedAt[url] ?: 0L) > RETRY_AFTER_FAILURE_MILLIS
+            if (current != UrlPreviewLoadState.Failed || !failedLongAgo) return
+        }
         states[url] = UrlPreviewLoadState.Loading
         sessionCoroutineScope.launch {
-            urlPreviewProvider.getPreview(url).fold(
-                onSuccess = { info ->
-                    val isUseless = info.title.isNullOrBlank() && info.description.isNullOrBlank() && info.imageMxcUri.isNullOrBlank()
-                    states[url] = if (isUseless) UrlPreviewLoadState.Failed else UrlPreviewLoadState.Loaded(info)
-                },
-                onFailure = { states[url] = UrlPreviewLoadState.Failed },
-            )
+            // Retry a few times with a growing pause while the card stays in its loading state.
+            for (delayMillis in RETRY_DELAYS_MILLIS) {
+                val info = urlPreviewProvider.getPreview(url).getOrNull()
+                val isUseless = info == null || (info.title.isNullOrBlank() && info.description.isNullOrBlank() && info.imageMxcUri.isNullOrBlank())
+                if (!isUseless) {
+                    states[url] = UrlPreviewLoadState.Loaded(info!!)
+                    return@launch
+                }
+                delay(delayMillis)
+            }
+            failedAt[url] = System.currentTimeMillis()
+            states[url] = UrlPreviewLoadState.Failed
         }
+    }
+
+    private companion object {
+        val RETRY_DELAYS_MILLIS = listOf(1_500L, 4_000L, 8_000L)
+        const val RETRY_AFTER_FAILURE_MILLIS = 30_000L
     }
 }

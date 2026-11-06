@@ -68,6 +68,8 @@ fun PinnedMessagesBannerView(
     onClick: (EventId) -> Unit,
     onViewAllClick: () -> Unit,
     modifier: Modifier = Modifier,
+    containerColor: Color = ElementTheme.colors.bgCanvasDefault,
+    showBorder: Boolean = true,
 ) {
     when (state) {
         PinnedMessagesBannerState.Hidden -> Unit
@@ -77,6 +79,8 @@ fun PinnedMessagesBannerView(
                 onClick = onClick,
                 onViewAllClick = onViewAllClick,
                 modifier = modifier,
+                containerColor = containerColor,
+                showBorder = showBorder,
             )
         }
     }
@@ -87,15 +91,17 @@ private fun PinnedMessagesBannerRow(
     state: PinnedMessagesBannerState.Visible,
     onClick: (EventId) -> Unit,
     onViewAllClick: () -> Unit,
+    containerColor: Color,
+    showBorder: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val analyticsService = LocalAnalyticsService.current
     val borderColor = ElementTheme.colors.pinnedMessageBannerBorder
     Row(
         modifier = modifier
-            .background(color = ElementTheme.colors.bgCanvasDefault)
+            .background(color = containerColor)
             .fillMaxWidth()
-            .drawBorder(borderColor)
+            .let { if (showBorder) it.drawBorder(borderColor) else it }
             .heightIn(min = 64.dp)
             .clickable {
                 if (state is PinnedMessagesBannerState.Loaded) {

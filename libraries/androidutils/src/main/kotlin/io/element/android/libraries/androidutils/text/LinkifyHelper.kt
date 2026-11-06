@@ -25,7 +25,7 @@ import timber.log.Timber
 object LinkifyHelper {
     fun linkify(
         text: CharSequence,
-        @LinkifyCompat.LinkifyMask linkifyMask: Int = Linkify.WEB_URLS or Linkify.PHONE_NUMBERS or Linkify.EMAIL_ADDRESSES,
+        @LinkifyCompat.LinkifyMask linkifyMask: Int = Linkify.WEB_URLS or Linkify.EMAIL_ADDRESSES,
     ): CharSequence {
         // Convert the text to a Spannable to be able to add URL spans, return the original text if it's not possible (in tests, i.e.)
         @Suppress("USELESS_ELVIS")
@@ -103,8 +103,8 @@ object LinkifyHelper {
 }
 
 /**
- * Linkify the text with the default mask (WEB_URLS, PHONE_NUMBERS, EMAIL_ADDRESSES).
+ * Linkify the text with the default mask (WEB_URLS, EMAIL_ADDRESSES; numbers are never linked).
  */
 fun CharSequence.safeLinkify(): CharSequence {
-    return LinkifyHelper.linkify(this, Linkify.WEB_URLS or Linkify.PHONE_NUMBERS or Linkify.EMAIL_ADDRESSES)
+    return LinkifyHelper.linkify(this, Linkify.WEB_URLS or Linkify.EMAIL_ADDRESSES)
 }

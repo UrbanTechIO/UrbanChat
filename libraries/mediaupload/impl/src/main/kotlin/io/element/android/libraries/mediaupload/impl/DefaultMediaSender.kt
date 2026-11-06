@@ -218,6 +218,8 @@ class DefaultMediaSender(
     ): Result<Unit> {
         val handler = when (uploadInfo) {
             is MediaUploadInfo.Image -> {
+                // Our own image opens from this copy instead of being downloaded again.
+                sentMediaStash?.stash(uploadInfo.file)
                 sendImage(
                     file = uploadInfo.file,
                     thumbnailFile = uploadInfo.thumbnailFile,

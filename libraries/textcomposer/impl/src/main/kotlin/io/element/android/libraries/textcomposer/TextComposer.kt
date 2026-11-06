@@ -770,6 +770,8 @@ private fun StandardLayout(
     }
 }
 
+private const val SEND_LATER_EXTRA_HOLD_MILLIS = 250L
+
 /** Press and hold on the send button (used for "send later"). Does nothing when [onLongClick] is null. */
 @Composable
 private fun longClickModifier(onLongClick: (() -> Unit)?): Modifier {
@@ -780,7 +782,8 @@ private fun longClickModifier(onLongClick: (() -> Unit)?): Modifier {
         awaitEachGesture {
             // Look at the touch first (Initial pass), before the button's own click handling sees it.
             awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-            val released = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+            // A little longer than a normal long press, so a slow tap on send does not open "send later" by accident.
+            val released = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis + SEND_LATER_EXTRA_HOLD_MILLIS) {
                 waitForUpOrCancellation(pass = PointerEventPass.Initial)
             }
             if (released == null) {

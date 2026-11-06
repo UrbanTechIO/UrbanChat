@@ -11,6 +11,14 @@
     <string name="a11y_active">Active</string>
     <string name="a11y_inactive">Inactive</string>
     <string name="urban_action_select">Select</string>
+    <string name="urban_action_translate">Translate</string>
+    <string name="urban_attachment_contact">Contact</string>
+    <string name="urban_attachment_gif">GIF</string>
+    <string name="urban_gif_key_prompt">Enter your Giphy API key to search GIFs. It stays on this phone, and what you search for is sent to Giphy.</string>
+    <string name="urban_gif_key_hint">Giphy API key</string>
+    <string name="urban_gif_search_hint">Search GIFs</string>
+    <string name="urban_gif_none">No GIFs found. Check the connection and the key.</string>
+    <string name="urban_contact_search_hint">Search for a person</string>
     <plurals name="urban_delete_selected_title">
         <item quantity="one">Delete %1$d message?</item>
         <item quantity="other">Delete %1$d messages?</item>

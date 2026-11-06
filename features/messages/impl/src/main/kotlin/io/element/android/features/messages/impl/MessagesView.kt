@@ -111,8 +111,12 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.res.pluralStringResource
+import io.element.android.features.forward.api.PendingForwards
+import io.element.android.features.messages.impl.timeline.model.event.TimelineItemTextBasedContent
+import io.element.android.features.messages.impl.extras.ContactPickerSheet
 import io.element.android.features.messages.impl.timeline.selection.MessageSelection
 import io.element.android.features.messages.impl.topbars.MessagesViewTopBar
+import io.element.android.features.messages.impl.topbars.liquidGlassCapsule
 import io.element.android.features.messages.impl.topbars.SelectionTopBar
 import io.element.android.libraries.ui.strings.CommonPlurals
 import io.element.android.features.messages.impl.topbars.ThreadTopBar
@@ -148,8 +152,10 @@ import com.kyant.backdrop.effects.vibrancy
 import io.element.android.features.messages.impl.timeline.components.LiquidGlassState
 import io.element.android.features.messages.impl.timeline.components.LocalLiquidGlassState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import dev.chrisbanes.haze.HazeDefaults
+import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
@@ -349,6 +355,26 @@ fun MessagesView(
                             selectedCount = selectedMessages.size,
                             onCloseClick = { MessageSelection.clear() },
                             onDeleteClick = { showDeleteSelected = true },
+                            onForwardClick = {
+                                val ordered = selectedMessages.values.sortedBy { it.sentTimeMillis }
+                                val first = ordered.firstOrNull()
+                                if (first != null) {
+                                    PendingForwards.set(ordered.drop(1).mapNotNull { it.eventId })
+                                    state.eventSink(MessagesEvent.HandleAction(TimelineItemAction.Forward, first))
+                                }
+                                MessageSelection.clear()
+                            },
+                            onCopyClick = {
+                                val text = selectedMessages.values.sortedBy { it.sentTimeMillis }
+                                    .mapNotNull { (it.content as? TimelineItemTextBasedContent)?.body }
+                                    .joinToString("\n")
+                                if (text.isNotEmpty()) {
+                                    val clipboard = localView.context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("messages", text))
+                                    android.widget.Toast.makeText(localView.context, localView.context.getString(CommonStrings.common_copied_to_clipboard), android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                                MessageSelection.clear()
+                            },
                             modifier = topBarModifier,
                         )
                     } else if (state.timelineState.timelineMode is Timeline.Mode.Thread) {
@@ -494,6 +520,7 @@ fun MessagesView(
                             onContentClick = ::onContentClick,
                             extraTopContentPadding = if (state.frostedGlassEnabled) padding.calculateTopPadding() else 0.dp,
                             extraBottomContentPadding = extraBottomContentPadding,
+                            headerHazeState = if (state.frostedGlassEnabled) chatBackgroundHazeState else null,
                             onGalleryItemClick = { event, index ->
                                 val hideKeyboard = onGalleryEventItemClick(
                                     state.timelineState.isLive,
@@ -759,6 +786,7 @@ private fun MessagesViewContent(
     modifier: Modifier = Modifier,
     extraTopContentPadding: Dp = 0.dp,
     extraBottomContentPadding: Dp = 0.dp,
+    headerHazeState: HazeState? = null,
     knockRequestsBannerView: @Composable () -> Unit,
 ) {
     Box(
@@ -768,15 +796,24 @@ private fun MessagesViewContent(
             .imePadding(),
     ) {
         var showStickerTray by remember { mutableStateOf(false) }
+        var showContactPicker by remember { mutableStateOf(false) }
         AttachmentsBottomSheet(
             state = state.composerState,
             onSendLocationClick = onSendLocationClick,
             onCreatePollClick = onCreatePollClick,
             enableTextFormatting = state.enableTextFormatting,
             onStickerClick = stickerController?.let { { showStickerTray = true } },
+            onContactClick = stickerController?.let { { showContactPicker = true } },
         )
         if (showStickerTray && stickerController != null) {
-            StickerTray(controller = stickerController, onDismiss = { showStickerTray = false })
+            StickerTray(
+                controller = stickerController,
+                onGifChosen = { uri -> state.composerState.eventSink(MessageComposerEvent.SendUri(uri)) },
+                onDismiss = { showStickerTray = false },
+            )
+        }
+        if (showContactPicker && stickerController != null) {
+            ContactPickerSheet(controller = stickerController.extras, onDismiss = { showContactPicker = false })
         }
 
         if (state.voiceMessageComposerState.showPermissionRationaleDialog) {
@@ -841,6 +878,8 @@ private fun MessagesViewContent(
             )
 
             if (state.timelineState.timelineMode !is Timeline.Mode.Thread) {
+                // The timeline runs behind the header in the glass themes, so the banners start below it.
+                Box(modifier = Modifier.padding(top = extraTopContentPadding)) {
                 Column(
                     modifier = Modifier.onSizeChanged { topBannersHeightDp = with(density) { it.height.toDp() } },
                 ) {
@@ -854,10 +893,29 @@ private fun MessagesViewContent(
                                 TimelineEvent.FocusOnEvent(eventId = eventId, debounce = FOCUS_ON_PINNED_EVENT_DEBOUNCE_DURATION_IN_MILLIS.milliseconds)
                             )
                         }
+                        // In the glass themes the bar is a second, smaller header under the main one: a floating glass capsule
+                        // in Liquid Glass, a rounded frosted card in Frosted (same blur and transparency as the header).
+                        // The background-only layer, like the message bubbles use: the timeline layer contains this bar, and a
+                        // bar that draws a layer holding itself loops until the app crashes.
+                        val liquidBackdrop = LocalLiquidGlassState.current.backgroundBackdrop
+                        val glassModifier = when {
+                            liquidBackdrop != null -> Modifier
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                                .liquidGlassCapsule(liquidBackdrop)
+                            headerHazeState != null -> Modifier
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                                .clip(RoundedCornerShape(24.dp))
+                                .hazeEffect(state = headerHazeState, style = rememberFrostedHazeStyle(state.headerBarOpacity))
+                            else -> Modifier
+                        }
+                        val isGlass = liquidBackdrop != null || headerHazeState != null
                         PinnedMessagesBannerView(
                             state = state.pinnedMessagesBannerState,
                             onClick = ::focusOnPinnedEvent,
                             onViewAllClick = onViewAllPinnedMessagesClick,
+                            modifier = glassModifier,
+                            containerColor = if (isGlass) Color.Transparent else ElementTheme.colors.bgCanvasDefault,
+                            showBorder = !isGlass,
                         )
                     }
                     if (state.showLiveLocationShareBanner) {
@@ -866,6 +924,7 @@ private fun MessagesViewContent(
                             onStopClick = { state.eventSink(MessagesEvent.StopLiveLocationShare) }
                         )
                     }
+                }
                 }
             }
 

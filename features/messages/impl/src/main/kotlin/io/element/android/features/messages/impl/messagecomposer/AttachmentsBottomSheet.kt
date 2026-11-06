@@ -29,6 +29,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import io.element.android.compound.tokens.generated.CompoundIcons
 import io.element.android.features.messages.impl.R
+import io.element.android.libraries.ui.strings.CommonStrings
 import io.element.android.libraries.androidutils.ui.hideKeyboard
 import io.element.android.libraries.designsystem.components.list.ListItemContent
 import io.element.android.libraries.designsystem.preview.ElementPreview
@@ -47,6 +48,8 @@ internal fun AttachmentsBottomSheet(
     enableTextFormatting: Boolean,
     modifier: Modifier = Modifier,
     onStickerClick: (() -> Unit)? = null,
+    onContactClick: (() -> Unit)? = null,
+    onGifClick: (() -> Unit)? = null,
 ) {
     val localView = LocalView.current
     var isVisible by rememberSaveable { mutableStateOf(state.showAttachmentSourcePicker) }
@@ -86,6 +89,8 @@ internal fun AttachmentsBottomSheet(
                 enableTextFormatting = enableTextFormatting,
                 onSendLocationClick = onSendLocationClick,
                 onCreatePollClick = onCreatePollClick,
+                onContactClick = onContactClick?.let { click -> { isVisible = false; click() } },
+                onGifClick = onGifClick?.let { click -> { isVisible = false; click() } },
                 onStickerClick = onStickerClick?.let { click ->
                     {
                         isVisible = false
@@ -104,6 +109,8 @@ private fun AttachmentSourcePickerMenu(
     onCreatePollClick: () -> Unit,
     enableTextFormatting: Boolean,
     onStickerClick: (() -> Unit)?,
+    onContactClick: (() -> Unit)?,
+    onGifClick: (() -> Unit)?,
 ) {
     Column(
         modifier = Modifier
@@ -149,11 +156,25 @@ private fun AttachmentSourcePickerMenu(
             leadingContent = ListItemContent.Icon(IconSource.Vector(CompoundIcons.Polls())),
             content = { Text(stringResource(R.string.screen_room_attachment_source_poll)) },
         )
+        if (onGifClick != null) {
+            ListItem(
+                modifier = Modifier.clickable { onGifClick() },
+                leadingContent = ListItemContent.Icon(IconSource.Vector(CompoundIcons.Image())),
+                content = { Text(stringResource(CommonStrings.urban_attachment_gif)) },
+            )
+        }
+        if (onContactClick != null) {
+            ListItem(
+                modifier = Modifier.clickable { onContactClick() },
+                leadingContent = ListItemContent.Icon(IconSource.Vector(CompoundIcons.UserProfile())),
+                content = { Text(stringResource(CommonStrings.urban_attachment_contact)) },
+            )
+        }
         if (onStickerClick != null) {
             ListItem(
                 modifier = Modifier.clickable { onStickerClick() },
                 leadingContent = ListItemContent.Icon(IconSource.Vector(CompoundIcons.Favourite())),
-                content = { Text("Sticker") },
+                content = { Text("Stickers & GIFs") },
             )
         }
         if (enableTextFormatting) {

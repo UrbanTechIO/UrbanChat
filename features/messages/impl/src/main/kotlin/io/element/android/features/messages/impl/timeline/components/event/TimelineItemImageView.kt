@@ -42,6 +42,8 @@ import io.element.android.features.messages.impl.timeline.model.event.aTimelineI
 import io.element.android.features.messages.impl.timeline.protection.ProtectedView
 import io.element.android.features.messages.impl.timeline.protection.coerceRatioWhenHidingContent
 import io.element.android.features.messages.impl.timeline.util.handleAsyncImageStateChange
+import io.element.android.libraries.urbanextras.autodownload.AutoDownloadKind
+import io.element.android.libraries.urbanextras.autodownload.AutoDownloadRules
 import io.element.android.libraries.designsystem.components.blurhash.blurHashBackground
 import io.element.android.libraries.designsystem.modifiers.onKeyboardContextMenuAction
 import io.element.android.libraries.designsystem.preview.ElementPreview
@@ -105,7 +107,8 @@ fun TimelineItemImageView(
     // this device already (gallery, camera, files), so re-downloading our own sent image from the
     // server and saving a second copy would just create a duplicate in the Gallery.
     val mediaDownloadContext = LocalMediaDownloadContext.current
-    if (mediaDownloadContext.downloadToGalleryEnabled && !isMine) {
+    // The auto-download rule for photos can hold it back (Wi-Fi only or never); the photo still opens from the server.
+    if (mediaDownloadContext.downloadToGalleryEnabled && !isMine && AutoDownloadRules.allowedNow(AutoDownloadKind.Photos)) {
         LaunchedEffect(content.mediaSource) {
             mediaDownloadContext.coordinator.ensureDownloaded(
                 mediaSource = content.mediaSource,

@@ -201,6 +201,9 @@ class DefaultActionListPresenter(
             if (timelineItem.isRemote && timelineItem.content.canBeForwarded()) {
                 add(TimelineItemAction.Forward)
             }
+            if (timelineItem.content is io.element.android.features.messages.impl.timeline.model.event.TimelineItemTextBasedContent) {
+                add(TimelineItemAction.Translate)
+            }
             if (timelineItem.content is TimelineItemVoiceContent) {
                 add(TimelineItemAction.Transcribe)
             }

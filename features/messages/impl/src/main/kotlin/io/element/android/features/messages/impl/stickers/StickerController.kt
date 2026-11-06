@@ -63,6 +63,9 @@ class StickerController(
     // What each sticker file was uploaded as, so a sticker that was sent before is sent again without uploading it again.
     private val uploads = context.getSharedPreferences("sticker_uploads", Context.MODE_PRIVATE)
 
+    /** Other attach-menu extras of this chat: contacts and GIFs. */
+    val extras = io.element.android.features.messages.impl.extras.ExtrasController(context, client, room)
+
     private val directory = File(context.filesDir, "stickers")
     private val _stickers = MutableStateFlow(loadStickers())
     val stickers: StateFlow<List<File>> = _stickers

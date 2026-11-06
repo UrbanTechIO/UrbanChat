@@ -494,6 +494,7 @@ class MessagesPresenter(
             TimelineItemAction.ViewInTimeline -> Unit
             TimelineItemAction.RemindMe -> handleRemindMe(targetEvent)
             TimelineItemAction.Transcribe -> handleTranscribe(targetEvent)
+            TimelineItemAction.Translate -> (targetEvent.content as? TimelineItemTextBasedContent)?.let { UrbanRequests.post(UrbanRequest.Translate(it.plainText)) } ?: Unit
         }
     }
 

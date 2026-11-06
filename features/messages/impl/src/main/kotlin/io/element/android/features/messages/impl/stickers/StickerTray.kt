@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import io.element.android.compound.theme.ElementTheme
 import io.element.android.compound.tokens.generated.CompoundIcons
+import io.element.android.features.messages.impl.extras.GiphyPanel
 import io.element.android.libraries.designsystem.components.dialogs.ConfirmationDialog
 import io.element.android.libraries.designsystem.theme.components.DropdownMenu
 import io.element.android.libraries.designsystem.theme.components.DropdownMenuItem
@@ -63,6 +64,7 @@ private const val MAX_PICKED_STICKERS = 30
 private const val PACK_THUMBNAIL_SIZE = 256L
 private const val TAB_ICON_SIZE = 128L
 private const val MINE_KEY = "mine"
+private const val GIF_KEY = "gif"
 
 /**
  * Bottom sheet for stickers, laid out like WhatsApp: a row of tabs on top, each tab showing the first sticker of its
@@ -73,6 +75,7 @@ private const val MINE_KEY = "mine"
 @Composable
 fun StickerTray(
     controller: StickerController,
+    onGifChosen: (android.net.Uri) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -99,7 +102,7 @@ fun StickerTray(
     val packsByKey = packs.associateBy { StickerPackStore.packKey(it) }
     val baseKeys = listOf(MINE_KEY) + packsByKey.keys
     val orderedKeys = savedOrder.filter { it in baseKeys } + baseKeys.filter { it !in savedOrder }
-    val activeKey = if (selectedKey in orderedKeys) selectedKey else MINE_KEY
+    val activeKey = if (selectedKey == GIF_KEY || selectedKey in orderedKeys) selectedKey else MINE_KEY
 
     val picker = rememberLauncherForActivityResult(
         ActivityResultContracts.PickMultipleVisualMedia(MAX_PICKED_STICKERS)
@@ -122,6 +125,22 @@ fun StickerTray(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                item(key = GIF_KEY) {
+                    StickerTab(
+                        selected = activeKey == GIF_KEY,
+                        onClick = {
+                            selectedKey = GIF_KEY
+                            message = null
+                        },
+                        onLongClick = null,
+                    ) {
+                        Text(
+                            text = "GIF",
+                            style = ElementTheme.typography.fontBodyMdMedium,
+                            color = ElementTheme.colors.textPrimary,
+                        )
+                    }
+                }
                 rowItemsIndexed(orderedKeys, key = { _, key -> key }) { index, key ->
                     val pack = packsByKey[key]
                     Box {
@@ -233,6 +252,9 @@ fun StickerTray(
                 }
             }
 
+            if (activeKey == GIF_KEY) {
+                GiphyPanel(controller = controller.extras, onGifChosen = onGifChosen, onDone = onDismiss)
+            } else {
             val hint = message ?: when {
                 activeKey == MINE_KEY -> "My stickers. Tap to send, long-press to remove."
                 else -> "${packsByKey[activeKey]?.title.orEmpty()}. Tap to send."
@@ -327,6 +349,7 @@ fun StickerTray(
                         }
                     }
                 }
+            }
             }
         }
     }

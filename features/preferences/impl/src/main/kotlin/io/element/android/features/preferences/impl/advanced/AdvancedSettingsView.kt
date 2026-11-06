@@ -175,6 +175,30 @@ internal fun ColumnScope.AdvancedAccountSection(state: AdvancedSettingsState) {
         ),
         onClick = { state.eventSink(AdvancedSettingsEvents.SetShowOnlineStatusEnabled(!state.isShowOnlineStatusEnabled)) }
     )
+    ListItem(
+        content = {
+            Text(text = stringResource(id = R.string.urban_settings_send_read_receipts))
+        },
+        supportingContent = {
+            Text(text = stringResource(id = R.string.urban_settings_send_read_receipts_description))
+        },
+        trailingContent = ListItemContent.Switch(
+            checked = state.isSendReadReceiptsEnabled,
+        ),
+        onClick = { state.eventSink(AdvancedSettingsEvents.SetSendReadReceiptsEnabled(!state.isSendReadReceiptsEnabled)) }
+    )
+    ListItem(
+        content = {
+            Text(text = stringResource(id = R.string.urban_settings_render_read_receipts))
+        },
+        supportingContent = {
+            Text(text = stringResource(id = R.string.urban_settings_render_read_receipts_description))
+        },
+        trailingContent = ListItemContent.Switch(
+            checked = state.isRenderReadReceiptsEnabled,
+        ),
+        onClick = { state.eventSink(AdvancedSettingsEvents.SetRenderReadReceiptsEnabled(!state.isRenderReadReceiptsEnabled)) }
+    )
 }
 
 /** Chat list, media quality and downloads. */
@@ -302,6 +326,7 @@ internal fun ColumnScope.AdvancedChatsSection(state: AdvancedSettingsState) {
         ),
         onClick = { state.eventSink(AdvancedSettingsEvents.SetDownloadToGalleryEnabled(!state.downloadToGalleryEnabled)) }
     )
+    io.element.android.libraries.urbanextras.ui.AutoDownloadSettings()
     ListItem(
         content = {
             Text(text = stringResource(id = R.string.screen_advanced_settings_disable_link_previews_title))

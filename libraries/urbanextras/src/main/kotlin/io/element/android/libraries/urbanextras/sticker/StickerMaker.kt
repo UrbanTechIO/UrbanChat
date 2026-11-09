@@ -8,7 +8,9 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.graphics.Matrix
 import android.net.Uri
+import android.media.ExifInterface
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.segmentation.subject.SubjectSegmentation
 import com.google.mlkit.vision.segmentation.subject.SubjectSegmenterOptions
@@ -60,8 +62,26 @@ object StickerMaker {
         var sample = 1
         while (maxOf(bounds.outWidth, bounds.outHeight) / sample > MAX_INPUT_SIDE) sample *= 2
         val options = BitmapFactory.Options().apply { inSampleSize = sample }
-        return context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, options) }
+        val decoded = context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, options) }
             ?: error("Could not read the picture")
+        // A phone photo is stored sideways with a rotation note in its EXIF data; apply it so the objects match the picture on screen.
+        val orientation = runCatching {
+            context.contentResolver.openInputStream(uri)?.use {
+                ExifInterface(it).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+            }
+        }.getOrNull() ?: ExifInterface.ORIENTATION_NORMAL
+        val matrix = Matrix()
+        when (orientation) {
+            ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+            ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+            ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
+            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.postScale(-1f, 1f)
+            ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.postScale(1f, -1f)
+            ExifInterface.ORIENTATION_TRANSPOSE -> { matrix.postRotate(90f); matrix.postScale(-1f, 1f) }
+            ExifInterface.ORIENTATION_TRANSVERSE -> { matrix.postRotate(270f); matrix.postScale(-1f, 1f) }
+            else -> return decoded
+        }
+        return Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, matrix, true)
     }
 
     private suspend fun segment(bitmap: Bitmap, options: SubjectSegmenterOptions): List<LiftedSubject> = suspendCancellableCoroutine { continuation ->

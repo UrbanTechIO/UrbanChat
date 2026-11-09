@@ -576,9 +576,11 @@ fun MessagesView(
 
                         SuggestionsPickerView(
                             modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                // When the composer floats over the chat (Liquid Glass), lift the list above it.
+                                .padding(bottom = extraBottomContentPadding)
                                 .shadow(10.dp)
                                 .background(ElementTheme.colors.bgCanvasDefault)
-                                .align(Alignment.BottomStart)
                                 .heightIn(max = 230.dp),
                             roomId = state.roomId,
                             roomName = state.roomName,

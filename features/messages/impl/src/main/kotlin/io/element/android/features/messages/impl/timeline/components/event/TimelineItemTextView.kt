@@ -8,6 +8,7 @@
 
 package io.element.android.features.messages.impl.timeline.components.event
 
+import android.net.Uri
 import android.text.Spanned
 import android.text.SpannedString
 import android.text.style.URLSpan
@@ -46,6 +47,8 @@ import io.element.android.libraries.textcomposer.mentions.LocalMentionSpanUpdate
 import io.element.android.wysiwyg.compose.EditorStyledText
 import io.element.android.wysiwyg.link.Link
 
+private val MATRIX_ID_IN_LINK = Regex("[@!#$][^\\s/:]+:[^\\s/]+")
+
 @Composable
 fun TimelineItemTextView(
     content: TimelineItemTextBasedContent,
@@ -76,7 +79,27 @@ fun TimelineItemTextView(
         // then disappear once mentions resolved a moment after the initial render.
         val firstLinkUrl = remember(content.formattedBody) {
             val formattedBody = content.formattedBody
-            (formattedBody as? Spanned)?.getSpans(0, formattedBody.length, URLSpan::class.java)?.firstOrNull()?.url
+            (formattedBody as? Spanned)?.let { spanned ->
+                spanned.getSpans(0, formattedBody.length, URLSpan::class.java)
+                    .sortedBy { spanned.getSpanStart(it) }
+                    .firstOrNull { span ->
+                        // Mentions (@name), room links (#room, !room) and matrix.to links are links too, but a preview of them
+                        // would be the page of a server, not of anything the sender shared (for example "Synapse is running").
+                        val label = formattedBody.subSequence(spanned.getSpanStart(span), spanned.getSpanEnd(span)).toString()
+                        val uri = Uri.parse(span.url)
+                        // The permalink base can also be the homeserver's own address, so look for a Matrix id (@user:server, !room:server, #alias:server)
+                        // anywhere in the link as well.
+                        val decoded = Uri.decode(span.url.orEmpty())
+                        // The auto-linker also turns the server part of an id such as "@test:matrix.example.com" into a link of its own.
+                        val start = spanned.getSpanStart(span)
+                        val partOfMatrixId = start > 0 && formattedBody[start - 1].let { it == ':' || it == '@' }
+                        !(label.startsWith("@") || label.startsWith("#") || label.startsWith("!")) &&
+                            uri.host?.lowercase() != "matrix.to" &&
+                            uri.scheme?.lowercase() != "matrix" &&
+                            !MATRIX_ID_IN_LINK.containsMatchIn(decoded) &&
+                            !partOfMatrixId
+                    }?.url
+            }
         }
         Column(modifier.semantics { contentDescription = content.plainText }) {
             // A message with a link: the text view takes every touch, so a long press anywhere on it is caught here and opens the

@@ -33,6 +33,9 @@ private const val DEBOUNCE_MS = 500L
 // fully absorbed instead of each one independently reaching DEBOUNCE_MS and re-triggering.
 private const val POST_SWITCH_LOCKOUT_MS = 500L
 
+// How long the router stays set up after playback stops, so a following voice message keeps the earpiece and the dark screen.
+private const val STOP_GRACE_MS = 3_000L
+
 @ContributesBinding(AppScope::class)
 @SingleIn(AppScope::class)
 class DefaultProximityAudioRouter(
@@ -58,6 +61,7 @@ class DefaultProximityAudioRouter(
     private var previousSpeakerphoneOn: Boolean? = null
     private var pendingSwitch: Runnable? = null
     private var lastSwitchAtMs = 0L
+    private var pendingStop: Runnable? = null
 
     private val listener = object : SensorEventListener {
         override fun onSensorChanged(event: SensorEvent) {
@@ -72,7 +76,11 @@ class DefaultProximityAudioRouter(
             // bounces between earpiece and speaker a few times before settling. If we just
             // switched, extend the wait so lingering flicker right after don't re-trigger it.
             val sinceLastSwitch = SystemClock.elapsedRealtime() - lastSwitchAtMs
-            val delay = if (sinceLastSwitch < POST_SWITCH_LOCKOUT_MS) {
+            // Going to the ear is acted on at once, so the sound moves to the earpiece before the phone touches the ear.
+            // Only the move away from the ear waits, to absorb the flicker.
+            val delay = if (near) {
+                0L
+            } else if (sinceLastSwitch < POST_SWITCH_LOCKOUT_MS) {
                 DEBOUNCE_MS + (POST_SWITCH_LOCKOUT_MS - sinceLastSwitch)
             } else {
                 DEBOUNCE_MS
@@ -92,11 +100,17 @@ class DefaultProximityAudioRouter(
 
     @Suppress("DEPRECATION")
     override fun start() {
+        // The next voice message starts right after the previous one stopped: keep the route (and the dark screen) as it was.
+        pendingStop?.let { debounceHandler.removeCallbacks(it) }
+        pendingStop = null
         if (isListening) return
         val sensor = proximitySensor ?: return
         isListening = true
         isNear = false
         lastSwitchAtMs = 0L
+        // The system's own proximity lock turns the screen off the moment the phone is at the ear and back on when it leaves,
+        // far faster than waiting for our own reading. It does nothing while the phone is away from the ear.
+        acquireWakeLock()
         // Track content is always voice-communication styled (see SimplePlayer) so the track
         // itself never needs touching again — from here on, only isSpeakerphoneOn moves audio
         // between the earpiece and the speaker, which is instant and glitch-free (no AudioTrack
@@ -117,11 +131,23 @@ class DefaultProximityAudioRouter(
                 manager.isSpeakerphoneOn = true
             }
         }
-        sensorManager?.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_NORMAL)
+        sensorManager?.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_FASTEST)
+    }
+
+    override fun stop() {
+        if (!isListening) return
+        // A voice message ending is followed by the next one a moment later: wait before really letting go.
+        pendingStop?.let { debounceHandler.removeCallbacks(it) }
+        val runnable = Runnable {
+            pendingStop = null
+            stopNow()
+        }
+        pendingStop = runnable
+        debounceHandler.postDelayed(runnable, STOP_GRACE_MS)
     }
 
     @Suppress("DEPRECATION")
-    override fun stop() {
+    private fun stopNow() {
         if (!isListening) return
         isListening = false
         sensorManager?.unregisterListener(listener)
@@ -149,7 +175,7 @@ class DefaultProximityAudioRouter(
             audioManager?.isBluetoothScoOn = false
             audioManager?.isSpeakerphoneOn = speakerOn
         }
-        if (speakerOn) releaseWakeLock() else acquireWakeLock()
+        // The proximity wake lock stays held for the whole playback (see start()).
     }
 
     private fun acquireWakeLock() {
